@@ -11,7 +11,7 @@ export class ProjectSetupService {
     }
 
     // 1. Create directory structure
-    const dirs = ['features', 'step-definitions', 'pages', 'utils', 'test-data', 'config', 'reports'];
+    const dirs = ['src/features', 'src/step-definitions', 'src/pages', 'src/utils', 'src/test-data', 'src/config', 'reports'];
     for (const dir of dirs) {
       const fullPath = path.join(projectRoot, dir);
       if (!fs.existsSync(fullPath)) {
@@ -146,7 +146,6 @@ export class ProjectSetupService {
         moduleResolution: "NodeNext",
         lib: ["ES2022"],
         outDir: "./dist",
-        rootDir: ".",
         strict: true,
         esModuleInterop: true,
         forceConsistentCasingInFileNames: true,
@@ -156,7 +155,7 @@ export class ProjectSetupService {
         declarationMap: true,
         sourceMap: true
       },
-      include: ["features/**/*", "step-definitions/**/*", "pages/**/*", "utils/**/*"],
+      include: ["src/**/*.ts", "wdio.conf.ts", "wdio.shared.conf.ts", "wdio.android.conf.ts", "wdio.ios.conf.ts"],
       exclude: ["node_modules", "dist", "reports"]
     };
     fs.writeFileSync(tsConfigPath, JSON.stringify(tsConfig, null, 2));
@@ -166,13 +165,13 @@ export class ProjectSetupService {
     const content = `// cucumber.js — Cucumber configuration
 export default {
   requireModule: ['ts-node/register'],
-  require: ['step-definitions/**/*.ts'],
+  require: ['src/step-definitions/**/*.ts'],
   format: [
     'progress-bar',
     'json:reports/cucumber-report.json',
     'html:reports/cucumber-report.html'
   ],
-  paths: ['features/**/*.feature'],
+  paths: ['src/features/**/*.feature'],
   publishQuiet: true
 };
 `;
@@ -443,7 +442,7 @@ export class MobileGestures {
   }
 }
 `;
-    fs.writeFileSync(path.join(projectRoot, 'utils', 'MobileGestures.ts'), content);
+    fs.writeFileSync(path.join(projectRoot, 'src', 'utils', 'MobileGestures.ts'), content);
   }
 
   private scaffoldMockServer(projectRoot: string) {
@@ -474,9 +473,9 @@ export class MockServer {
    */
   static getBaseUrl(platform: 'android' | 'ios' = 'android', port: number = 3000): string {
     if (platform === 'android') {
-      return \\\`http://10.0.2.2:\\\${port}\\\`;
+      return \`http://10.0.2.2:\${port}\`;
     }
-    return \\\`http://localhost:\\\${port}\\\`;
+    return \`http://localhost:\${port}\`;
   }
 
   /**
@@ -515,7 +514,7 @@ export class MockServer {
    */
   loadScenariosFromFile(filePath: string) {
     if (!fs.existsSync(filePath)) {
-      console.warn(\\\`Mock scenarios file not found: \\\${filePath}\\\`);
+      console.warn(\`Mock scenarios file not found: \${filePath}\`);
       return;
     }
     const raw = fs.readFileSync(filePath, 'utf8');
@@ -531,8 +530,8 @@ export class MockServer {
   async start() {
     return new Promise((resolve) => {
       this.server = this.app.listen(this.port, () => {
-        console.log(\\\`Mock Server running on http://localhost:\\\${this.port}\\\`);
-        console.log(\\\`  Android emulator URL: http://10.0.2.2:\\\${this.port}\\\`);
+        console.log(\`Mock Server running on http://localhost:\${this.port}\`);
+        console.log(\`  Android emulator URL: http://10.0.2.2:\${this.port}\`);
         resolve(true);
       });
     });
@@ -544,7 +543,7 @@ export class MockServer {
   }
 }
 `;
-    fs.writeFileSync(path.join(projectRoot, 'utils', 'MockServer.ts'), content);
+    fs.writeFileSync(path.join(projectRoot, 'src', 'utils', 'MockServer.ts'), content);
   }
 
   private scaffoldHooks(projectRoot: string) {

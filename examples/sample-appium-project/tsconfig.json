@@ -14,7 +14,18 @@
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "../../node_modules/@types",
+      "../../node_modules"
+    ],
+    "types": [
+      "node",
+      "webdriverio/globals",
+      "@wdio/cucumber-framework",
+      "@wdio/appium-service"
+    ]
   },
   "include": [
     "src/**/*.ts",
