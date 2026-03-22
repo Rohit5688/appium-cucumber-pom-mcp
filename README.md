@@ -69,29 +69,29 @@ Add the local server to your MCP Client settings:
 ## 🛠️ MCP Tool Reference (26 Exposes)
 
 ### Project Setup & Maintenance
-* \`setup_project\`: Bootstraps a scalable framework with hooks and standard structure.
-* \`upgrade_project\`: Updates an existing repository to latest core dependencies and migrates configurations.
-* \`manage_config\`: Reads/updates `mcp-config.json` capability builds and device routing.
-* \`check_environment\`: Identifies missing Android SDKs, unbooted iOS simulators, or unreachable Appium servers.
+* `setup_project`: Bootstraps a scalable framework with hooks and standard structure.
+* `upgrade_project`: Updates an existing repository to latest core dependencies and migrates configurations.
+* `manage_config`: Reads/updates `mcp-config.json` capability builds and device routing.
+* `check_environment`: Identifies missing Android SDKs, unbooted iOS simulators, or unreachable Appium servers.
 
 ### Codebase Intelligence & Generation
-* \`analyze_codebase\`: AST-based extraction of existing Steps, Pages, and Helpers.
-* \`generate_cucumber_pom\`: Heart of the machine. Generates the BDD suite instructions mapping English to POM code.
-* \`validate_and_write\`: Syntactically validates TypeScript and Gherkin before committing writes safely to disk (with backup snapshots).
-* \`migrate_test\`: Translates Native frameworks (Espresso/XCUITest) into Appium + Cucumber.
+* `analyze_codebase`: AST-based extraction of existing Steps, Pages, and Helpers.
+* `generate_cucumber_pom`: Heart of the machine. Generates the BDD suite instructions mapping English to POM code.
+* `validate_and_write`: Syntactically validates TypeScript and Gherkin before committing writes safely to disk (with backup snapshots).
+* `migrate_test`: Translates Native frameworks (Espresso/XCUITest) into Appium + Cucumber.
 
 ### Execution & Healing
-* \`start_appium_session\` / \`end_appium_session\`: Triggers an active app session mapped to the LLM. 
-* \`inspect_ui_hierarchy\`: Dumps the raw UI tree to find accurate Native/Flutter/React-Native node bounds.
-* \`verify_selector\`: Real-time query against the active emulator verifying if the AI's proposed locator is truly visible.
-* \`run_cucumber_test\`: Runs and formats Mocha/Cucumber output strings.
-* \`self_heal_test\`: Feeds test failures and live screen context into the LLM to patch broken step definitions and locators.
+* `start_appium_session` / `end_appium_session`: Triggers an active app session mapped to the LLM. 
+* `inspect_ui_hierarchy`: Dumps the raw UI tree to find accurate Native/Flutter/React-Native node bounds.
+* `verify_selector`: Real-time query against the active emulator verifying if the AI's proposed locator is truly visible.
+* `run_cucumber_test`: Runs and formats Mocha/Cucumber output strings.
+* `self_heal_test`: Feeds test failures and live screen context into the LLM to patch broken step definitions and locators.
 
 ### Advanced Quality Assurance
-* \`analyze_coverage\`: Reports on missing core functional flows and negative tests.
-* \`generate_test_data_factory\`: Bootstraps typed `faker.js` entity mockers.
-* \`export_bug_report\`: Auto-classifies failures into Jira/Linear ready Markdown tickets with environment metadata.
-* \`suggest_refactorings\`: Flags unused POM methods and Duplicate Step Definitions.
+* `analyze_coverage`: Reports on missing core functional flows and negative tests.
+* `generate_test_data_factory`: Bootstraps typed `faker.js` entity mockers.
+* `export_bug_report`: Auto-classifies failures into Jira/Linear ready Markdown tickets with environment metadata.
+* `suggest_refactorings`: Flags unused POM methods and Duplicate Step Definitions.
 
 ---
 
