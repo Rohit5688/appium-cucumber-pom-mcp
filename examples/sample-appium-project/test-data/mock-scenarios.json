@@ -1,0 +1,33 @@
+{
+  "login-success": {
+    "method": "post",
+    "path": "/api/auth/login",
+    "statusCode": 200,
+    "body": {
+      "token": "mock-jwt-token-123",
+      "user": {
+        "id": 1,
+        "name": "Test User",
+        "role": "admin"
+      }
+    }
+  },
+  "login-failure": {
+    "method": "post",
+    "path": "/api/auth/login",
+    "statusCode": 401,
+    "body": {
+      "error": "Invalid credentials"
+    }
+  },
+  "user-profile": {
+    "method": "get",
+    "path": "/api/user/profile",
+    "statusCode": 200,
+    "body": {
+      "id": 1,
+      "name": "Test User",
+      "email": "test@example.com"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "./.appium-mcp/configSchema.json",
+  "version": "1.1.0",
+  "project": {
+    "language": "typescript",
+    "testFramework": "cucumber",
+    "client": "webdriverio-appium"
+  },
+  "mobile": {
+    "defaultPlatform": "android",
+    "capabilitiesProfiles": {
+      "pixel8": {
+        "platformName": "Android",
+        "appium:automationName": "UiAutomator2",
+        "appium:deviceName": "Pixel_8"
+      },
+      "iphone14": {
+        "platformName": "iOS",
+        "appium:automationName": "XCUITest",
+        "appium:deviceName": "iPhone 14"
+      }
+    }
+  },
+  "paths": {
+    "featuresRoot": "features",
+    "pagesRoot": "pages",
+    "stepsRoot": "step-definitions",
+    "utilsRoot": "utils"
+  },
+  "reuse": {
+    "locatorOrder": [
+      "accessibility id",
+      "resource-id",
+      "xpath",
+      "class chain",
+      "predicate",
+      "text"
+    ]
+  }
+}
