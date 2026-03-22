@@ -1,4 +1,8 @@
-# Appium Cucumber POM MCP Server
+<p align="center">
+  <img src="docs/logo.png" width="400" alt="AppForge Logo">
+</p>
+
+# 🏗️ AppForge | Mobile Automation MCP Server
 
 A production-grade Model Context Protocol (MCP) server that empowers AI Assistants (like Claude, Gemini, or Antigravity) to act as expert **Mobile Automation Engineers**. 
 
@@ -47,7 +51,7 @@ Add the local server to your MCP Client settings:
 \`\`\`json
 {
   "mcpServers": {
-    "appium-mcp": {
+    "appforge": {
       "command": "node",
       "args": ["/path/to/appium-cucumber-pom-mcp/dist/index.js", "--transport", "stdio"]
     }
