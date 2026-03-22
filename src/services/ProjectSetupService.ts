@@ -20,7 +20,7 @@ export class ProjectSetupService {
     }
 
     // 2. package.json
-    this.scaffoldPackageJson(projectRoot, appName);
+    this.scaffoldPackageJson(projectRoot, appName, platform);
 
     // 3. tsconfig.json
     this.scaffoldTsConfig(projectRoot);
@@ -50,7 +50,13 @@ export class ProjectSetupService {
     this.scaffoldMcpConfig(projectRoot, platform);
 
     // 12. wdio.conf.ts — WebdriverIO + Appium connection config
-    this.scaffoldWdioConfig(projectRoot, platform);
+    if (platform === 'both') {
+      this.scaffoldWdioSharedConfig(projectRoot);
+      this.scaffoldWdioAndroidConfig(projectRoot);
+      this.scaffoldWdioIosConfig(projectRoot);
+    } else {
+      this.scaffoldWdioConfig(projectRoot, platform);
+    }
 
     // 13. Mock scenarios sample JSON
     this.scaffoldMockScenarios(projectRoot);
@@ -62,7 +68,13 @@ export class ProjectSetupService {
       '  📦 package.json',
       '  ⚙️  tsconfig.json',
       '  🥒 cucumber.js',
-      '  🔧 wdio.conf.ts',
+      ...(platform === 'both' ? [
+        '  🔧 wdio.shared.conf.ts',
+        '  🔧 wdio.android.conf.ts',
+        '  🔧 wdio.ios.conf.ts'
+      ] : [
+        '  🔧 wdio.conf.ts'
+      ]),
       '  📄 mcp-config.json',
       '  🏗️  pages/BasePage.ts',
       '  🤸 utils/MobileGestures.ts',
@@ -84,20 +96,31 @@ export class ProjectSetupService {
 
   // ─── Scaffolders ───────────────────────────────────────────────
 
-  private scaffoldPackageJson(projectRoot: string, appName: string) {
+  private scaffoldPackageJson(projectRoot: string, appName: string, platform: string) {
+    const scripts: Record<string, string> = {};
+    if (platform === 'both') {
+      scripts["test"] = "npx wdio run wdio.shared.conf.ts";
+      scripts["test:android"] = "npx wdio run wdio.android.conf.ts";
+      scripts["test:ios"] = "npx wdio run wdio.ios.conf.ts";
+    } else {
+      scripts["test"] = "npx wdio run wdio.conf.ts";
+      if (platform === 'android') scripts["test:android"] = "npx wdio run wdio.conf.ts";
+      if (platform === 'ios') scripts["test:ios"] = "npx wdio run wdio.conf.ts";
+    }
+    scripts["test:smoke"] = scripts["test"] + " --cucumberOpts.tagExpression='@smoke'";
+
     const pkg = {
       name: appName.toLowerCase().replace(/\s+/g, '-'),
       version: '1.0.0',
       type: 'module',
-      scripts: {
-        "test": "cucumber-js",
-        "test:android": "cucumber-js --tags '@android'",
-        "test:ios": "cucumber-js --tags '@ios'",
-        "test:smoke": "cucumber-js --tags '@smoke'"
-      },
+      scripts,
       dependencies: {
         "@cucumber/cucumber": "^10.0.0",
         "webdriverio": "^8.0.0",
+        "@wdio/cli": "^8.2.0",
+        "@wdio/local-runner": "^8.2.0",
+        "@wdio/cucumber-framework": "^8.2.0",
+        "@wdio/appium-service": "^8.2.0",
         "ts-node": "^10.9.0",
         "typescript": "^5.0.0",
         "express": "^4.18.0"
@@ -684,6 +707,85 @@ export const config: Options.Testrunner = {
 };
 `;
     this.writeIfNotExists(path.join(projectRoot, 'wdio.conf.ts'), content);
+  }
+
+  private scaffoldWdioSharedConfig(projectRoot: string) {
+    const content = `import type { Options } from '@wdio/types';
+
+/**
+ * Shared WebdriverIO Configuration
+ * Adjust common settings here. Platform specifics belong in wdio.android.conf.ts / wdio.ios.conf.ts
+ */
+export const config: Options.Testrunner = {
+  runner: 'local',
+  hostname: 'localhost',
+  port: 4723,
+  path: '/',
+
+  specs: ['./features/**/*.feature'],
+  maxInstances: 1,
+
+  framework: 'cucumber',
+  cucumberOpts: {
+    require: ['./step-definitions/**/*.ts'],
+    backtrace: false,
+    dryRun: false,
+    failFast: false,
+    snippets: true,
+    source: true,
+    strict: false,
+    timeout: 60000,
+  },
+
+  reporters: ['spec'],
+  services: ['appium'],
+  appium: {
+    args: ['--relaxed-security'],
+  },
+
+  logLevel: 'info',
+  waitforTimeout: 10000,
+  connectionRetryTimeout: 120000,
+  connectionRetryCount: 3,
+};
+`;
+    this.writeIfNotExists(path.join(projectRoot, 'wdio.shared.conf.ts'), content);
+  }
+
+  private scaffoldWdioAndroidConfig(projectRoot: string) {
+    const content = `import { config as sharedConfig } from './wdio.shared.conf.ts';
+
+export const config = {
+  ...sharedConfig,
+  capabilities: [{
+    platformName: 'Android',
+    'appium:automationName': 'UiAutomator2',
+    'appium:deviceName': 'Pixel_8',
+    // 'appium:app': '/path/to/your/app.apk',
+    'appium:newCommandTimeout': 240,
+    'appium:noReset': false,
+  }]
+};
+`;
+    this.writeIfNotExists(path.join(projectRoot, 'wdio.android.conf.ts'), content);
+  }
+
+  private scaffoldWdioIosConfig(projectRoot: string) {
+    const content = `import { config as sharedConfig } from './wdio.shared.conf.ts';
+
+export const config = {
+  ...sharedConfig,
+  capabilities: [{
+    platformName: 'iOS',
+    'appium:automationName': 'XCUITest',
+    'appium:deviceName': 'iPhone 14',
+    // 'appium:app': '/path/to/your/app.app',
+    'appium:newCommandTimeout': 240,
+    'appium:noReset': false,
+  }]
+};
+`;
+    this.writeIfNotExists(path.join(projectRoot, 'wdio.ios.conf.ts'), content);
   }
 
   private scaffoldMockScenarios(projectRoot: string) {

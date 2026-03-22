@@ -52,6 +52,18 @@ This is where you define your target devices. Use `manage_config` or edit manual
 
 ---
 
+## 🧱 Multi-Config Architecture (WebdriverIO)
+
+For dual-platform projects (testing both `Android` and `iOS`), the Appium MCP supports a **Multi-Config** setup. When initializing a project with `platform: "both"`, it scaffolds three separate WebdriverIO configurations:
+
+1. `wdio.shared.conf.ts` (Core Cucumber settings, reporting, and Appium connection limits)
+2. `wdio.android.conf.ts` (Imports shared config + Android UiAutomator2 capabilities)
+3. `wdio.ios.conf.ts` (Imports shared config + iOS XCUITest capabilities)
+
+When executing tests via `run_cucumber_test` (e.g., asking the AI to "Run Android tests"), the MCP Server will automatically route execution to `npx wdio run wdio.android.conf.ts`. If you are using a legacy monolithic `wdio.conf.ts`, the agent will still execute it but inject `platformName` capability overrides at runtime.
+
+---
+
 ## 🛠️ Customizing Locators
 
 Use the `reuse.locatorOrder` array to tell the AI what you prefer. If your app has excellent Accessibility support, prioritize `accessibility id`. If you are testing a legacy Android app with only IDs, put `resource-id` first.

@@ -13,10 +13,10 @@ If you're starting from scratch, the `setup_project` tool is your best friend.
 2.  **What Happens?**: 
     *   Creates `features/`, `pages/`, `step-definitions/`, and `utils/` folders.
     *   Installs `webdriverio`, `@cucumber/cucumber`, and `ts-morph`.
-    *   Scaffolds `wdio.conf.ts` and `tsconfig.json`.
+    *   Scaffolds `tsconfig.json` and WebdriverIO configs (`wdio.conf.ts`, or the new Multi-Config split: `wdio.shared.conf.ts`, `wdio.android.conf.ts`, etc.).
     *   Generates `BasePage.ts`, `MobileGestures.ts`, and `MockServer.ts`.
     *   Creates a starter `mcp-config.json` with Android/iOS profiles.
-3.  **Next Step**: Run `npx wdio run wdio.conf.ts` to see the example pass!
+3.  **Next Step**: Run `npx wdio run wdio.conf.ts` (or `npx wdio run wdio.android.conf.ts` for Multi-Config setups) to see the example pass!
 
 ### 🔄 Existing Project: Bring the Magic to Your Code
 Already have a WebdriverIO project? We'll adapt to *you*.

@@ -45,25 +45,35 @@ export class ExecutionService {
     }
   ): Promise<ExecutionResult> {
     try {
-      const parts: string[] = ['npx', 'cucumber-js'];
+      const fs = await import('fs');
+      let configName = 'wdio.conf.ts';
 
-      // Apply tag filtering
-      if (options?.tags) {
-        parts.push(`--tags '${options.tags}'`);
-      }
-
-      // Apply platform filter as a tag
       if (options?.platform) {
-        const platformTag = `@${options.platform}`;
-        if (options?.tags) {
-          parts.push(`and '${platformTag}'`);
-        } else {
-          parts.push(`--tags '${platformTag}'`);
+        const specificConfig = `wdio.${options.platform}.conf.ts`;
+        if (fs.existsSync(path.join(projectRoot, specificConfig))) {
+          configName = specificConfig;
         }
       }
 
-      // JSON output for structured results
-      parts.push('--format json:reports/cucumber-results.json');
+      const parts: string[] = ['npx', 'wdio', 'run', configName];
+
+      // Apply tag filtering via wdio cucumberOpts
+      let tagExpression = options?.tags || '';
+
+      // If we fall back to generic monolithic config but user wants a specific platform,
+      // we still need to filter via @android or @ios tags for the generic run to work correctly.
+      if (options?.platform && configName === 'wdio.conf.ts') {
+        const platformTag = `@${options.platform}`;
+        if (tagExpression) {
+          tagExpression = `(${tagExpression}) and ${platformTag}`;
+        } else {
+          tagExpression = platformTag;
+        }
+      }
+
+      if (tagExpression) {
+         parts.push(`--cucumberOpts.tagExpression="${tagExpression}"`);
+      }
 
       // Additional args
       if (options?.specificArgs) {
@@ -78,7 +88,14 @@ export class ExecutionService {
       });
 
       // Try to parse the JSON report for structured stats
-      const stats = await this.parseReport(path.join(projectRoot, 'reports', 'cucumber-results.json'));
+      // wdio requires @wdio/cucumberjs-json-reporter to output this file.
+      // If it doesn't exist, we gracefully fail and return 0s.
+      let stats;
+      try {
+        stats = await this.parseReport(path.join(projectRoot, 'reports', 'cucumber-results.json'));
+      } catch {
+        stats = { total: 0, passed: 0, failed: 0, skipped: 0 };
+      }
 
       return {
         success: true,
@@ -88,7 +105,12 @@ export class ExecutionService {
       };
     } catch (error: any) {
       // Cucumber exits non-zero on test failures
-      const stats = await this.parseReport(path.join(projectRoot, 'reports', 'cucumber-results.json'));
+      let stats;
+      try {
+        stats = await this.parseReport(path.join(projectRoot, 'reports', 'cucumber-results.json'));
+      } catch {
+        stats = { total: 0, passed: 0, failed: 0, skipped: 0 };
+      }
 
       // Auto-capture failure context from live session if available
       let failureContext: ExecutionResult['failureContext'];

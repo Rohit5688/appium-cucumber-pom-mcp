@@ -42,6 +42,13 @@ export class ProjectMaintenanceService {
                 fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
                 logs.push('✅ Migrated mcp-config.json to standard versioning format.');
             }
+            // Check for legacy wdio monolith vs multi-config
+            const wdioPath = path.join(projectRoot, 'wdio.conf.ts');
+            const wdioShared = path.join(projectRoot, 'wdio.shared.conf.ts');
+            if (fs.existsSync(wdioPath) && !fs.existsSync(wdioShared)) {
+                logs.push('💡 Tip: Your project is using a monolithic wdio.conf.ts. The Appium MCP now supports Multi-Config Architecture (wdio.shared.conf.ts + specific platform configs).');
+                logs.push('   > Run `setup_project` with `platform: "both"` to auto-generate the new split configuration files!');
+            }
         }
         const summary = logs.join('\n');
         return summary;

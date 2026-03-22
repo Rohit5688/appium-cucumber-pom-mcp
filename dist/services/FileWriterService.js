@@ -109,8 +109,10 @@ export class FileWriterService {
                 message: `Dry run complete. ${files.length} files validated successfully.${securityWarnings.length > 0 ? ` ${securityWarnings.length} security warning(s).` : ''}`
             }, null, 2);
         }
-        // Step 4: Backup existing files before overwrite
+        // Step 4: Backup existing files before overwrite (Atomic Prep)
         const backupDir = path.join(projectRoot, '.appium-mcp', 'backups', new Date().toISOString().replace(/[:.]/g, '-'));
+        const overwrittenFiles = [];
+        const newFiles = [];
         for (const file of files) {
             const destPath = path.join(projectRoot, file.path);
             if (fs.existsSync(destPath)) {
@@ -120,25 +122,54 @@ export class FileWriterService {
                     fs.mkdirSync(bDir, { recursive: true });
                 }
                 fs.copyFileSync(destPath, backupPath);
+                overwrittenFiles.push(file.path);
+            }
+            else {
+                newFiles.push(file.path);
             }
         }
-        // Step 5: Move from staging to actual project paths
+        // Step 5: Move from staging to actual project paths with Rollback Support
         const results = [];
-        for (const file of files) {
-            const destPath = path.join(projectRoot, file.path);
-            const dir = path.dirname(destPath);
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, { recursive: true });
+        try {
+            for (const file of files) {
+                const destPath = path.join(projectRoot, file.path);
+                const dir = path.dirname(destPath);
+                if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+                fs.writeFileSync(destPath, file.content, 'utf8');
+                results.push(file.path);
             }
-            fs.writeFileSync(destPath, file.content, 'utf8');
-            results.push(file.path);
+        }
+        catch (writeError) {
+            // Automatic Rollback
+            for (const newFile of newFiles) {
+                const destPath = path.join(projectRoot, newFile);
+                if (fs.existsSync(destPath)) {
+                    fs.unlinkSync(destPath);
+                }
+            }
+            for (const overwrittenFile of overwrittenFiles) {
+                const destPath = path.join(projectRoot, overwrittenFile);
+                const backupPath = path.join(backupDir, overwrittenFile);
+                if (fs.existsSync(backupPath)) {
+                    fs.copyFileSync(backupPath, destPath);
+                }
+            }
+            await this.cleanStaging(stagingDir);
+            return JSON.stringify({
+                success: false,
+                phase: 'write-to-disk',
+                error: writeError.message,
+                message: 'A critical write error occurred. The batch operation was aborted and all modified files were rolled back to their original state.'
+            }, null, 2);
         }
         // Clean up staging
         await this.cleanStaging(stagingDir);
         return JSON.stringify({
             success: true,
             filesWritten: results,
-            backedUpTo: fs.existsSync(backupDir) ? backupDir : undefined,
+            backedUpTo: overwrittenFiles.length > 0 && fs.existsSync(backupDir) ? backupDir : undefined,
             securityWarnings: securityWarnings.length > 0 ? securityWarnings : undefined,
             message: `Successfully validated and wrote ${results.length} files.`
         }, null, 2);
