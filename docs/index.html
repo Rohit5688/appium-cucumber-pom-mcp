@@ -122,27 +122,50 @@
 
         .feature-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .feature-card {
             background: var(--card-bg);
             padding: 2.5rem;
-            border-radius: 16px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+            text-align: left;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
         .feature-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-5px);
             border-color: var(--primary);
         }
 
-        .feature-card h3 {
+        .feature-icon {
+            font-size: 2.5rem;
+            line-height: 1;
+            flex-shrink: 0;
+            color: var(--primary);
+        }
+
+        .feature-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke-width: 2.5;
+            stroke: currentColor;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .feature-content h3 {
             font-size: 1.5rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             color: var(--primary);
         }
 
@@ -219,40 +242,67 @@
             <h2 class="section-title">Superior Mobile Performance</h2>
             <div class="feature-grid">
                 <div class="feature-card">
-                    <h3>📱 Multi-Platform Architecture</h3>
-                    <p>Scaffold unified projects for Android and iOS using the same Gherkin steps while maintaining separate, optimized Page Objects for each platform.</p>
+                    <div class="feature-icon">📱</div>
+                    <div class="feature-content">
+                        <h3>Cross-Platform POM Gen</h3>
+                        <p>Automatically generate Page Objects for both Android and iOS from a single source. We handle platform-specific locators (ID, XPath, Accessibility ID) with ease.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <h3>🏗️ Cross-Platform POM</h3>
-                    <p>Automatically generate platform-specific logic (<code>.android.ts</code> vs <code>.ios.ts</code>) that shares a common interface to keep your test code DRY.</p>
+                    <div class="feature-icon">👆</div>
+                    <div class="feature-content">
+                        <h3>Native Mobile Gestures</h3>
+                        <p>Simplified API for complex gestures: Swipe, Scroll, Long Press, and Multi-touch. We wrap Appium's W3C Actions into human-readable steps.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <h3>🤸 Advanced Mobile Gestures</h3>
-                    <p>Native support for mobile interactions: Swipe, Scroll, Pinch, Long-press, and biometric simulation (Face/Touch ID) out of the box.</p>
+                    <div class="feature-icon">🛰️</div>
+                    <div class="feature-content">
+                        <h3>Integrated Mock Server</h3>
+                        <p>Intercept mobile network traffic and mock API responses directly. Test offline scenarios and edge cases without needing a live backend.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <h3>🛡️ AI Self-Healing XML</h3>
-                    <p>Identify brittle mobile locators and heal them in real-time by re-inspecting the mobile accessibility tree. Our "brain" learns and avoids broken locators in the future.</p>
+                    <div class="feature-icon">🚀</div>
+                    <div class="feature-content">
+                        <h3>BDD Migrator</h3>
+                        <p>Convert existing Appium/UiAutomator scripts into clean, Gherkin-based BDD scenarios. Perfect for modernization of legacy test suites.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <h3>⚙️ Environmental Diagnostic</h3>
-                    <p>Integrated tool to verify your environment. Check Appium, Java, and Android SDK health in one click to avoid complex setup headaches.</p>
+                    <div class="feature-icon">🖼️</div>
+                    <div class="feature-content">
+                        <h3>Hybrid App Support</h3>
+                        <p>Seamlessly switch contexts between Native and Webview. Handle deep links, browser-based authentication, and in-app browsers automatically.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <h3>🧪 Integrated Mock Server</h3>
-                    <p>Stub API responses and control application state during UI tests. Perfect for isolated testing of edge cases and preventing flakiness.</p>
+                    <div class="feature-icon">🌍</div>
+                    <div class="feature-content">
+                        <h3>Real Device Farm Sync</h3>
+                        <p>Direct integration with BrowserStack, Sauce Labs, and LambdaTest. Automatically manage capabilities and tunnels for multi-device parallel execution.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <h3>🚚 Legacy Test Migration</h3>
-                    <p>Translate legacy Espresso, XCUITest, or Detox tests into modern Appium-Cucumber code in seconds with our automated migration tool.</p>
+                    <div class="feature-icon">🛡️</div>
+                    <div class="feature-content">
+                        <h3>AI Self-Healing Locators</h3>
+                        <p>Identify brittle mobile locators and heal them in real-time by re-inspecting the mobile accessibility tree. Our "brain" learns and avoids broken locators in the future.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <h3>📊 Coverage & A11y Analysis</h3>
-                    <p>Deeply analyze your mobile test suite to find regression gaps and accessibility issues. Export detailed bug reports and quality metrics instantly.</p>
+                    <div class="feature-icon">⚙️</div>
+                    <div class="feature-content">
+                        <h3>Environmental Diagnostic</h3>
+                        <p>Integrated tool to verify your environment. Check Appium, Java, and Android SDK health in one click to avoid complex setup headaches.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
-                    <h3>🚀 Automated CI Workflows</h3>
-                    <p>Generate GitHub Action workflows for your mobile tests. Run them on PRs with pre-configured emulators and environment checks.</p>
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-content">
+                        <h3>Coverage & A11y Analysis</h3>
+                        <p>Deeply analyze your mobile test suite to find regression gaps and accessibility issues. Export detailed bug reports and quality metrics instantly.</p>
+                    </div>
                 </div>
             </div>
 
