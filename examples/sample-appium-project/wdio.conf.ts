@@ -11,7 +11,7 @@ export const config: Options.Testrunner = {
   port: 4723,
   path: '/',
 
-  specs: ['./features/**/*.feature'],
+  specs: ['./src/features/**/*.feature'],
 
   maxInstances: 1,
 
@@ -26,7 +26,7 @@ export const config: Options.Testrunner = {
 
   framework: 'cucumber',
   cucumberOpts: {
-    require: ['./step-definitions/**/*.ts'],
+    require: ['./src/step-definitions/**/*.ts'],
     backtrace: false,
     dryRun: false,
     failFast: false,
