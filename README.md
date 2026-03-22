@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.png" width="400" alt="AppForge Logo">
+  <img src="docs/readme-logo.png" width="400" alt="AppForge Logo">
 </p>
 
 # 🏗️ AppForge | Mobile Automation MCP Server
