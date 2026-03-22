@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appium Cucumber POM MCP | Mobile Automation Mastered</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #fbbf24;
+            --primary-glow: rgba(251, 191, 36, 0.4);
+            --bg: #0c0a09;
+            --card-bg: rgba(28, 25, 23, 0.7);
+            --text: #fafaf9;
+            --text-dim: #a8a29e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Hero Section */
+        header {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: radial-gradient(circle at 50% 50%, #1c1917 0%, #0c0a09 100%);
+            position: relative;
+        }
+
+        .hero-img {
+            max-width: 600px;
+            border-radius: 20px;
+            box-shadow: 0 0 50px var(--primary-glow);
+            margin-bottom: 3rem;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-dim);
+            max-width: 700px;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            background-color: var(--primary);
+            color: #000;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--primary-glow);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 8rem 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 4rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .code-block {
+            background: #000;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 4rem;
+            font-family: 'Courier New', Courier, monospace;
+            color: #10b981;
+            border: 1px solid #292524;
+            text-align: left;
+        }
+
+        footer {
+            padding: 4rem 0;
+            text-align: center;
+            color: var(--text-dim);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <img src="hero_visual_appium.png" alt="Appium MCP Hero" class="hero-img">
+            <h1>Appium Cucumber MCP</h1>
+            <p class="subtitle">Intelligent Mobile Automation for Android & iOS. AI-powered Page Object generation with native mobile gestures and hybrid app support.</p>
+            <a href="https://github.com/Rohit5688/appium-cucumber-pom-mcp" class="btn">View Repository</a>
+        </div>
+    </header>
+
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">Mobile First Capabilities</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>📱 Multi-Platform</h3>
+                    <p>Scaffold unified projects for Android and iOS using the same Cucumber steps and shared Page Objects.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🤸 Native Gestures</h3>
+                    <p>Built-in support for swipes, pinches, long-presses, and biometric simulation (Face/Touch ID).</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔍 Cross-Context</h3>
+                    <p>Seamlessly switch between Native and WebView contexts for robust Hybrid App testing.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🛡️ Audit & Heals</h3>
+                    <p>Identifies poor locators and automatically heals tests by re-inspecting the mobile accessibility tree.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🧪 Mock Integration</h3>
+                    <p>Integrated Mock Server for stubbing API responses and controlling app state during UI tests.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚙️ Environmental Check</h3>
+                    <p>Diagnostic tools to verify your local Appium, Java, and Android SDK environment in one click.</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <p># Bootstrap Mobile Project 📱</p>
+                <p>npx mcp-appium-cucumber setup ./mobile-poc --platform android</p>
+                <br>
+                <p># Generate Mobile POM 🤖</p>
+                <p>generate_cucumber_pom --feature login.feature --platform android</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Appium Cucumber MCP. The future of mobile quality assurance.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
