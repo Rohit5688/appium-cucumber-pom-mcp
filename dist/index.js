@@ -23,6 +23,8 @@ import { CoverageAnalysisService } from "./services/CoverageAnalysisService.js";
 import { MigrationService } from "./services/MigrationService.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
+import * as fs from "fs";
+import { executeSandbox } from "./services/SandboxEngine.js";
 /**
  * Appium Cucumber POM MCP Server
  * Orchestrates Mobile Automation (Android/iOS) using WebdriverIO + Cucumber
@@ -420,6 +422,18 @@ class AppiumMcpServer {
                         },
                         required: ["selector"]
                     }
+                },
+                {
+                    name: "execute_sandbox_code",
+                    description: "TURBO MODE: Execute a JavaScript snippet inside a secure V8 sandbox on the MCP server. The script has access to `forge.api.*` methods that call internal server services (like codebase analysis, test execution) and can process data locally, returning ONLY the final result. This drastically reduces token usage. Available APIs: forge.api.analyzeCodebase(projectRoot), forge.api.runTests(projectRoot), forge.api.readFile(filePath), forge.api.getConfig(projectRoot), forge.api.summarizeSuite(projectRoot). Use console.log() for debugging (captured and returned).",
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            script: { type: "string", description: "The JavaScript code to execute. Use `return` to send a value back. Use `await forge.api.*()` to call server services." },
+                            timeoutMs: { type: "number", description: "Optional execution timeout in milliseconds. Default: 10000 (10s)." }
+                        },
+                        required: ["script"],
+                    },
                 }
             ],
         }));
@@ -560,6 +574,47 @@ class AppiumMcpServer {
                             verification.note = "Success automatically learned to rule base.";
                         }
                         return this.textResult(JSON.stringify(verification, null, 2));
+                    }
+                    case "execute_sandbox_code": {
+                        const apiRegistry = {
+                            analyzeCodebase: async (projectRoot) => {
+                                const config = this.configService.read(projectRoot);
+                                const paths = this.configService.getPaths(config);
+                                return await this.analyzerService.analyze(projectRoot, paths);
+                            },
+                            runTests: async (projectRoot) => {
+                                return await this.executionService.runTest(projectRoot, {});
+                            },
+                            readFile: async (filePath) => {
+                                if (!fs.existsSync(filePath))
+                                    return null;
+                                return fs.readFileSync(filePath, 'utf8');
+                            },
+                            getConfig: async (projectRoot) => {
+                                return this.configService.read(projectRoot);
+                            },
+                            summarizeSuite: async (projectRoot) => {
+                                return await this.summarySuiteService.summarize(projectRoot);
+                            },
+                        };
+                        const sandboxResult = await executeSandbox(args.script, apiRegistry, { timeoutMs: args.timeoutMs });
+                        if (sandboxResult.success) {
+                            let responseText = '';
+                            if (sandboxResult.logs.length > 0) {
+                                responseText += `[Sandbox Logs]\n${sandboxResult.logs.join('\n')}\n\n`;
+                            }
+                            responseText += typeof sandboxResult.result === 'string'
+                                ? sandboxResult.result
+                                : JSON.stringify(sandboxResult.result, null, 2);
+                            responseText += `\n\n⏱️ Executed in ${sandboxResult.durationMs}ms`;
+                            return this.textResult(responseText);
+                        }
+                        else {
+                            return {
+                                content: [{ type: "text", text: `❌ SANDBOX ERROR: ${sandboxResult.error}\n\nLogs:\n${sandboxResult.logs.join('\n')}` }],
+                                isError: true,
+                            };
+                        }
                     }
                     default:
                         throw new Error(`Unknown tool: ${request.params.name}`);
