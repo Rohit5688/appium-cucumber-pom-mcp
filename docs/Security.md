@@ -40,3 +40,18 @@ Sensitive configuration files like `mcp-config.json` and `.env` are restricted. 
 *   **Use `.env`**: Always store your Appium URL and Cloud credentials in the `.env` file via `set_credentials`.
 *   **Check Audit Reports**: If the AI says "I had to regenerate the code due to security concerns," trust the tool—it likely caught a hardcoded password!
 *   **Restrict Permissions**: Run the MCP server with the minimum necessary filesystem permissions for your project directory.
+
+### 6. V8 Sandbox Isolation (Code Mode)
+The `execute_sandbox_code` tool runs user-provided JavaScript inside a hardened V8 context using Node's `vm` module:
+
+| Protection | Mechanism |
+|---|---|
+| **No `eval()` / `new Function()`** | Blocked at both static regex analysis AND `vm.createContext({ codeGeneration: { strings: false } })` |
+| **No `require()` / `import()`** | Regex pre-scan + undefined in sandbox context |
+| **No `process` / `globalThis`** | Regex pre-scan + excluded from context allowlist |
+| **No `fetch` / network access** | Not injected into sandbox context |
+| **Timeout enforcement** | Default 10s via `vm.Script.runInContext({ timeout })` |
+| **Context isolation** | Fresh `vm.createContext()` per execution — no state leakage |
+| **Console capture** | `console.log/warn/error` captured to array, not printed |
+
+Only safe builtins are exposed: `JSON`, `Math`, `Date`, `Array`, `Object`, `String`, `Number`, `Boolean`, `Map`, `Set`, `RegExp`, `Promise`. Server services are accessed exclusively through the controlled `forge.api.*` bridge.

@@ -66,7 +66,7 @@ Add the local server to your MCP Client settings:
 
 ---
 
-## 🛠️ MCP Tool Reference (26 Exposes)
+## 🛠️ MCP Tool Reference (27 Exposes)
 
 ### Project Setup & Maintenance
 * `setup_project`: Bootstraps a scalable framework with hooks and standard structure.
@@ -93,6 +93,9 @@ Add the local server to your MCP Client settings:
 * `export_bug_report`: Auto-classifies failures into Jira/Linear ready Markdown tickets with environment metadata.
 * `suggest_refactorings`: Flags unused POM methods and Duplicate Step Definitions.
 
+### Token Optimization
+* `execute_sandbox_code`: 🆕 **TURBO MODE** — Execute JavaScript inside a secure V8 sandbox on the server for up to **98% token savings**. See [Token Optimizer docs](docs/TokenOptimizer.md).
+
 ---
 
 ## 📝 Example AI Prompts
@@ -108,5 +111,12 @@ Add the local server to your MCP Client settings:
 ## 🔒 Safety First
 * **Non-Destructive**: Revisions are safely backed up to `.appium-mcp/backups/`.
 * **Idempotent Analysis**: AST parsing guarantees non-breaking detection of existing test artifacts. 
+
+## 📖 Additional Documentation
+
+* [**E2E Testing Guide**](docs/E2ETestingGuide.md) — Step-by-step guide to test every feature as an end user.
+* [**Token Optimizer**](docs/TokenOptimizer.md) — Code Mode Execution for up to 98% token savings.
+* [**User Guide**](docs/UserGuide.md) — Detailed usage instructions and prompts.
+* [**Security**](docs/Security.md) — Security architecture and threat model.
 
 *(Built for enterprise scale AI workflows by abstracting the friction of mobile configuration and brittle selectors.)*
