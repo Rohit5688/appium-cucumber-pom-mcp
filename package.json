@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "build:macos": "pkg . --targets node18-macos-arm64,node18-macos-x64 --out-path binaries"
+    "build:macos": "pkg . --targets node18-macos-arm64,node18-macos-x64 --out-path binaries",
+    "build:win": "pkg . --targets node18-win-x64 --out-path binaries"
   },
   "pkg": {
     "scripts": [
