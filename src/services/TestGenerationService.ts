@@ -10,7 +10,7 @@ export interface GenerationOutput {
 export class TestGenerationService {
   /**
    * Generates a structured system prompt for the LLM.
-   * The prompt instructs the LLM to return a JSON matching GenerationOutput schema.
+   * Adapts to the project's detected architecture pattern (POM vs YAML vs Facade).
    */
   public generateAppiumPrompt(
     projectRoot: string,
@@ -45,6 +45,15 @@ export class TestGenerationService {
       ? analysis.existingUtils.map(u => `  ${u.path}: [${u.publicMethods.join(', ')}]`).join('\n')
       : '  (none found)';
 
+    const conflictsWarning = analysis.conflicts.length > 0
+      ? `\n## ⚠️ STEP CONFLICTS DETECTED\nThe following step patterns are duplicated across files. DO NOT create any of these:\n${analysis.conflicts.map(c => `- \`${c.pattern}\` (in: ${c.files.join(', ')})`).join('\n')}\n`
+      : '';
+
+    // Decide output file type based on architecture
+    const locatorFileEntry = (analysis.architecturePattern === 'yaml-locators' || analysis.architecturePattern === 'facade')
+      ? '{ "path": "locators/example.yaml", "content": "..." }'
+      : '{ "path": "pages/ExamplePage.ts", "content": "..." }';
+
     return `
 You are an expert Mobile Automation Engineer (Appium + WebdriverIO + Cucumber BDD).
 Generate a COMPLETE test suite from this plain English request:
@@ -54,13 +63,15 @@ ${testName ? `Test Name: "${testName}"` : ''}
 
 ## ENVIRONMENT
 - Default Platform: ${platform}
+- Detected Architecture: **${analysis.architecturePattern}**
 - Locator Priority: ${locatorOrder.join(' → ')}
 - Features Dir: ${paths.featuresRoot}/
 - Steps Dir: ${paths.stepsRoot}/
 - Pages Dir: ${paths.pagesRoot}/
 - Utils Dir: ${paths.utilsRoot}/
+${analysis.yamlLocatorFiles.length > 0 ? `- YAML Locator Files: ${analysis.yamlLocatorFiles.join(', ')}` : ''}
 
-${screenXml ? `## 📱 LIVE UI HIERARCHY (XML)\nUse this to extract EXACT locators instead of guessing.\n\`\`\`xml\n${screenXml}\n\`\`\`\n` : ''}
+${screenXml ? `## 📱 LIVE UI HIERARCHY (XML)\nUse this to extract EXACT locators instead of guessing.\n\\\`\\\`\\\`xml\n${screenXml}\n\\\`\\\`\\\`\n` : ''}
 ${screenshotBase64 ? `## 🖼️ SCREENSHOT\nA Base64 screenshot is attached. Use it to visually confirm elements before creating locators.\n` : ''}
 
 ## REQUIRED SCENARIO COVERAGE
@@ -69,7 +80,7 @@ ${screenshotBase64 ? `## 🖼️ SCREENSHOT\nA Base64 screenshot is attached. Us
 3. **Accessibility**: Include steps to verify significant elements have TalkBack/VoiceOver labels.
 
 ## EXISTING CODE (REUSE THESE — DO NOT DUPLICATE)
-
+${conflictsWarning}
 ### Existing Step Definitions:
 ${existingStepsSummary}
 
@@ -79,40 +90,8 @@ ${existingPagesSummary}
 ### Existing Utility Helpers:
 ${existingUtilsSummary}
 
-## STRICT RULES
+${this.getArchitectureRules(analysis, platform)}
 
-1. **BDD Triad**: Generate a Gherkin \`.feature\` file, a \`.steps.ts\` file, and a \`.page.ts\` file.
-2. **Strict POM**: ALL locators and driver commands belong ONLY inside Page Object methods. Step definitions MUST call page methods only.
-3. **Page Classes extend BasePage**: Import and extend \`BasePage\` from \`../pages/BasePage\`.
-4. **Locators**: Use accessibility-id (\`~id\`) as the PRIMARY strategy. Fall back to \`resource-id\` or \`xpath\` only when necessary.
-5. **Reuse**: If an existing step or page method matches, DO NOT create a new one. Reference the existing one and explain in \`reusePlan\`.
-6. **Mobile Gestures**: Import \`MobileGestures\` from \`../utils/MobileGestures\` for swipe, longPress, scrollToText, handleAlert.
-7. **API Mocking**: If the test requires specific backend state, use \`MockServer\` from \`../utils/MockServer\`.
-8. **Tags**: Add appropriate tags (\`@smoke\`, \`@android\`, \`@ios\`, \`@regression\`).
-9. **Data-Driven**: If the scenario involves multiple users/values, use a Scenario Outline with an Examples table.
-10. **WebView Screens**: If the test involves a WebView (embedded browser, payment form, settings page), use \`this.switchToWebView()\` before interacting with web elements and \`this.switchToNativeContext()\` to return to native.
-11. **App Lifecycle**: Use \`this.openDeepLink(url)\` for direct navigation to screens. Use \`this.handlePermissionDialog(accept)\` for system permission popups.
-${platform === 'both' ? `
-## CROSS-PLATFORM RULES (platform: both)
-
-When platform is "both", generate SEPARATE Page Objects per platform:
-- \`pages/LoginPage.android.ts\` — Uses Android locators (\`resource-id\`, \`content-desc\`)
-- \`pages/LoginPage.ios.ts\` — Uses iOS locators (\`accessibility-id\`, \`-ios predicate\`)
-- \`pages/LoginPage.ts\` — Platform router that imports the correct file based on \`driver.capabilities.platformName\`
-
-Example platform router:
-\\\`\\\`\\\`typescript
-import { LoginPageAndroid } from './LoginPage.android';
-import { LoginPageIOS } from './LoginPage.ios';
-import { browser } from '@wdio/globals';
-
-export function getLoginPage() {
-  const platform = (browser.capabilities as any).platformName;
-  return platform === 'iOS' ? new LoginPageIOS() : new LoginPageAndroid();
-}
-\\\`\\\`\\\`
-The .feature file and .steps.ts file remain shared — only Page Objects split.
-` : ''}
 ${learningPrompt ?? ''}
 
 ## OUTPUT FORMAT (JSON ONLY)
@@ -124,15 +103,93 @@ Return ONLY a valid JSON object matching this schema:
   "filesToCreate": [
     { "path": "features/example.feature", "content": "..." },
     { "path": "step-definitions/example.steps.ts", "content": "..." },
-    { "path": "pages/ExamplePage.ts", "content": "..." }
+    ${locatorFileEntry}
   ],
   "filesToUpdate": [
-    { "path": "pages/ExistingPage.ts", "content": "...full updated content...", "reason": "Added newMethod()" }
+    { "path": "...", "content": "...full updated content...", "reason": "Added newMethod()" }
   ]
 }
 \\\`\\\`\\\`
 
 DO NOT include any text outside the JSON block. DO NOT use markdown code fences outside the JSON.
+`;
+  }
+
+  /**
+   * Returns architecture-specific rules for the generation prompt.
+   * Adapts to the project's existing locator strategy.
+   */
+  private getArchitectureRules(analysis: CodebaseAnalysisResult, platform: string): string {
+    const arch = analysis.architecturePattern;
+
+    if (arch === 'yaml-locators' || arch === 'facade') {
+      const yamlFiles = analysis.yamlLocatorFiles?.join(', ') || '(none yet — create new ones)';
+      return `
+## STRICT RULES — YAML LOCATOR ARCHITECTURE (Detected: ${arch})
+
+This project uses **YAML-based locator files** with a resolver function. Follow this pattern EXACTLY:
+
+1. **Locators in YAML**: Store ALL locators in \`.yaml\` files under the \`locators/\` directory. Format:
+\\\`\\\`\\\`yaml
+# locators/login.yaml
+login_button:
+  ios: ~loginButton
+  android: ~login_btn
+
+username_field:
+  ios: ~usernameInput
+  android: //android.widget.EditText[@resource-id="com.app:id/username"]
+\\\`\\\`\\\`
+
+2. **resolveLocator()**: In step definitions and utils, use \`resolveLocator('login_button')\` to get the platform-specific selector at runtime. NEVER hardcode selectors inline in .ts files.
+3. **No POM Classes with inline selectors**: Do NOT create Page Object classes with inline \`$()\` selectors. Use utility helpers + resolveLocator() instead.
+4. **Existing YAML files**: ${yamlFiles}
+5. **BDD Triad**: Generate a \`.feature\` file, a \`.steps.ts\` file, and a \`.yaml\` locator file.
+6. **Tags**: Add appropriate tags (\`@smoke\`, \`@android\`, \`@ios\`, \`@regression\`).
+7. **Data-Driven**: If the scenario involves multiple users/values, use Scenario Outline with Examples.
+8. **Reuse**: If an existing step or util method matches, DO NOT create a new one.
+9. **Cross-Platform**: The YAML file handles platform differences. Step definitions remain shared.
+`;
+    }
+
+    if (arch === 'hybrid') {
+      return `
+## STRICT RULES — HYBRID ARCHITECTURE (Detected: ${arch})
+
+This project uses BOTH Page Object classes AND YAML locator files. Follow the EXISTING pattern:
+
+1. **Check existing patterns first**: Look at how existing pages/steps handle locators.
+2. **If the screen already has a YAML file**, add new locators to it and use resolveLocator().
+3. **If the screen already has a Page Object**, extend it with new methods.
+4. **For new screens**, prefer the YAML locator pattern (more maintainable for cross-platform).
+5. **Tags**: Add appropriate tags (\`@smoke\`, \`@android\`, \`@ios\`, \`@regression\`).
+6. **Reuse**: If an existing step or method matches, DO NOT create a new one.
+`;
+    }
+
+    // Default: POM architecture
+    return `
+## STRICT RULES — PAGE OBJECT MODEL (Detected: ${arch})
+
+1. **BDD Triad**: Generate a Gherkin \`.feature\` file, a \`.steps.ts\` file, and a \`.page.ts\` file.
+2. **Strict POM**: ALL locators and driver commands belong ONLY inside Page Object methods. Step definitions MUST call page methods only.
+3. **Page Classes extend BasePage**: Import and extend \`BasePage\` from \`../pages/BasePage\`.
+4. **Locators**: Use accessibility-id (\`~id\`) as the PRIMARY strategy. Fall back to \`resource-id\` or \`xpath\` only when necessary.
+5. **Reuse**: If an existing step or page method matches, DO NOT create a new one.
+6. **Mobile Gestures**: Import \`MobileGestures\` from \`../utils/MobileGestures\` for swipe, longPress, scrollToText, handleAlert.
+7. **API Mocking**: If the test requires specific backend state, use \`MockServer\` from \`../utils/MockServer\`.
+8. **Tags**: Add appropriate tags (\`@smoke\`, \`@android\`, \`@ios\`, \`@regression\`).
+9. **Data-Driven**: If the scenario involves multiple users/values, use a Scenario Outline with Examples.
+10. **WebView Screens**: Use \`this.switchToWebView()\` before interacting with web elements and \`this.switchToNativeContext()\` to return to native.
+11. **App Lifecycle**: Use \`this.openDeepLink(url)\` for direct navigation. Use \`this.handlePermissionDialog(accept)\` for system popups.
+${platform === 'both' ? `
+## CROSS-PLATFORM RULES (platform: both)
+
+When platform is "both", generate SEPARATE Page Objects per platform:
+- \`pages/LoginPage.android.ts\` — Uses Android locators
+- \`pages/LoginPage.ios.ts\` — Uses iOS locators
+- \`pages/LoginPage.ts\` — Platform router
+` : ''}
 `;
   }
 }

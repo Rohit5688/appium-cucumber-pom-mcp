@@ -2,6 +2,8 @@ import path from 'path';
 import { Project, SyntaxKind, Node } from 'ts-morph';
 import fs from 'fs/promises';
 
+export type ArchitecturePattern = 'pom' | 'yaml-locators' | 'facade' | 'hybrid';
+
 export interface CodebaseAnalysisResult {
   existingFeatures: string[];
   existingStepDefinitions: {
@@ -22,6 +24,10 @@ export interface CodebaseAnalysisResult {
     pattern: string;
     files: string[];
   }[];
+  /** Detected project architecture — drives how code is generated */
+  architecturePattern: ArchitecturePattern;
+  /** YAML locator files found (e.g., locators/login.yaml) */
+  yamlLocatorFiles: string[];
 }
 
 export class CodebaseAnalyzerService {
@@ -46,6 +52,8 @@ export class CodebaseAnalyzerService {
       existingPageObjects: [],
       existingUtils: [],
       conflicts: [],
+      architecturePattern: 'pom', // default, will be refined below
+      yamlLocatorFiles: [],
     };
 
     // 1. Discover Feature files
@@ -130,7 +138,10 @@ export class CodebaseAnalyzerService {
       }
     }
 
-    // 5. Detect Step Rule Conflicts
+    // 5. Detect Architecture Pattern
+    result.architecturePattern = await this.detectArchitecture(projectRoot, result);
+
+    // 6. Detect Step Rule Conflicts
     const patternMap = new Map<string, string[]>();
     for (const stepDef of result.existingStepDefinitions) {
       for (const step of stepDef.steps) {
@@ -148,6 +159,95 @@ export class CodebaseAnalyzerService {
     }
 
     return result;
+  }
+
+  // ─── Architecture Detection ────────────────────────────
+
+  /**
+   * Detects the project's locator architecture by scanning for:
+   * - YAML locator files → 'yaml-locators'
+   * - Page Object classes with inline selectors → 'pom'
+   * - driverFacade/resolveLocator usage → 'facade'
+   * - Mix of patterns → 'hybrid'
+   */
+  private async detectArchitecture(
+    projectRoot: string,
+    analysis: CodebaseAnalysisResult
+  ): Promise<ArchitecturePattern> {
+    let hasYaml = false;
+    let hasPom = false;
+    let hasFacade = false;
+
+    // 1. Check for YAML locator files
+    const yamlDirs = [
+      path.join(projectRoot, 'locators'),
+      path.join(projectRoot, 'src', 'locators'),
+      path.join(projectRoot, 'test-data', 'locators')
+    ];
+
+    for (const dir of yamlDirs) {
+      const yamlFiles = await this.listFilesWithExtensions(dir, ['.yaml', '.yml']);
+      if (yamlFiles.length > 0) {
+        hasYaml = true;
+        analysis.yamlLocatorFiles = yamlFiles.map(f => path.relative(projectRoot, f));
+      }
+    }
+
+    // 2. Check for POM patterns (page classes with inline $() selectors)
+    if (analysis.existingPageObjects.length > 0) {
+      const hasInlineLocators = analysis.existingPageObjects.some(p => p.locators.length > 0);
+      if (hasInlineLocators) hasPom = true;
+    }
+
+    // 3. Check for Facade/resolveLocator patterns in step definitions and utils
+    const searchDirs = [
+      path.join(projectRoot, 'src'),
+      path.join(projectRoot, 'step-definitions'),
+      path.join(projectRoot, 'utils'),
+      path.join(projectRoot, 'pages')
+    ];
+
+    for (const dir of searchDirs) {
+      const tsFiles = await this.listFilesAbsolute(dir, '.ts');
+      for (const f of tsFiles) {
+        try {
+          const content = await fs.readFile(f, 'utf8');
+          if (
+            content.includes('resolveLocator') ||
+            content.includes('driverFacade') ||
+            content.includes('LocatorService') ||
+            content.includes('getLocator(')
+          ) {
+            hasFacade = true;
+            break;
+          }
+        } catch { /* skip unreadable files */ }
+      }
+      if (hasFacade) break;
+    }
+
+    // 4. Classify
+    if (hasYaml && hasFacade) return 'yaml-locators';
+    if (hasYaml && hasPom) return 'hybrid';
+    if (hasYaml) return 'yaml-locators';
+    if (hasFacade) return 'facade';
+    return 'pom';
+  }
+
+  private async listFilesWithExtensions(dir: string, extensions: string[]): Promise<string[]> {
+    let results: string[] = [];
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          results = results.concat(await this.listFilesWithExtensions(fullPath, extensions));
+        } else if (extensions.some(ext => entry.name.endsWith(ext))) {
+          results.push(fullPath);
+        }
+      }
+    } catch { /* directory doesn't exist */ }
+    return results;
   }
 
   // ─── AST Extractors ───────────────────────────────────
