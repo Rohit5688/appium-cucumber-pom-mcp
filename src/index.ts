@@ -474,16 +474,24 @@ class AppForgeServer {
             return this.textResult(`Updated ${args.platform} app path to: ${args.appPath}`);
 
           case "analyze_codebase": {
-            const config = this.configService.read(args.projectRoot);
-            const paths = this.configService.getPaths(config);
-            const result = await this.analyzerService.analyze(args.projectRoot, paths);
+            const result = await this.analyzerService.analyze(args.projectRoot);
+            try {
+              const config = this.configService.read(args.projectRoot);
+              config.paths = result.detectedPaths;
+              this.configService.write(args.projectRoot, config);
+            } catch (e) {
+              // Ignore if config doesn't exist yet
+            }
             return this.textResult(JSON.stringify(result, null, 2));
           }
 
           case "generate_cucumber_pom": {
             const config = this.configService.read(args.projectRoot);
-            const paths = this.configService.getPaths(config);
-            const analysis = await this.analyzerService.analyze(args.projectRoot, paths);
+            const analysis = await this.analyzerService.analyze(args.projectRoot);
+            
+            // Persist the empirically discovered structural paths back to memory
+            config.paths = analysis.detectedPaths;
+            this.configService.write(args.projectRoot, config);
             const learningPrompt = this.learningService.getKnowledgePromptInjection(args.projectRoot);
             const prompt = this.generationService.generateAppiumPrompt(
               args.projectRoot,
@@ -575,8 +583,7 @@ class AppForgeServer {
 
           case "suggest_refactorings": {
             const config = this.configService.read(args.projectRoot);
-            const paths = this.configService.getPaths(config);
-            const analysis = await this.analyzerService.analyze(args.projectRoot, paths);
+            const analysis = await this.analyzerService.analyze(args.projectRoot);
             return this.textResult(this.refactoringService.generateRefactoringSuggestions(analysis));
           }
 
@@ -638,8 +645,7 @@ class AppForgeServer {
             const apiRegistry: SandboxApiRegistry = {
               analyzeCodebase: async (projectRoot: string) => {
                 const config = this.configService.read(projectRoot);
-                const paths = this.configService.getPaths(config);
-                return await this.analyzerService.analyze(projectRoot, paths);
+                return await this.analyzerService.analyze(projectRoot);
               },
               runTests: async (projectRoot: string) => {
                 return await this.executionService.runTest(projectRoot, {});

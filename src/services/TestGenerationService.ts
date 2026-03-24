@@ -26,7 +26,7 @@ export class TestGenerationService {
     const locatorOrder = config.reuse?.locatorOrder ?? [
       'accessibility id', 'resource-id', 'xpath', 'class chain', 'predicate', 'text'
     ];
-    const paths = config.paths ?? {
+    const paths = analysis.detectedPaths ?? config.paths ?? {
       featuresRoot: 'features',
       pagesRoot: 'pages',
       stepsRoot: 'step-definitions',

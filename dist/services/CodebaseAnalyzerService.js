@@ -6,95 +6,101 @@ export class CodebaseAnalyzerService {
      * Scans the project for existing BDD assets using ts-morph AST parsing.
      * Scans features/, step-definitions/, pages/, and utils/.
      */
-    async analyze(projectRoot, customPaths) {
-        const featuresDir = path.join(projectRoot, customPaths?.featuresRoot ?? 'features');
-        const stepsDir = path.join(projectRoot, customPaths?.stepsRoot ?? 'step-definitions');
-        const pagesDir = path.join(projectRoot, customPaths?.pagesRoot ?? 'pages');
-        const utilsDir = path.join(projectRoot, customPaths?.utilsRoot ?? 'utils');
+    async analyze(projectRoot) {
         const result = {
             existingFeatures: [],
             existingStepDefinitions: [],
             existingPageObjects: [],
             existingUtils: [],
             conflicts: [],
-            architecturePattern: 'pom', // default, will be refined below
+            architecturePattern: 'pom',
             yamlLocatorFiles: [],
+            detectedPaths: {
+                featuresRoot: 'features',
+                stepsRoot: 'step-definitions',
+                pagesRoot: 'pages',
+                utilsRoot: 'utils',
+                locatorsRoot: 'locators'
+            }
         };
-        // 1. Discover Feature files
-        result.existingFeatures = await this.listFiles(featuresDir, '.feature', projectRoot);
-        // 2. Discover Step Definitions using AST
-        const stepFiles = await this.listFilesAbsolute(stepsDir, '.ts');
-        if (stepFiles.length > 0) {
+        // 1. Discover Feature files anywhere in the workspace
+        const featureFiles = await this.listFilesWithExtensions(projectRoot, ['.feature']);
+        result.existingFeatures = featureFiles.map(f => path.relative(projectRoot, f));
+        if (featureFiles.length > 0) {
+            result.detectedPaths.featuresRoot = path.dirname(path.relative(projectRoot, featureFiles[0]));
+        }
+        // 2. Discover ALL TypeScript Files dynamically
+        const tsFiles = await this.listFilesWithExtensions(projectRoot, ['.ts']);
+        if (tsFiles.length > 0) {
             const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
-            for (const f of stepFiles) {
+            for (const f of tsFiles) {
+                if (f.includes('mcp-config') || f.includes('wdio.conf') || f.endsWith('d.ts'))
+                    continue;
                 project.addSourceFileAtPath(f);
             }
             for (const sourceFile of project.getSourceFiles()) {
+                const filePath = sourceFile.getFilePath();
+                const relativePath = path.relative(projectRoot, filePath);
+                const codeContent = sourceFile.getFullText();
                 const steps = this.extractStepsAST(sourceFile);
                 if (steps.length > 0) {
-                    result.existingStepDefinitions.push({
-                        file: path.relative(projectRoot, sourceFile.getFilePath()),
-                        steps
-                    });
+                    result.existingStepDefinitions.push({ file: relativePath, steps });
+                    if (result.detectedPaths.stepsRoot === 'step-definitions') {
+                        result.detectedPaths.stepsRoot = path.dirname(relativePath);
+                    }
+                    continue;
                 }
-            }
-        }
-        // 3. Discover Page Objects using AST
-        const pageFiles = await this.listFilesAbsolute(pagesDir, '.ts');
-        if (pageFiles.length > 0) {
-            const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
-            for (const f of pageFiles) {
-                project.addSourceFileAtPath(f);
-            }
-            for (const sourceFile of project.getSourceFiles()) {
                 const classes = sourceFile.getClasses();
+                let isPageObject = false;
                 for (const cls of classes) {
-                    const publicMethods = cls.getMethods()
-                        .filter(m => !m.hasModifier(SyntaxKind.PrivateKeyword) && !m.hasModifier(SyntaxKind.ProtectedKeyword))
-                        .map(m => m.getName());
-                    const locators = this.extractLocatorsAST(cls);
-                    result.existingPageObjects.push({
-                        path: path.relative(projectRoot, sourceFile.getFilePath()),
-                        className: cls.getName() ?? 'AnonymousClass',
-                        publicMethods,
-                        locators
-                    });
+                    const className = cls.getName() || '';
+                    const hasLocators = this.extractLocatorsAST(cls).length > 0;
+                    const isStandardPom = className.toLowerCase().includes('page') || className.toLowerCase().includes('screen');
+                    if (hasLocators || isStandardPom) {
+                        const publicMethods = cls.getMethods()
+                            .filter(m => !m.hasModifier(SyntaxKind.PrivateKeyword) && !m.hasModifier(SyntaxKind.ProtectedKeyword))
+                            .map(m => m.getName());
+                        result.existingPageObjects.push({
+                            path: relativePath,
+                            className: className || 'AnonymousClass',
+                            publicMethods,
+                            locators: this.extractLocatorsAST(cls)
+                        });
+                        isPageObject = true;
+                    }
                 }
-            }
-        }
-        // 4. Discover Utils using AST
-        const utilFiles = await this.listFilesAbsolute(utilsDir, '.ts');
-        if (utilFiles.length > 0) {
-            const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
-            for (const f of utilFiles) {
-                project.addSourceFileAtPath(f);
-            }
-            for (const sourceFile of project.getSourceFiles()) {
-                const methods = [];
-                // Extract methods from classes
-                for (const cls of sourceFile.getClasses()) {
-                    for (const m of cls.getMethods()) {
-                        if (!m.hasModifier(SyntaxKind.PrivateKeyword)) {
-                            methods.push(`${cls.getName()}.${m.getName()}`);
+                if (isPageObject) {
+                    if (result.detectedPaths.pagesRoot === 'pages') {
+                        result.detectedPaths.pagesRoot = path.dirname(relativePath);
+                    }
+                    continue;
+                }
+                if (relativePath.toLowerCase().includes('util') || codeContent.includes('export function') || codeContent.includes('export const')) {
+                    const methods = [];
+                    for (const cls of classes) {
+                        for (const m of cls.getMethods()) {
+                            if (!m.hasModifier(SyntaxKind.PrivateKeyword))
+                                methods.push(`${cls.getName()}.${m.getName()}`);
                         }
                     }
-                }
-                // Extract exported standalone functions
-                for (const fn of sourceFile.getFunctions()) {
-                    if (fn.isExported()) {
-                        methods.push(fn.getName() ?? 'anonymous');
+                    for (const fn of sourceFile.getFunctions()) {
+                        if (fn.isExported())
+                            methods.push(fn.getName() ?? 'anonymous');
                     }
-                }
-                if (methods.length > 0) {
-                    result.existingUtils.push({
-                        path: path.relative(projectRoot, sourceFile.getFilePath()),
-                        publicMethods: methods
-                    });
+                    if (methods.length > 0) {
+                        result.existingUtils.push({ path: relativePath, publicMethods: methods });
+                        if (result.detectedPaths.utilsRoot === 'utils') {
+                            result.detectedPaths.utilsRoot = path.dirname(relativePath);
+                        }
+                    }
                 }
             }
         }
         // 5. Detect Architecture Pattern
         result.architecturePattern = await this.detectArchitecture(projectRoot, result);
+        if (result.yamlLocatorFiles.length > 0) {
+            result.detectedPaths.locatorsRoot = path.dirname(path.relative(projectRoot, result.yamlLocatorFiles[0]));
+        }
         // 6. Detect Step Rule Conflicts
         const patternMap = new Map();
         for (const stepDef of result.existingStepDefinitions) {
