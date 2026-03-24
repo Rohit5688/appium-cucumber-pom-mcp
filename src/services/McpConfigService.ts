@@ -30,6 +30,8 @@ export interface McpConfig {
   };
   builds?: Record<string, BuildProfile>;
   activeBuild?: string;
+  executionCommand?: string;
+  testRunTimeout?: number;
 }
 
 export interface BuildProfile {

@@ -36,6 +36,13 @@ export interface CodebaseAnalysisResult {
     utilsRoot: string;
     locatorsRoot: string;
   };
+  importAliases?: Record<string, string[]>;
+  envConfig?: {
+    present: boolean;
+    files: string[];
+    keys: string[];
+  };
+  packageScripts?: Record<string, string>;
 }
 
 export class CodebaseAnalyzerService {
@@ -112,6 +119,51 @@ export class CodebaseAnalyzerService {
           }
         }
 
+        // --- Phase 43: Detect Functional/Object-Literal POMs ---
+        const variableDeclarations = sourceFile.getVariableDeclarations();
+        for (const varDecl of variableDeclarations) {
+          const name = varDecl.getName() || '';
+          const isStandardPom = name.toLowerCase().includes('page') || name.toLowerCase().includes('screen');
+          
+          let hasLocators = false;
+          const publicMethods: string[] = [];
+          const locators: { name: string; strategy: string; selector: string }[] = [];
+
+          const initializer = varDecl.getInitializer();
+          if (initializer && Node.isObjectLiteralExpression(initializer)) {
+            for (const prop of initializer.getProperties()) {
+              // Extract functions inside object literals
+              if (Node.isMethodDeclaration(prop)) {
+                 publicMethods.push(prop.getName());
+              } else if (Node.isPropertyAssignment(prop)) {
+                 const propInit = prop.getInitializer();
+                 if (propInit && (Node.isArrowFunction(propInit) || Node.isFunctionExpression(propInit))) {
+                    publicMethods.push(prop.getName());
+                 }
+              }
+              
+              // Basic locator AST detection
+              const bodyText = prop.getText();
+              const selectorMatch = bodyText.match(/\$\(\s*['"`](.+?)['"`]\s*\)/) || bodyText.match(/~(.+?)/);
+              if (selectorMatch && selectorMatch[1]) {
+                 hasLocators = true;
+                 const propName = 'getName' in prop ? prop.getName() : 'unknown';
+                 locators.push({ name: propName, strategy: this.classifyLocatorStrategy(selectorMatch[1]), selector: selectorMatch[1] });
+              }
+            }
+          }
+
+          if (isStandardPom || hasLocators) {
+             result.existingPageObjects.push({
+               path: relativePath,
+               className: name || 'AnonymousObject',
+               publicMethods,
+               locators
+             });
+             isPageObject = true;
+          }
+        }
+
         if (isPageObject) {
           if (result.detectedPaths.pagesRoot === 'pages') {
              result.detectedPaths.pagesRoot = path.dirname(relativePath);
@@ -137,6 +189,48 @@ export class CodebaseAnalyzerService {
           }
         }
       }
+    }
+
+    // 4b. Parse tsconfig.json for Path Aliasing
+    const tsconfigPath = path.join(projectRoot, 'tsconfig.json');
+    try {
+      await fs.access(tsconfigPath);
+      const content = await fs.readFile(tsconfigPath, 'utf8');
+      const stripped = content.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
+      const tsconfig = JSON.parse(stripped);
+      if (tsconfig.compilerOptions?.paths) {
+        result.importAliases = tsconfig.compilerOptions.paths;
+      }
+    } catch(e) { }
+
+    // 4c. Discover existing Env or Config Files
+    let rootFiles: string[] = [];
+    try { rootFiles = await fs.readdir(projectRoot); } catch(e) {}
+    const envFiles = rootFiles.filter(f => f.startsWith('.env') && !f.endsWith('.example'));
+    let hasCustomConfigDir = false;
+    try {
+       const configStat = await fs.stat(path.join(projectRoot, 'config'));
+       if (configStat.isDirectory()) hasCustomConfigDir = true;
+    } catch { }
+
+    result.envConfig = {
+      present: envFiles.length > 0 || hasCustomConfigDir,
+      files: envFiles,
+      keys: []
+    };
+
+    // 4d. Discover Custom package.json Scripts
+    const packageJsonPath = path.join(projectRoot, 'package.json');
+    let pkgExists = false;
+    try { await fs.stat(packageJsonPath); pkgExists = true; } catch {}
+    if (pkgExists) {
+      try {
+         const pkgContent = await fs.readFile(packageJsonPath, 'utf8');
+         const pkg = JSON.parse(pkgContent);
+         if (pkg.scripts) {
+           result.packageScripts = pkg.scripts;
+         }
+      } catch(e) {}
     }
 
     // 5. Detect Architecture Pattern

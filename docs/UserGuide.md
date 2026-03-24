@@ -22,7 +22,7 @@ If you're starting from scratch, the `setup_project` tool is your best friend.
 Already have a WebdriverIO project? We'll adapt to *you*.
 
 1.  **Run Analysis**: Call `analyze_codebase`.
-2.  **Self-Healing Upgrade**: The MCP server will automatically detect your patterns and apply missing configurations like `mcp-config.json`.
+2.  **Self-Healing Upgrade**: The MCP server will automatically detect your patterns and apply missing configurations like `mcp-config.json`. You can modify the generated configuration to set a custom `executionCommand` if your project doesn't use standard `npx wdio` commands (e.g., `yarn test:mobile:e2e`).
 3.  **Zero-Config Maintenance**: The `upgrade_project` tool ensures your dependencies stay up-to-date with current mobile automation standards.
 
 ---

@@ -181,6 +181,7 @@ class AppForgeServer {
               projectRoot: { type: "string" },
               tags: { type: "string", description: "Cucumber tag expression, e.g. '@smoke and @android'" },
               platform: { type: "string", enum: ["android", "ios"] },
+              overrideCommand: { type: "string", description: "Optional full command to run (e.g. 'npm run test:e2e:smoke'). Bypasses the default executionCommand." },
               specificArgs: { type: "string" }
             },
             required: ["projectRoot"]
@@ -510,10 +511,14 @@ class AppForgeServer {
             return this.textResult(await this.fileWriterService.validateAndWrite(args.projectRoot, args.files, 3, args.dryRun));
 
           case "run_cucumber_test": {
+            const config = this.configService.read(args.projectRoot);
+            const activeCommand = args.overrideCommand || config.executionCommand;
             const result = await this.executionService.runTest(args.projectRoot, {
               tags: args.tags,
               platform: args.platform,
-              specificArgs: args.specificArgs
+              specificArgs: args.specificArgs,
+              executionCommand: activeCommand,
+              testRunTimeout: config.testRunTimeout
             });
             return this.textResult(JSON.stringify(result, null, 2));
           }

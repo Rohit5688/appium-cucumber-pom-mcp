@@ -42,6 +42,8 @@ export class ExecutionService {
       tags?: string;
       platform?: 'android' | 'ios';
       specificArgs?: string;
+      executionCommand?: string;
+      testRunTimeout?: number;
     }
   ): Promise<ExecutionResult> {
     try {
@@ -55,9 +57,19 @@ export class ExecutionService {
         }
       }
 
-      const parts: string[] = ['npx', 'wdio', 'run', configName];
+      let parts: string[] = [];
+      if (options?.executionCommand) {
+        parts = [options.executionCommand];
+      } else {
+        if (fs.existsSync(path.join(projectRoot, 'yarn.lock'))) {
+          parts = ['yarn', 'wdio', 'run', configName];
+        } else if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) {
+          parts = ['pnpm', 'exec', 'wdio', 'run', configName];
+        } else {
+          parts = ['npx', 'wdio', 'run', configName];
+        }
+      }
 
-      // Apply tag filtering via wdio cucumberOpts
       let tagExpression = options?.tags || '';
 
       // If we fall back to generic monolithic config but user wants a specific platform,
@@ -71,6 +83,12 @@ export class ExecutionService {
         }
       }
 
+      const hasExtraArgs = Boolean(tagExpression) || Boolean(options?.specificArgs);
+      const isNpmRun = parts.length > 0 && parts[0].trim().startsWith('npm run');
+      if (isNpmRun && hasExtraArgs && !parts[0].includes(' -- ')) {
+         parts.push('--');
+      }
+
       if (tagExpression) {
          parts.push(`--cucumberOpts.tagExpression="${tagExpression}"`);
       }
@@ -81,10 +99,11 @@ export class ExecutionService {
       }
 
       const command = parts.join(' ');
+      const runTimeout = options?.testRunTimeout ?? 300000; // 5 min default timeout for mobile
       const { stdout, stderr } = await execAsync(command, {
         cwd: projectRoot,
         env: { ...process.env, FORCE_COLOR: '0' },
-        timeout: 300000 // 5 min timeout
+        timeout: runTimeout
       });
 
       // Try to parse the JSON report for structured stats
