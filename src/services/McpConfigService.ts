@@ -63,7 +63,7 @@ export class McpConfigService {
 
     try {
       const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      
+
       // Auto-migration
       if (!raw.version || raw.version === '1.0.0') {
         raw.version = this.CURRENT_VERSION;

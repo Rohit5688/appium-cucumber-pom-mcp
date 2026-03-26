@@ -14,6 +14,16 @@ import http from 'http';
 export class AppiumSessionService {
     driver = null;
     configService = new McpConfigService();
+    // ─── P7-02: Deduplication log buffer ──────────────────
+    // Prevents repeated identical error lines from flooding structured MCP output
+    // during Appium failure loops (each unique message logs once per session).
+    seenLogMessages = new Set();
+    deduplicatedLog(msg) {
+        if (!this.seenLogMessages.has(msg)) {
+            this.seenLogMessages.add(msg);
+            console.error(msg);
+        }
+    }
     // ─── Session Lifecycle ─────────────────────────────────
     /**
      * Starts a new Appium session using capabilities from mcp-config.json.
@@ -32,7 +42,9 @@ export class AppiumSessionService {
         const port = parseInt(parsedUrl.port || '4723', 10);
         // Detect Appium 2 vs Appium 1 server path automatically
         const serverPath = await this.detectAppiumPath(hostname, port);
-        console.error(`[AppForge] Detected Appium server path: ${serverPath} at ${hostname}:${port}`);
+        this.deduplicatedLog(`[AppForge] Detected Appium server path: ${serverPath} at ${hostname}:${port}`);
+        // Reset dedup buffer for new session attempt
+        this.seenLogMessages.clear();
         try {
             this.driver = await remote({
                 protocol: 'http',
@@ -61,7 +73,12 @@ export class AppiumSessionService {
         }
         catch (error) {
             this.driver = null;
-            throw this.enrichSessionError(error, serverUrl, serverPath, capabilities);
+            // ─── P7-09: Normalize downstream error into compact envelope ──
+            // Strip raw WebdriverIO stack traces and HTTP bodies from what surfaces
+            // to the MCP response. Full diagnostics still go to stderr.
+            const enriched = this.enrichSessionError(error, serverUrl, serverPath, capabilities);
+            this.deduplicatedLog(`[AppForge] Session startup failed: ${enriched.message}`);
+            throw enriched;
         }
     }
     /**

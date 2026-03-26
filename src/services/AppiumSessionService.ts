@@ -29,6 +29,18 @@ export class AppiumSessionService {
   private driver: Browser | null = null;
   private configService = new McpConfigService();
 
+  // ─── P7-02: Deduplication log buffer ──────────────────
+  // Prevents repeated identical error lines from flooding structured MCP output
+  // during Appium failure loops (each unique message logs once per session).
+  private seenLogMessages = new Set<string>();
+
+  private deduplicatedLog(msg: string): void {
+    if (!this.seenLogMessages.has(msg)) {
+      this.seenLogMessages.add(msg);
+      console.error(msg);
+    }
+  }
+
   // ─── Session Lifecycle ─────────────────────────────────
 
   /**
@@ -51,7 +63,10 @@ export class AppiumSessionService {
 
     // Detect Appium 2 vs Appium 1 server path automatically
     const serverPath = await this.detectAppiumPath(hostname, port);
-    console.error(`[AppForge] Detected Appium server path: ${serverPath} at ${hostname}:${port}`);
+    this.deduplicatedLog(`[AppForge] Detected Appium server path: ${serverPath} at ${hostname}:${port}`);
+
+    // Reset dedup buffer for new session attempt
+    this.seenLogMessages.clear();
 
     try {
       this.driver = await remote({
@@ -82,7 +97,12 @@ export class AppiumSessionService {
       };
     } catch (error: any) {
       this.driver = null;
-      throw this.enrichSessionError(error, serverUrl, serverPath, capabilities);
+      // ─── P7-09: Normalize downstream error into compact envelope ──
+      // Strip raw WebdriverIO stack traces and HTTP bodies from what surfaces
+      // to the MCP response. Full diagnostics still go to stderr.
+      const enriched = this.enrichSessionError(error, serverUrl, serverPath, capabilities);
+      this.deduplicatedLog(`[AppForge] Session startup failed: ${enriched.message}`);
+      throw enriched;
     }
   }
 

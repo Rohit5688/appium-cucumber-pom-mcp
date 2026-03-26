@@ -164,7 +164,7 @@ class AppForgeServer {
         },
         {
           name: "generate_cucumber_pom",
-          description: "Generate a complete BDD suite (feature + steps + page) from plain English with maximum reuse. Provide live Appium screenshots/XML if available to improve locator accuracy.",
+          description: "[PROMPT-BUILDER] Returns an LLM prompt containing a complete BDD suite (feature + steps + page object) from plain English. Output must be passed to validate_and_write to save files to disk. Provide live Appium screenshots/XML if available to improve locator accuracy.",
           inputSchema: {
             type: "object",
             properties: {
@@ -179,7 +179,7 @@ class AppForgeServer {
         },
         {
           name: "validate_and_write",
-          description: "Validate TypeScript syntax (tsc --noEmit) and Gherkin syntax, then write generated files to disk.",
+          description: "[ARTIFACT-WRITER] Validates TypeScript syntax (tsc --noEmit) and Gherkin syntax, then writes generated files to disk. This is the second step after generate_cucumber_pom — it physically creates the .feature, step-definitions, and page object files.",
           inputSchema: {
             type: "object",
             properties: {
@@ -227,7 +227,7 @@ class AppForgeServer {
         },
         {
           name: "run_cucumber_test",
-          description: "Execute Cucumber Appium tests with tag/platform filtering and structured result parsing.",
+          description: "[EXECUTOR] Runs the Cucumber/Appium test suite with tag/platform filtering and returns structured pass/fail results. Call this after validate_and_write to execute the generated tests.",
           inputSchema: {
             type: "object",
             properties: {
@@ -242,7 +242,7 @@ class AppForgeServer {
         },
         {
           name: "inspect_ui_hierarchy",
-          description: "Structure and parse Appium XML page source + Base64 screenshot for vision analysis.",
+          description: "[PROMPT-BUILDER] Parses Appium XML page source + Base64 screenshot and returns a structured hierarchy for vision analysis. Pass the output's xmlDump to generate_cucumber_pom for accurate locator generation.",
           inputSchema: {
             type: "object",
             properties: {
@@ -254,7 +254,7 @@ class AppForgeServer {
         },
         {
           name: "self_heal_test",
-          description: "Analyze a failed test run with XML + screenshot vision to propose healed selectors.",
+          description: "[PROMPT-BUILDER] Analyzes a failed test run using XML + screenshot and returns a prompt proposing healed selectors. After reviewing the output, use validate_and_write to apply the fixes.",
           inputSchema: {
             type: "object",
             properties: {
@@ -341,7 +341,7 @@ class AppForgeServer {
         },
         {
           name: "generate_ci_workflow",
-          description: "Generate a CI/CD workflow file (GitHub Actions or GitLab CI) for running Appium tests.",
+          description: "[ARTIFACT-WRITER] Generates and writes a CI/CD workflow file (GitHub Actions or GitLab CI) directly to the project. The file is saved immediately — no validate_and_write step required.",
           inputSchema: {
             type: "object",
             properties: {
@@ -490,7 +490,7 @@ class AppForgeServer {
         },
         {
           name: "export_bug_report",
-          description: "Generate a Jira-formatted bug report from a failed Appium test, with auto-classified severity.",
+          description: "[PROMPT-BUILDER] Generates a Jira-formatted bug report from a failed Appium test with auto-classified severity. Returns formatted text ready to copy into your issue tracker.",
           inputSchema: {
             type: "object",
             properties: {
@@ -505,7 +505,7 @@ class AppForgeServer {
         },
         {
           name: "generate_test_data_factory",
-          description: "Generate a typed mock data factory using faker.js for reusable test data (TypeScript interface + builder function).",
+          description: "[PROMPT-BUILDER] Returns an LLM prompt to generate a typed mock data factory using faker.js (TypeScript interface + builder function). Use validate_and_write to save the resulting file.",
           inputSchema: {
             type: "object",
             properties: {
@@ -542,7 +542,7 @@ class AppForgeServer {
         },
         {
           name: "migrate_test",
-          description: "Generate an LLM prompt to map an existing Espresso, XCUITest, or Detox test file to Appium + Cucumber POM.",
+          description: "[PROMPT-BUILDER] Returns an LLM prompt to translate an existing Espresso, XCUITest, or Detox test file into Appium + Cucumber POM format. Pass the generated code to validate_and_write to persist it.",
           inputSchema: {
             type: "object",
             properties: {
@@ -556,7 +556,7 @@ class AppForgeServer {
         },
         {
           name: "start_appium_session",
-          description: "Start a live Appium session on a device/emulator. Returns session ID, device info, initial page source, and screenshot. Required before using live inspect/verify features.",
+          description: "[EXECUTOR] Starts a live Appium session on a device/emulator and returns session ID, device info, and initial page source. Required first step before using inspect_ui_hierarchy or verify_selector in live mode. Supports Appium 1 and Appium 2 (auto-detected).",
           inputSchema: {
             type: "object",
             properties: {
@@ -568,7 +568,7 @@ class AppForgeServer {
         },
         {
           name: "end_appium_session",
-          description: "Terminate the active Appium session and release the device.",
+          description: "[EXECUTOR] Terminates the active Appium session and releases the device. Returns explicit state: 'terminated' or 'no_active_session'.",
           inputSchema: {
             type: "object",
             properties: {},
