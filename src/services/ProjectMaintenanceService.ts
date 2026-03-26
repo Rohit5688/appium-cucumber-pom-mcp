@@ -40,11 +40,15 @@ export class ProjectMaintenanceService {
     } else {
       // Add version tag if missing
       const raw = fs.readFileSync(configPath, 'utf8');
-      const config = JSON.parse(raw);
-      if (!config.version) {
-        config.version = '1.0.0';
-        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-        logs.push('✅ Migrated mcp-config.json to standard versioning format.');
+      try {
+        const config = JSON.parse(raw);
+        if (!config.version) {
+          config.version = '1.0.0';
+          fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+          logs.push('✅ Migrated mcp-config.json to standard versioning format.');
+        }
+      } catch (e) {
+        logs.push('❌ existing mcp-config.json is malformed. Cannot parse JSON. Skipping config upgrade.');
       }
 
       // Check for legacy wdio monolith vs multi-config
