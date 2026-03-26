@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 export class ProjectSetupService {
   /**
@@ -17,60 +18,49 @@ export class ProjectSetupService {
       );
     }
 
-    if (!fs.existsSync(projectRoot)) {
-      fs.mkdirSync(projectRoot, { recursive: true });
-    }
-
-    // 1. Create directory structure
-    const dirs = ['src/features', 'src/step-definitions', 'src/pages', 'src/utils', 'src/test-data', 'src/config', 'reports'];
-    for (const dir of dirs) {
-      const fullPath = path.join(projectRoot, dir);
-      if (!fs.existsSync(fullPath)) {
-        fs.mkdirSync(fullPath, { recursive: true });
+    // ── Atomic scaffold: write to a staging temp dir first, ──────────
+    // ── then commit all files at once. Roll back on any failure.  ────
+    const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'appforge-scaffold-'));
+    try {
+      // 1. Create directory structure inside staging
+      const dirs = ['src/features', 'src/step-definitions', 'src/pages', 'src/utils', 'src/test-data', 'src/config', 'reports'];
+      for (const dir of dirs) {
+        fs.mkdirSync(path.join(stagingDir, dir), { recursive: true });
       }
+
+      // 2–13. Generate all files into staging
+      this.scaffoldPackageJson(stagingDir, appName, platform);
+      this.scaffoldTsConfig(stagingDir);
+      this.scaffoldCucumberConfig(stagingDir);
+      this.scaffoldBasePage(stagingDir);
+      this.scaffoldMobileGestures(stagingDir);
+      this.scaffoldMockServer(stagingDir);
+      this.scaffoldHooks(stagingDir);
+      this.scaffoldSampleFeature(stagingDir);
+      this.scaffoldGitignore(stagingDir);
+      this.scaffoldMcpConfig(stagingDir, platform);
+      if (platform === 'both') {
+        this.scaffoldWdioSharedConfig(stagingDir);
+        this.scaffoldWdioAndroidConfig(stagingDir);
+        this.scaffoldWdioIosConfig(stagingDir);
+      } else {
+        this.scaffoldWdioConfig(stagingDir, platform);
+      }
+      this.scaffoldMockScenarios(stagingDir);
+
+      // Commit: copy all staged files to the real projectRoot
+      if (!fs.existsSync(projectRoot)) {
+        fs.mkdirSync(projectRoot, { recursive: true });
+      }
+      this.copyDirRecursive(stagingDir, projectRoot);
+    } catch (err) {
+      // Roll back staging dir on failure
+      try { fs.rmSync(stagingDir, { recursive: true, force: true }); } catch {}
+      throw err;
     }
 
-    // 2. package.json
-    this.scaffoldPackageJson(projectRoot, appName, platform);
-
-    // 3. tsconfig.json
-    this.scaffoldTsConfig(projectRoot);
-
-    // 4. cucumber.js config
-    this.scaffoldCucumberConfig(projectRoot);
-
-    // 5. BasePage.ts
-    this.scaffoldBasePage(projectRoot);
-
-    // 6. MobileGestures.ts
-    this.scaffoldMobileGestures(projectRoot);
-
-    // 7. MockServer.ts
-    this.scaffoldMockServer(projectRoot);
-
-    // 8. Before/After hooks
-    this.scaffoldHooks(projectRoot);
-
-    // 9. Sample feature
-    this.scaffoldSampleFeature(projectRoot);
-
-    // 10. .gitignore
-    this.scaffoldGitignore(projectRoot);
-
-    // 11. mcp-config.json (with paths field matching McpConfig interface)
-    this.scaffoldMcpConfig(projectRoot, platform);
-
-    // 12. wdio.conf.ts — WebdriverIO + Appium connection config
-    if (platform === 'both') {
-      this.scaffoldWdioSharedConfig(projectRoot);
-      this.scaffoldWdioAndroidConfig(projectRoot);
-      this.scaffoldWdioIosConfig(projectRoot);
-    } else {
-      this.scaffoldWdioConfig(projectRoot, platform);
-    }
-
-    // 13. Mock scenarios sample JSON
-    this.scaffoldMockScenarios(projectRoot);
+    // Clean up staging
+    try { fs.rmSync(stagingDir, { recursive: true, force: true }); } catch {}
 
     const summary = [
       `✅ Scaffolded Appium BDD project at ${projectRoot}`,
@@ -364,7 +354,7 @@ export abstract class BasePage {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'pages', 'BasePage.ts'), content);
+    this.writeIfNotExists(path.join(projectRoot, 'src', 'pages', 'BasePage.ts'), content);
   }
 
   private scaffoldMobileGestures(projectRoot: string) {
@@ -608,7 +598,7 @@ AfterAll(async function () {
   console.log('[Hooks] Test suite complete.');
 });
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'step-definitions', 'hooks.ts'), content);
+    this.writeIfNotExists(path.join(projectRoot, 'src', 'step-definitions', 'hooks.ts'), content);
   }
 
   private scaffoldSampleFeature(projectRoot: string) {
@@ -625,7 +615,7 @@ Feature: Sample Login Flow
     And I tap the login button
     Then I should see the home screen
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'features', 'sample.feature'), content);
+    this.writeIfNotExists(path.join(projectRoot, 'src', 'features', 'sample.feature'), content);
   }
 
   private scaffoldGitignore(projectRoot: string) {
@@ -841,7 +831,34 @@ export const config = {
 
   private writeIfNotExists(filePath: string, content: string) {
     if (!fs.existsSync(filePath)) {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
       fs.writeFileSync(filePath, content);
+    }
+  }
+
+  /**
+   * Recursively copies all files from src directory to dest directory.
+   * Skips already-existing files in dest (non-destructive commit).
+   */
+  private copyDirRecursive(src: string, dest: string) {
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      if (entry.isDirectory()) {
+        if (!fs.existsSync(destPath)) {
+          fs.mkdirSync(destPath, { recursive: true });
+        }
+        this.copyDirRecursive(srcPath, destPath);
+      } else {
+        // Only write if not already present (preserve user customizations)
+        if (!fs.existsSync(destPath)) {
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
     }
   }
 }

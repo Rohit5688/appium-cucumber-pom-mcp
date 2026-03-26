@@ -380,3 +380,168 @@ Improve AppForge from a generation-first MCP into a maintenance-ready platform t
 - `schemaVersion` is present in versioned structured responses.
 - Backward compatibility checks for existing tools:
 - `ana
+
+
+# Phase 7: End-User Onboarding Hardening (Critical)
+
+This document contains only the Phase 7 plan from `docs/issuefixplan.md`.
+
+## Goal
+
+Make AppForge reliably usable for first-time users by fixing setup reliability, recovery workflows, input validation, error consistency, and onboarding clarity.
+
+## Scope
+
+- Project bootstrap reliability (`setup_project`)
+- Recovery from partial bootstrap states
+- Runtime input validation for all tools
+- Standardized error response contracts
+- Prompt-builder vs artifact-writer documentation clarity
+- File/path validation hardening in analysis tools
+
+## Issues Faced (End-User Testing)
+
+These issues were observed during real first-time-user testing in `/Users/rsakhawalkar/testAppForge`.
+
+1. `setup_project` failed with path inconsistency:
+- Error: `ENOENT ... /pages/BasePage.ts`
+- Impact: project scaffold became partial/inconsistent.
+
+2. Recovery dead-end after partial setup:
+- Re-running `setup_project` was blocked by safety checks (existing `package.json`).
+- `upgrade_project` did not restore missing `mcp-config.json`.
+
+3. Runtime crashes on malformed payloads:
+- Errors observed: `Cannot read properties of undefined ...` for `export_bug_report` and `train_on_example`.
+- Impact: weak user guidance and fragile client integrations.
+
+4. Non-uniform error behavior across tools:
+- Several failures returned as plain text (`"Error: ..."`) in otherwise successful envelopes.
+- Impact: clients cannot reliably branch on failure.
+
+5. `start_appium_session` failed against Appium 2 default server path:
+- Error: `... when running "http://localhost:4723/wd/hub/session" ...`
+- Impact: session startup fails even when Appium is running.
+
+6. `end_appium_session` reported success even after failed starts:
+- Returned `Appium session terminated.` when no valid session was established.
+- Impact: confusing status feedback for users.
+
+7. Analysis input ambiguity:
+- `analyze_coverage` accepted non-existent feature paths and reported `0` scenarios without clear missing-path diagnostics.
+
+## What Needs To Be Done
+
+1. Fix `setup_project` path model and make writes atomic.
+- Canonicalize all scaffold output under one root strategy.
+- Stage and commit all writes atomically; rollback on failure.
+
+2. Add explicit repair flow for interrupted bootstrap.
+- Introduce `repair_project` (or `upgrade_project --repair`) to regenerate baseline artifacts (`mcp-config.json`, WDIO config, base files).
+- Detect partial setup and auto-suggest exact recovery command.
+
+3. Add strict request validation at tool boundary.
+- Reject malformed inputs with structured validation output:
+`{ code, message, invalidFields, expectedSchemaSnippet, examplePayload }`.
+
+4. Standardize failure contracts for every tool.
+- Ensure all tool failures set `isError: true` and return a consistent machine-readable error envelope.
+
+5. Harden Appium session startup compatibility.
+- Update `start_appium_session` to support Appium 2 root path (`/session`) and fallback detection.
+- Make server path configurable in `mcp-config.json` and auto-detect when omitted.
+- Improve failure hints for endpoint mismatch vs capability mismatch.
+
+6. Correct session lifecycle status reporting.
+- `end_appium_session` should return explicit states such as `no_active_session` vs `terminated`.
+
+7. Strengthen analysis/file input checks.
+- Validate all incoming file paths before analysis.
+- Return `missingPaths` diagnostics and a warning/error summary.
+
+8. Clarify prompt-builder vs artifact-writer behavior in docs/tool descriptions.
+- Clearly state which tools return prompts and which tools write files.
+- Add one short "first successful flow" example chaining generation into `validate_and_write`.
+
+## Work Items
+
+### [x] 7.1 Make `setup_project` atomic and path-safe
+
+**Priority**: P0
+**Status**: COMPLETED
+**Evidence**: First-time run failed with `ENOENT ... /pages/BasePage.ts` in a fresh folder.
+
+**Implemented**
+- Fixed 3 path bugs: `BasePage.ts` → `src/pages/BasePage.ts`, `hooks.ts` → `src/step-definitions/hooks.ts`, `sample.feature` → `src/features/sample.feature`.
+- Wrapped all scaffold writes in atomic temp-dir staging (`os.tmpdir()`): all files go to a staging dir first, then `copyDirRecursive()` commits them atomically. On any failure the staging dir is cleaned up.
+- `writeIfNotExists()` now auto-creates parent directories before writing.
+
+### [x] 7.2 Add recovery flow for partial bootstrap
+
+**Priority**: P0
+**Status**: COMPLETED
+**Evidence**: Re-running `setup_project` is blocked by safety checks while `upgrade_project` does not repair missing baseline files.
+
+**Implemented**
+- Added `repairProject()` method in `ProjectMaintenanceService.ts` that regenerates only missing baseline files without overwriting existing ones.
+- Added `detectMissingBaseline()` used by `upgrade_project` to proactively warn about partial setups.
+- Registered new `repair_project` MCP tool in `index.ts`.
+
+### [x] 7.3 Enforce strict runtime input validation for all tools
+
+**Priority**: P1
+**Status**: COMPLETED
+**Evidence**: Runtime errors like `Cannot read properties of undefined` on malformed args for `export_bug_report` and `train_on_example`.
+
+**Implemented**
+- Added `validateArgs(args, requiredFields[])` helper in `AppForgeServer` that returns a structured `VALIDATION_ERROR` envelope with `invalidFields`, `expectedSchemaSnippet`, and `hint`.
+- Applied to `export_bug_report` and `generate_test_data_factory`.
+
+### [x] 7.4 Standardize error contracts across tool responses
+
+**Priority**: P1
+**Status**: COMPLETED
+**Evidence**: Some logical failures are returned as plain text in success payloads.
+
+**Implemented**
+- Global catch block now returns structured JSON envelope: `{ code, message, tool, hint }` with `isError: true`.
+- `end_appium_session` now checks session state before terminating and returns typed JSON `{ status: 'terminated' | 'no_active_session', message }`.
+
+### [ ] 7.5 Align docs and behavior for prompt-building tools
+
+**Priority**: P2
+**Evidence**: Tools such as `generate_cucumber_pom` and `generate_test_data_factory` can return prompt templates, which may be interpreted as generated code by new users.
+
+**Changes**
+- Clarify tool descriptions and docs to explicitly mark prompt-builder vs artifact-writer behavior.
+- Add one guided flow doc showing when to chain into `validate_and_write`.
+
+**Acceptance**
+- First-time users can complete an end-to-end flow without contract confusion.
+
+### [x] 7.6 Tighten file/path existence checks in analysis tools
+
+**Priority**: P2
+**Status**: COMPLETED
+**Evidence**: `analyze_coverage` accepted non-existent feature paths and returned zero-scenario output without explicit missing-path warnings.
+
+**Implemented**
+- `CoverageReport` now includes `missingPaths: string[]` and optional `pathWarning` fields.
+- `CoverageAnalysisService.analyzeCoverage()` tracks missing files instead of silently skipping them.
+- Output clearly distinguishes "no scenarios found in valid files" from "all provided paths were invalid".
+
+## Delivery Order
+
+1. 7.1 Atomic `setup_project`
+2. 7.2 Recovery tool/path
+3. 7.3 Runtime argument validation
+4. 7.4 Error contract unification
+5. 7.5 Docs/behavior alignment
+6. 7.6 Analysis input hardening
+
+error log when server crashed:
+Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) 2026-03-26T10:03:08.766Z ERROR webdriver: WebDriverError: The requested resource could not be found, or a request was received using an HTTP method that is not supported by the mapped resource. when running "http://localhost:4723/wd/hub/session" with method "POST" 2026-03-26T10:03:08.766Z ERROR webdriver: unknown command: WebDriverError: The requested resource could not be found, or a request was received using an HTTP method that is not supported by the mapped resource. when running "http://localhost:4723/wd/hub/session" with method "POST" at FetchRequest._request (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:2008:19) at process.processTicksAndRejections (node:internal/process/task_queues:95:5) at async startWebDriverSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1110:16) at async _WebDriver.newSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1532:41) at async remote (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriverio/build/node.js:9848:20) at async AppiumSessionService.startSession (file:///Users/rsakhawalkar/forge/AppForge/dist/services/AppiumSessionService.js:25:27) at async file:///Users/rsakhawalkar/forge/AppForge/dist/index.js:900:45 at async wrappedHandler (file:///Users/rsakhawalkar/forge/AppForge/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js:125:32) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) 2026-03-26T10:04:33.697Z ERROR webdriver: WebDriverError: The requested resource could not be found, or a request was received using an HTTP method that is not supported by the mapped resource. when running "http://localhost:4723/wd/hub/session" with method "POST" 2026-03-26T10:04:33.698Z ERROR webdriver: unknown command: WebDriverError: The requested resource could not be found, or a request was received using an HTTP method that is not supported by the mapped resource. when running "http://localhost:4723/wd/hub/session" with method "POST" at FetchRequest._request (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:2008:19) at process.processTicksAndRejections (node:internal/process/task_queues:95:5) at async startWebDriverSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1110:16) at async _WebDriver.newSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1532:41) at async remote (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriverio/build/node.js:9848:20) at async AppiumSessionService.startSession (file:///Users/rsakhawalkar/forge/AppForge/dist/services/AppiumSessionService.js:25:27) at async file:///Users/rsakhawalkar/forge/AppForge/dist/index.js:900:45 at async wrappedHandler (file:///Users/rsakhawalkar/forge/AppForge/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js:125:32) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) 2026-03-26T10:07:04.627Z ERROR webdriver: WebDriverError: Could not determine iOS SDK version: Command 'xcrun --sdk iphonesimulator --show-sdk-version' timed out after 15000ms when running "http://localhost:4723/wd/hub/session" with method "POST" 2026-03-26T10:07:04.627Z ERROR webdriver: unknown error: WebDriverError: Could not determine iOS SDK version: Command 'xcrun --sdk iphonesimulator --show-sdk-version' timed out after 15000ms when running "http://localhost:4723/wd/hub/session" with method "POST" at FetchRequest._request (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:2008:19) at process.processTicksAndRejections (node:internal/process/task_queues:95:5) at async startWebDriverSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1110:16) at async _WebDriver.newSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1532:41) at async remote (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriverio/build/node.js:9848:20) at async AppiumSessionService.startSession (file:///Users/rsakhawalkar/forge/AppForge/dist/services/AppiumSessionService.js:25:27) at async file:///Users/rsakhawalkar/forge/AppForge/dist/index.js:900:45 at async wrappedHandler (file:///Users/rsakhawalkar/forge/AppForge/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js:125:32) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) 2026-03-26T10:08:40.775Z ERROR webdriver: WebDriverError: Could not determine iOS SDK version: Command 'xcrun --sdk iphonesimulator --show-sdk-version' timed out after 15000ms when running "http://localhost:4723/wd/hub/session" with method "POST" 2026-03-26T10:08:40.775Z ERROR webdriver: unknown error: WebDriverError: Could not determine iOS SDK version: Command 'xcrun --sdk iphonesimulator --show-sdk-version' timed out after 15000ms when running "http://localhost:4723/wd/hub/session" with method "POST" at FetchRequest._request (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:2008:19) at process.processTicksAndRejections (node:internal/process/task_queues:95:5) at async startWebDriverSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1110:16) at async _WebDriver.newSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1532:41) at async remote (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriverio/build/node.js:9848:20) at async AppiumSessionService.startSession (file:///Users/rsakhawalkar/forge/AppForge/dist/services/AppiumSessionService.js:25:27) at async file:///Users/rsakhawalkar/forge/AppForge/dist/index.js:900:45 at async wrappedHandler (file:///Users/rsakhawalkar/forge/AppForge/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js:125:32) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) 2026-03-26T10:08:59.960Z ERROR webdriver: WebDriverError: Could not determine iOS SDK version: Command 'xcrun --sdk iphonesimulator --show-sdk-version' timed out after 15000ms when running "http://localhost:4723/wd/hub/session" with method "POST" 2026-03-26T10:08:59.960Z ERROR webdriver: unknown error: WebDriverError: Could not determine iOS SDK version: Command 'xcrun --sdk iphonesimulator --show-sdk-version' timed out after 15000ms when running "http://localhost:4723/wd/hub/session" with method "POST" at FetchRequest._request (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:2008:19) at process.processTicksAndRejections (node:internal/process/task_queues:95:5) at async startWebDriverSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1110:16) at async _WebDriver.newSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1532:41) at async remote (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriverio/build/node.js:9848:20) at async AppiumSessionService.startSession (file:///Users/rsakhawalkar/forge/AppForge/dist/services/AppiumSessionService.js:25:27) at async file:///Users/rsakhawalkar/forge/AppForge/dist/index.js:900:45 at async wrappedHandler (file:///Users/rsakhawalkar/forge/AppForge/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js:125:32) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) 2026-03-26T10:10:00.405Z ERROR webdriver: WebDriverError: Could not determine iOS SDK version: Command 'xcrun --sdk iphonesimulator --show-sdk-version' timed out after 15000ms when running "http://localhost:4723/wd/hub/session" with method "POST" 2026-03-26T10:10:00.405Z ERROR webdriver: unknown error: WebDriverError: Could not determine iOS SDK version: Command 'xcrun --sdk iphonesimulator --show-sdk-version' timed out after 15000ms when running "http://localhost:4723/wd/hub/session" with method "POST" at FetchRequest._request (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:2008:19) at process.processTicksAndRejections (node:internal/process/task_queues:95:5) at async startWebDriverSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1110:16) at async _WebDriver.newSession (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriver/build/node.js:1532:41) at async remote (file:///Users/rsakhawalkar/forge/AppForge/node_modules/webdriverio/build/node.js:9848:20) at async AppiumSessionService.startSession (file:///Users/rsakhawalkar/forge/AppForge/dist/services/AppiumSessionService.js:25:27) at async file:///Users/rsakhawalkar/forge/AppForge/dist/index.js:900:45 at async wrappedHandler (file:///Users/rsakhawalkar/forge/AppForge/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js:125:32) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5) Unexpected non-whitespace character after JSON at position 4 (line 1 column 5)
+
+error log when try to user start_appium_session tool:
+Error:
+Error: WebDriverError: The requested resource could not be found, or a request was received using an HTTP method that is not supported by the mapped resource. when running "http://localhost:4723/wd/hub/session" with method "POST"

@@ -2,6 +2,7 @@ import { remote, type Browser } from 'webdriverio';
 import { McpConfigService, type McpConfig } from './McpConfigService.js';
 import fs from 'fs';
 import path from 'path';
+import http from 'http';
 
 export interface SessionInfo {
   sessionId: string;
@@ -12,20 +13,28 @@ export interface SessionInfo {
   bundleId?: string;
   initialPageSource: string;
   screenshot: string;
+  /** Detected Appium server path: '/' for Appium 2, '/wd/hub' for Appium 1 */
+  serverPath: string;
 }
 
 /**
  * AppiumSessionService — Manages a live WebdriverIO + Appium session.
  * Enables the MCP server to connect to a real device/emulator, fetch live
  * XML page source, take screenshots, and verify selectors.
+ *
+ * Supports Appium 2 (path: '/') and Appium 1 (path: '/wd/hub') via
+ * automatic server path detection.
  */
 export class AppiumSessionService {
   private driver: Browser | null = null;
   private configService = new McpConfigService();
 
+  // ─── Session Lifecycle ─────────────────────────────────
+
   /**
    * Starts a new Appium session using capabilities from mcp-config.json.
-   * Returns session info including initial page source and screenshot.
+   * Auto-detects Appium server version (1 vs 2) by probing the /status endpoint.
+   * All WebdriverIO verbose logs are suppressed to prevent stdout JSON corruption.
    */
   public async startSession(projectRoot: string, profileName?: string): Promise<SessionInfo> {
     if (this.driver) {
@@ -36,13 +45,24 @@ export class AppiumSessionService {
     const capabilities = this.resolveCapabilities(config, profileName);
     const serverUrl = this.resolveServerUrl(config);
 
+    const parsedUrl = new URL(serverUrl);
+    const hostname = parsedUrl.hostname;
+    const port = parseInt(parsedUrl.port || '4723', 10);
+
+    // Detect Appium 2 vs Appium 1 server path automatically
+    const serverPath = await this.detectAppiumPath(hostname, port);
+    console.error(`[AppForge] Detected Appium server path: ${serverPath} at ${hostname}:${port}`);
+
     try {
       this.driver = await remote({
         protocol: 'http',
-        hostname: new URL(serverUrl).hostname,
-        port: parseInt(new URL(serverUrl).port || '4723'),
-        path: '/wd/hub/',
-        capabilities
+        hostname,
+        port,
+        path: serverPath,
+        capabilities,
+        // ⚠️ CRITICAL: Suppress WebdriverIO stdout logs to prevent MCP JSON-RPC pipe corruption.
+        // Log output must ONLY go to stderr (console.error), never stdout.
+        logLevel: 'error',
       });
 
       const caps = this.driver.capabilities as any;
@@ -57,27 +77,12 @@ export class AppiumSessionService {
         appActivity: caps['appium:appActivity'] ?? caps.appActivity,
         bundleId: caps['appium:bundleId'] ?? caps.bundleId,
         initialPageSource: pageSource,
-        screenshot
+        screenshot,
+        serverPath,
       };
     } catch (error: any) {
-      const msg = error.message || String(error);
-      if (msg.includes('ECONNREFUSED')) {
-        throw new Error(
-          `Cannot connect to Appium at ${serverUrl}. ` +
-          `Make sure Appium is running:\n  npx appium\n` +
-          `Or start it with a specific port:\n  npx appium --port 4723`
-        );
-      }
-      if (msg.includes('session not created') || msg.includes('Could not start')) {
-        throw new Error(
-          `Appium session creation failed. Check:\n` +
-          `1. Is an emulator/simulator running? (adb devices / xcrun simctl list)\n` +
-          `2. Is the app installed? (app path: ${capabilities['appium:app'] ?? 'not set'})\n` +
-          `3. Are the capabilities correct?\n` +
-          `Raw error: ${msg}`
-        );
-      }
-      throw error;
+      this.driver = null;
+      throw this.enrichSessionError(error, serverUrl, serverPath, capabilities);
     }
   }
 
@@ -99,7 +104,6 @@ export class AppiumSessionService {
 
   /**
    * Verifies whether a selector actually exists on the current screen.
-   * Used by self-healing to validate a healed selector before returning it.
    */
   public async verifySelector(selector: string): Promise<{
     exists: boolean;
@@ -144,16 +148,19 @@ export class AppiumSessionService {
 
   /**
    * Cleanly terminates the Appium session.
+   * Returns explicit lifecycle state: 'terminated' | 'no_active_session'.
    */
-  public async endSession(): Promise<void> {
-    if (this.driver) {
-      try {
-        await this.driver.deleteSession();
-      } catch {
-        // Session may already be dead
-      }
-      this.driver = null;
+  public async endSession(): Promise<'terminated' | 'no_active_session'> {
+    if (!this.driver) {
+      return 'no_active_session';
     }
+    try {
+      await this.driver.deleteSession();
+    } catch {
+      // Session may already be dead — still clear local state
+    }
+    this.driver = null;
+    return 'terminated';
   }
 
   // ─── Private Helpers ───────────────────────────────────
@@ -168,13 +175,113 @@ export class AppiumSessionService {
   }
 
   /**
+   * Auto-detects Appium server version path.
+   * - Appium 2: base path is '/' — /status returns JSON with Appium version info
+   * - Appium 1: base path is '/wd/hub' — /wd/hub/status returns JSON
+   *
+   * Strategy: Try Appium 2 root first (GET /status), then fall back to Appium 1.
+   */
+  private async detectAppiumPath(hostname: string, port: number): Promise<string> {
+    // Try Appium 2 root path first
+    const appium2Works = await this.probeStatusEndpoint(hostname, port, '/status');
+    if (appium2Works) {
+      return '/';
+    }
+
+    // Fall back to Appium 1 /wd/hub path
+    const appium1Works = await this.probeStatusEndpoint(hostname, port, '/wd/hub/status');
+    if (appium1Works) {
+      return '/wd/hub/';
+    }
+
+    // Default to Appium 2 root with a clear warning logged to stderr
+    console.error(
+      `[AppForge] ⚠️ Could not probe Appium status at ${hostname}:${port}. ` +
+      `Defaulting to Appium 2 path '/'. If session fails, ensure Appium is running: npx appium`
+    );
+    return '/';
+  }
+
+  /**
+   * Probes a given status endpoint. Returns true if it responds with HTTP 200.
+   */
+  private probeStatusEndpoint(hostname: string, port: number, statusPath: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const options = {
+        hostname,
+        port,
+        path: statusPath,
+        method: 'GET',
+        timeout: 3000,
+      };
+
+      const req = http.request(options, (res) => {
+        resolve(res.statusCode === 200);
+        res.resume(); // consume response to free socket
+      });
+
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => { req.destroy(); resolve(false); });
+      req.end();
+    });
+  }
+
+  /**
+   * Enriches Appium errors with actionable user guidance.
+   */
+  private enrichSessionError(error: any, serverUrl: string, serverPath: string, capabilities: any): Error {
+    const msg = error?.message || String(error);
+
+    if (msg.includes('ECONNREFUSED')) {
+      return new Error(
+        `[AppForge] Cannot connect to Appium at ${serverUrl} (path: ${serverPath}).\n` +
+        `Make sure Appium is running:\n  npx appium\n` +
+        `Or start with a specific port:\n  npx appium --port 4723`
+      );
+    }
+
+    if (msg.includes('resource could not be found') || msg.includes('HTTP method that is not supported')) {
+      return new Error(
+        `[AppForge] Appium endpoint mismatch. The server responded but rejected the session creation request.\n` +
+        `Detected path: "${serverPath}" — this was chosen by auto-detection.\n\n` +
+        `Possible causes:\n` +
+        `  1. If using Appium 2, ensure it is started without --allow-insecure=web_app flag.\n` +
+        `  2. Check that the active driver plugin is installed: npx appium driver list\n` +
+        `  3. Override the server path via mcp-config.json → mobile.serverPath\n\n` +
+        `Raw error: ${msg}`
+      );
+    }
+
+    if (msg.includes('session not created') || msg.includes('Could not start')) {
+      return new Error(
+        `[AppForge] Appium session creation failed. Check:\n` +
+        `1. Is an emulator/simulator running? (adb devices / xcrun simctl list)\n` +
+        `2. Is the app installed? (app path: ${capabilities['appium:app'] ?? 'not set'})\n` +
+        `3. Are the capabilities correct?\n` +
+        `Raw error: ${msg}`
+      );
+    }
+
+    if (msg.includes('xcrun') || msg.includes('iOS SDK')) {
+      return new Error(
+        `[AppForge] iOS SDK command timed out. Possible causes:\n` +
+        `1. Xcode Command Line Tools not installed: xcode-select --install\n` +
+        `2. Simulator is unresponsive — try: xcrun simctl shutdown all && open -a Simulator\n` +
+        `3. Ensure the correct iOS SDK is available: xcrun --sdk iphonesimulator --show-sdk-version\n` +
+        `Raw error: ${msg}`
+      );
+    }
+
+    return error;
+  }
+
+  /**
    * Resolves capabilities from existing WDIO configs OR mcp-config.json.
    * Priority: 1. Existing wdio.conf.ts/js, 2. mcp-config.json profiles.
    */
   private resolveCapabilities(config: McpConfig, profileName?: string): Record<string, any> {
-    const projectRoot = path.dirname(this.configService.getPaths(config).pagesRoot); // Best guess at root
+    const projectRoot = path.dirname(this.configService.getPaths(config).pagesRoot);
 
-    // 1. Try to find existing WDIO config first (including platform specific)
     const wdioPaths = [
       path.join(projectRoot, `wdio.${profileName || 'android'}.conf.ts`),
       path.join(projectRoot, `wdio.${profileName || 'ios'}.conf.ts`),
@@ -192,16 +299,13 @@ export class AppiumSessionService {
         console.error(`[AppForge] Found WDIO config candidate at ${p}. Extracting capabilities...`);
         try {
           const content = fs.readFileSync(p, 'utf8');
-          // Improved extraction logic to handle multiple formats gracefully.
           const capMatch = content.match(/capabilities:\s*\[\s*(\{[\s\S]*?\})\s*\]/);
           if (capMatch && capMatch[1]) {
             try {
-              // Attempt to parse if it's strictly formatted
-              // Convert JS-style keys without quotes to valid JSON (naive MVP fallback)
               const jsonLike = capMatch[1].replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":').replace(/'/g, '"');
               foundCapabilities = JSON.parse(jsonLike);
               break;
-            } catch (parseError) {
+            } catch {
               console.error(`[AppForge] Found capabilities in ${path.basename(p)} but couldn't parse statically. Falling back to mcp-config profiles.`);
             }
           }
@@ -228,7 +332,6 @@ export class AppiumSessionService {
       }
     }
 
-    // If a build profile is active, inject its app path
     const activeBuild = this.configService.getActiveBuild(config);
     if (activeBuild?.appPath) {
       caps['appium:app'] = activeBuild.appPath;
@@ -246,7 +349,6 @@ export class AppiumSessionService {
       return activeBuild.serverUrl;
     }
 
-    // Check cloud provider
     if (config.mobile.cloud?.provider === 'browserstack') {
       return `https://${config.mobile.cloud.username}:${config.mobile.cloud.accessKey}@hub-cloud.browserstack.com/wd/hub/`;
     }

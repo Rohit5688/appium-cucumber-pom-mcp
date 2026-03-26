@@ -7,6 +7,10 @@ export interface CoverageReport {
   coverageGaps: string[];
   missingScenarios: string[];
   heatmap: Record<string, number>;
+  /** Paths that were provided but do not exist on disk. */
+  missingPaths: string[];
+  /** Warning message if any provided paths were missing. */
+  pathWarning?: string;
 }
 
 /**
@@ -20,9 +24,13 @@ export class CoverageAnalysisService {
     let scenariosCount = 0;
     const heatmap: Record<string, number> = {};
     const screenNames = new Set<string>();
+    const missingPaths: string[] = [];
 
     for (const file of featureFilesPaths) {
-      if (!fs.existsSync(file)) continue;
+      if (!fs.existsSync(file)) {
+        missingPaths.push(file);
+        continue;
+      }
       const content = fs.readFileSync(file, 'utf8');
 
       // Count scenarios
@@ -69,7 +77,14 @@ export class CoverageAnalysisService {
       screensCovered,
       coverageGaps,
       missingScenarios,
-      heatmap
+      heatmap,
+      missingPaths,
+      ...(missingPaths.length > 0 ? {
+        pathWarning:
+          `⚠️ ${missingPaths.length} of ${featureFilesPaths.length} provided path(s) do not exist on disk. ` +
+          `The coverage report below reflects only valid paths. ` +
+          `Missing: ${missingPaths.map(p => `\n  • ${p}`).join('')}`
+      } : {})
     };
   }
 

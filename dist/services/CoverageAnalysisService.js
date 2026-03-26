@@ -10,9 +10,12 @@ export class CoverageAnalysisService {
         let scenariosCount = 0;
         const heatmap = {};
         const screenNames = new Set();
+        const missingPaths = [];
         for (const file of featureFilesPaths) {
-            if (!fs.existsSync(file))
+            if (!fs.existsSync(file)) {
+                missingPaths.push(file);
                 continue;
+            }
             const content = fs.readFileSync(file, 'utf8');
             // Count scenarios
             const scenarioMatches = content.match(/^\s*Scenario(?: Outline)?:\s*(.*)$/gm);
@@ -52,7 +55,13 @@ export class CoverageAnalysisService {
             screensCovered,
             coverageGaps,
             missingScenarios,
-            heatmap
+            heatmap,
+            missingPaths,
+            ...(missingPaths.length > 0 ? {
+                pathWarning: `⚠️ ${missingPaths.length} of ${featureFilesPaths.length} provided path(s) do not exist on disk. ` +
+                    `The coverage report below reflects only valid paths. ` +
+                    `Missing: ${missingPaths.map(p => `\n  • ${p}`).join('')}`
+            } : {})
         };
     }
     /**

@@ -103,6 +103,18 @@ class AppForgeServer {
           }
         },
         {
+          name: "repair_project",
+          description: "Repair and restore missing baseline files after a partial or interrupted setup_project run. Safe to run at any time — only generates files that are missing and never overwrites existing ones.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectRoot: { type: "string" },
+              platform: { type: "string", enum: ["android", "ios", "both"], description: "Platform hint used when regenerating mcp-config.json. Defaults to android." }
+            },
+            required: ["projectRoot"]
+          }
+        },
+        {
           name: "manage_config",
           description: "Read or update the mcp-config.json file for capabilities, paths, and cloud settings.",
           inputSchema: {
@@ -601,6 +613,9 @@ class AppForgeServer {
           case "upgrade_project":
             return this.textResult(await this.projectMaintenanceService.upgradeProject(args.projectRoot));
 
+          case "repair_project":
+            return this.textResult(await this.projectMaintenanceService.repairProject(args.projectRoot, args.platform ?? 'android'));
+
           case "manage_config":
             if (args.operation === "read") {
               return this.textResult(JSON.stringify(this.configService.read(args.projectRoot), null, 2));
@@ -948,8 +963,11 @@ class AppForgeServer {
             return this.textResult(JSON.stringify(report, null, 2));
           }
 
-          case "export_bug_report":
+          case "export_bug_report": {
+            const bugValidation = this.validateArgs(args, ['testName', 'rawError']);
+            if (bugValidation) return bugValidation;
             return this.textResult(this.bugReportService.generateBugReport(args.testName, args.rawError, args.platform, args.deviceName, args.appVersion));
+          }
 
           case "generate_test_data_factory":
             return this.textResult(this.testDataService.generateDataFactoryPrompt(args.entityName, args.schemaDefinition));
@@ -986,8 +1004,17 @@ class AppForgeServer {
           }
 
           case "end_appium_session": {
-            await this.appiumSessionService.endSession();
-            return this.textResult('Appium session terminated.');
+            const sessionState = await this.appiumSessionService.endSession();
+            if (sessionState === 'no_active_session') {
+              return this.textResult(JSON.stringify({
+                status: 'no_active_session',
+                message: 'No active Appium session was found. Nothing to terminate.'
+              }, null, 2));
+            }
+            return this.textResult(JSON.stringify({
+              status: 'terminated',
+              message: 'Appium session terminated successfully.'
+            }, null, 2));
           }
 
           case "verify_selector": {
@@ -1068,13 +1095,48 @@ class AppForgeServer {
             throw new Error(`Unknown tool: ${request.params.name}`);
         }
       } catch (error: any) {
-        return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
+        const msg = error?.message || String(error);
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({
+            code: 'TOOL_EXECUTION_ERROR',
+            message: msg,
+            tool: request.params.name,
+            hint: 'Check the error message above for details. If this is an Appium connectivity issue, ensure Appium is running with: npx appium'
+          }, null, 2) }],
+          isError: true
+        };
       }
     });
   }
 
   private textResult(text: string) {
     return { content: [{ type: "text" as const, text }] };
+  }
+
+  /**
+   * Validates that required fields are present and non-empty in the args object.
+   * Returns a structured isError response if any are missing, or null if all OK.
+   *
+   * Usage: const v = this.validateArgs(args, ['testName', 'rawError']); if (v) return v;
+   */
+  private validateArgs(args: Record<string, any>, requiredFields: string[]) {
+    const missing = requiredFields.filter(
+      f => args[f] === undefined || args[f] === null || args[f] === ''
+    );
+    if (missing.length === 0) return null;
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({
+          code: 'VALIDATION_ERROR',
+          message: `Missing required argument(s): ${missing.join(', ')}`,
+          invalidFields: missing,
+          expectedSchemaSnippet: Object.fromEntries(missing.map(f => [f, { type: 'string', required: true }])),
+          hint: 'Provide all required fields and retry.'
+        }, null, 2)
+      }],
+      isError: true as const
+    };
   }
 
   async run() {
