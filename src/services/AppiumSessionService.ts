@@ -41,7 +41,7 @@ export class AppiumSessionService {
         protocol: 'http',
         hostname: new URL(serverUrl).hostname,
         port: parseInt(new URL(serverUrl).port || '4723'),
-        path: '/wd/hub',
+        path: '/wd/hub/',
         capabilities
       });
 
@@ -174,39 +174,58 @@ export class AppiumSessionService {
   private resolveCapabilities(config: McpConfig, profileName?: string): Record<string, any> {
     const projectRoot = path.dirname(this.configService.getPaths(config).pagesRoot); // Best guess at root
 
-    // 1. Try to find existing WDIO config first
+    // 1. Try to find existing WDIO config first (including platform specific)
     const wdioPaths = [
+      path.join(projectRoot, `wdio.${profileName || 'android'}.conf.ts`),
+      path.join(projectRoot, `wdio.${profileName || 'ios'}.conf.ts`),
+      path.join(projectRoot, 'config', `wdio.${profileName || 'android'}.conf.ts`),
+      path.join(projectRoot, 'config', `wdio.${profileName || 'ios'}.conf.ts`),
+      path.join(projectRoot, 'wdio.shared.conf.ts'),
       path.join(projectRoot, 'wdio.conf.ts'),
-      path.join(projectRoot, 'wdio.conf.js'),
-      path.join(projectRoot, 'config', 'wdio.conf.ts'),
-      path.join(projectRoot, 'config', 'wdio.conf.js')
+      path.join(projectRoot, 'wdio.conf.js')
     ];
+
+    let foundCapabilities: any = null;
 
     for (const p of wdioPaths) {
       if (fs.existsSync(p)) {
-        console.error(`[AppForge] Found existing WDIO config at ${p}. Extracting capabilities...`);
-        const content = fs.readFileSync(p, 'utf8');
-        // Simple regex extraction for capabilities block (MVP approach)
-        const capMatch = content.match(/capabilities:\s*\[\s*([\s\S]*?)\s*\]/);
-        if (capMatch && capMatch[1]) {
-           // This is a naive parse of the FIRST capability block. 
-           // In a real run, the LLM will use 'execute_sandbox_code' to parse this better.
-           console.error(`[AppForge] Capabilities found in ${path.basename(p)}. Syncing...`);
+        console.error(`[AppForge] Found WDIO config candidate at ${p}. Extracting capabilities...`);
+        try {
+          const content = fs.readFileSync(p, 'utf8');
+          // Improved extraction logic to handle multiple formats gracefully.
+          const capMatch = content.match(/capabilities:\s*\[\s*(\{[\s\S]*?\})\s*\]/);
+          if (capMatch && capMatch[1]) {
+            try {
+              // Attempt to parse if it's strictly formatted
+              // Convert JS-style keys without quotes to valid JSON (naive MVP fallback)
+              const jsonLike = capMatch[1].replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":').replace(/'/g, '"');
+              foundCapabilities = JSON.parse(jsonLike);
+              break;
+            } catch (parseError) {
+              console.error(`[AppForge] Found capabilities in ${path.basename(p)} but couldn't parse statically. Falling back to mcp-config profiles.`);
+            }
+          }
+        } catch (e) {
+          console.error(`[AppForge] Error reading ${p}: ${e}`);
         }
       }
     }
 
-    const profiles = config.mobile.capabilitiesProfiles;
+    const profiles = config.mobile.capabilitiesProfiles || {};
     const names = Object.keys(profiles);
 
-    if (names.length === 0) {
-      throw new Error('No capability profiles found in wdio.conf or mcp-config.json. Run setup_project first.');
-    }
-
-    const name = profileName ?? names[0];
-    const caps = profiles[name];
-    if (!caps) {
-      throw new Error(`Capability profile "${name}" not found. Available: ${names.join(', ')}`);
+    let caps: Record<string, any>;
+    if (foundCapabilities) {
+      caps = foundCapabilities;
+    } else {
+      if (names.length === 0) {
+        throw new Error('No capability profiles found in wdio.conf or mcp-config.json. Run setup_project first.');
+      }
+      const name = profileName ?? names[0];
+      caps = profiles[name];
+      if (!caps) {
+        throw new Error(`Capability profile "${name}" not found. Available: ${names.join(', ')}`);
+      }
     }
 
     // If a build profile is active, inject its app path
@@ -229,10 +248,10 @@ export class AppiumSessionService {
 
     // Check cloud provider
     if (config.mobile.cloud?.provider === 'browserstack') {
-      return `https://${config.mobile.cloud.username}:${config.mobile.cloud.accessKey}@hub-cloud.browserstack.com/wd/hub`;
+      return `https://${config.mobile.cloud.username}:${config.mobile.cloud.accessKey}@hub-cloud.browserstack.com/wd/hub/`;
     }
     if (config.mobile.cloud?.provider === 'saucelabs') {
-      return `https://${config.mobile.cloud.username}:${config.mobile.cloud.accessKey}@ondemand.us-west-1.saucelabs.com/wd/hub`;
+      return `https://${config.mobile.cloud.username}:${config.mobile.cloud.accessKey}@ondemand.us-west-1.saucelabs.com/wd/hub/`;
     }
 
     return 'http://localhost:4723';
