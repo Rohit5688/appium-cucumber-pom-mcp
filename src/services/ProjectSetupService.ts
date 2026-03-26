@@ -111,7 +111,7 @@ export class ProjectSetupService {
     scripts["test:smoke"] = scripts["test"] + " --cucumberOpts.tagExpression='@smoke'";
 
     const pkg = {
-      name: appName.toLowerCase().replace(/\s+/g, '-'),
+      name: (appName || 'appforge-mobile-automation').toLowerCase().replace(/\s+/g, '-'),
       version: '1.0.0',
       type: 'module',
       scripts,

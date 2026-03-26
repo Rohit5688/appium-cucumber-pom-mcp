@@ -525,10 +525,11 @@ export class LearningService {
       conditionsMatched++;
     }
 
-    // Gate 3: Platform match
-    if (rule.conditions.platforms && rule.conditions.platforms.length > 0 && ctx.platform) {
-      if (!rule.conditions.platforms.includes(ctx.platform)) {
-        return { matched: false, conditionsMatched, skipReason: `platform_mismatch: rule requires ${rule.conditions.platforms.join('|')}, got "${ctx.platform}"` };
+    // Gate 3: Platform match — LS-16: Case-insensitive matching for platforms
+    const ctxPlatform = (ctx.platform || '').toLowerCase();
+    if (rule.conditions.platforms && rule.conditions.platforms.length > 0) {
+      if (!rule.conditions.platforms.some(p => p.toLowerCase() === ctxPlatform)) {
+        return { matched: false, conditionsMatched, skipReason: `platform_mismatch: rule requires ${rule.conditions.platforms.join('|')}, got "${ctxPlatform}"` };
       }
       conditionsMatched++;
     }
@@ -542,8 +543,8 @@ export class LearningService {
       conditionsMatched++;
     }
 
-    // Gate 5: Text matchers
-    const text = ctx.requestText.toLowerCase();
+    // Gate 5: Text matchers — LS-16: Defensive guard for missing requestText
+    const text = (ctx.requestText || '').toLowerCase();
 
     if (rule.conditions.keywordsAll && rule.conditions.keywordsAll.length > 0) {
       const allMatch = rule.conditions.keywordsAll.every(kw => {
@@ -574,7 +575,7 @@ export class LearningService {
         try {
           // Safety: reject catastrophic backtracking regex patterns
           if (rxStr.length > 200) return false;
-          return new RegExp(rxStr, 'i').test(ctx.requestText);
+          return new RegExp(rxStr, 'i').test(text);
         } catch { return false; }
       });
       if (!anyMatch) {

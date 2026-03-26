@@ -978,8 +978,9 @@ class AppForgeServer {
           case "verify_training": {
             const ctx: RequestContext = {
               toolName: 'generate_cucumber_pom',
-              platform: args.platform,
-              requestText: args.testDescription,
+              platform: args.platform ?? 'android',
+              // LS-16: Guard against undefined testDescription
+              requestText: typeof args.testDescription === 'string' ? args.testDescription : '',
               tags: args.tags ?? [],
             };
             const result = this.learningService.verifyTraining(args.projectRoot, ctx);
