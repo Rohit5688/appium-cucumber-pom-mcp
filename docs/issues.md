@@ -1,192 +1,262 @@
-# AppForge MCP Tool Review Report
+## Issues
 
-**Model:** Claude 3.5 Sonnet (Anthropic) via Cline
-**Date:** 2026-03-25
-**Project:** appium-poc (Appium + Cucumber BDD mobile test framework)
-**Task:** Full framework audit and overhaul of core/utils/locator strategy layer
+### LS-01 — Appium 2/3 Base Path Incompatibility
 
----
-
-## 1. AppForge Tools Used During This Session
-
-| Tool | Used? | Purpose |
-| ----------------------- | ------ | --------------------------------------------------------------- |
-| `analyze_codebase` | ✅ Yes | Initial project discovery — Page Objects, step defs, configs |
-| `train_on_example` | ✅ Yes | Persisted 13 mandatory rules for future generation |
-| `manage_config` | ✅ Yes | Read mcp-config.json for capabilities and paths |
-| `check_environment` | ❌ No | Not needed — environment was already working |
-| `generate_cucumber_pom` | ❌ No | Not applicable — was refactoring, not generating new tests |
-| `validate_and_write` | ❌ No | Used Cline native write_to_file instead (faster, more flexible) |
-| `self_heal_test` | ❌ No | Was doing preventive fixes, not reactive healing |
-| `inspect_ui_hierarchy` | ❌ No | No live Appium session XML available during code review |
-| `audit_mobile_locators` | ❌ No | Read locator files directly with read_file |
-| `execute_sandbox_code` | ❌ No | Used read_file + search_files instead (more intuitive) |
-| `suggest_refactorings` | ❌ No | Did manual code review (tool output wasn't actionable enough) |
-| `run_cucumber_test` | ❌ No | Used direct wdio CLI for better output control |
-
----
-
-## 2. What Worked Well
-
-### 2.1 `train_on_example` — Learning Persistence
-
-The concept of persisting rules to `.appium-mcp/mcp-learning.json` is excellent. Being able to teach the tool "when you see X pattern, always do Y" is the right approach for team-specific conventions. The tagging system (e.g., `["framework", "anti-flake"]`) is useful for categorization.
-
-### 2.2 `analyze_codebase` — Initial Discovery
-
-Gave a quick birds-eye view of the project structure on first run. Identified all Page Objects, step definitions, and config files without manual exploration.
-
-### 2.3 `manage_config` — Config Access
-
-Clean way to read/write mcp-config.json without worrying about file format.
-
----
-
-## 3. What Did NOT Work Well — Practical Issues
-
-### 3.1 `analyze_codebase` is unusable for real projects (Token Overflow)
-
-The tool dumps ALL file contents into a single response. For a project with 50+ source files, this exceeds context limits. The tool itself warns: "⚠️ TOKEN-INTENSIVE (LEGACY)". The suggested alternative (`execute_sandbox_code`) requires writing JavaScript snippets to query the codebase, which is much less intuitive than just reading files.
-
-**Fix needed:** Add a lightweight `analyze_codebase_summary` mode that returns only:
-
-- File tree with line counts
-- Exported class/function names per file
-- Import dependency graph
-- No file contents — just structural metadata
-
-### 3.2 `generate_cucumber_pom` — Generation-only, no refactoring support
-
-The tool generates NEW test suites from plain English descriptions. There is NO tool for:
-
-- Analyzing EXISTING code for quality issues
-- Suggesting refactors to existing Page Objects
-- Detecting duplicated patterns across files
-- Proposing consolidation opportunities
-
-I had to do the entire framework audit manually (reading 10+ files, identifying 12 gaps, planning fixes). The MCP should have a tool for this.
-
-**Fix needed:** Add an `analyze_code_quality` tool that accepts a list of file paths and returns:
-
-- Duplicated code blocks with locations
-- Methods with too many responsibilities
-- Inconsistent patterns (e.g., some files use `browser`, others use `driver`)
-- Magic numbers that should be constants
-- Dead code / unused imports
-
-### 3.3 `validate_and_write` — Overly rigid input schema
-
-The tool requires a structured JSON input with `className`, `locators`, `methods` arrays. This is fine for generating new Page Objects from scratch, but useless when I need to:
-
-- Add a 2-line utility function
-- Fix one method in an existing file
-- Refactor imports
-
-I used Cline's native `write_to_file` and `replace_in_file` for ALL file operations because they're simpler and more flexible.
-
-**Fix needed:** Accept both structured JSON input (for generation) AND plain file content (for arbitrary writes). The validation step (tsc --noEmit + Gherkin lint) should work with either mode.
-
-### 3.4 `self_heal_test` — Reactive only, not preventive
-
-The tool requires FAILED test output + XML hierarchy + screenshot as input. It only works AFTER something breaks. The real value would be in PREVENTIVE analysis: "these locators are brittle and WILL break because..."
-
-**Fix needed:** Add a `predict_flakiness` mode that:
-
-- Analyzes locator strategies for brittleness (XPath depth, text-based selectors that may change with i18n)
-- Identifies wait patterns that hold stale element handles
-- Flags methods that mix responsibilities (navigation + assertion + popup handling)
-- Returns risk scores per test/page object
-
-### 3.5 `audit_mobile_locators` — Flags issues but doesn't fix them
-
-The tool identifies XPath over-usage and brittle selectors, but its output is a Markdown report with warnings. It doesn't suggest concrete replacement selectors or generate a PR-ready diff.
-
-**Fix needed:** Return actionable output with:
-
-- Current brittle selector
-- Suggested replacement (accessibility ID preferred, then predicate, then XPath)
-- Auto-generated `replace_in_file` diff that can be applied directly
-
-### 3.6 `execute_sandbox_code` — High friction for simple tasks
-
-To read a file or search for patterns, I need to write JavaScript like:
-
-```js
-const content = await forge.api.readFile("path/to/file");
-return content.match(/pattern/g);
+**Symptom**
+Every `start_appium_session` call against a running Appium 2 or 3 server returned:
+```
+WebDriverError: The requested resource could not be found ...
+when running "http://localhost:4723/wd/hub/session" with method "POST"
 ```
 
-This is slower and more error-prone than Cline's native `read_file` and `search_files` tools which I used instead.
+**Root cause**
+`AppiumSessionService` hardcoded `path: '/wd/hub/'`. Appium 2/3 dropped the `/wd/hub` prefix — the session endpoint is now at root `/`.
 
-**Fix needed:** Provide higher-level sandbox APIs:
+**Fix (already implemented)**
+`detectAppiumPath()` probes `/status` and `/wd/hub/status` before connecting and selects the correct base path automatically. WebdriverIO is then initialised with the detected path.
 
-- `forge.api.findDuplicateStepDefs(projectRoot)` — returns duplicate Cucumber steps
-- `forge.api.findUnusedLocators(projectRoot)` — returns locator keys defined in YAML but never referenced
-- `forge.api.findMagicNumbers(projectRoot)` — returns hardcoded timeout values
-- `forge.api.findInconsistentPatterns(projectRoot)` — returns files using `driver` vs `browser`, etc.
+**Status**: ✅ Fixed on `feature/token-optimization`.
 
-### 3.7 `train_on_example` — No validation or deduplication
+---
 
-Rules are appended without checking if a similar rule already exists. After multiple training calls, the learning file can have overlapping or contradictory rules. There's also no way to verify that trained rules are actually injected into `generate_cucumber_pom` prompts.
+### LS-02 — No Preflight Check for Missing Appium Drivers
 
-**Fix needed:**
+**Symptom**
+Session failed with:
+```
+Could not find a driver for automationName 'XCUITest' and platformName 'iOS'.
+Run 'appium driver list --installed' to see.
+```
+The error was clear but AppForge itself gave no hint about it before the attempt.
 
-- Deduplicate rules by comparing issue patterns
-- Allow listing/removing/editing existing rules
-- Add a `verify_training` tool that shows which rules would be applied for a given generation request
-- Version rules with timestamps and source references
+**Root cause**
+`check_environment` does not verify whether the required Appium driver (XCUITest / UiAutomator2) is installed for the target platform. Session startup discovers the gap at runtime rather than pre-flight.
 
-### 3.8 No tool for running and analyzing test results structurally
+**Fix plan**
+In `EnvironmentCheckService.check()`, add a driver-presence check:
+```
+appium driver list --installed
+```
+Cross-reference against the platform in `mcp-config.json` (`XCUITest` for iOS, `UiAutomator2` for Android). If missing, surface:
+```
+❌ Appium driver: xcuitest not installed.
+Fix: appium driver install xcuitest
+```
 
-`run_cucumber_test` executes tests but returns raw terminal output. There's no structured result parsing that returns:
+**Status**: ✅ Fixed on `feature/token-optimization`. `checkAppiumDrivers` now checks all required drivers for the given platform (including `both`), returns exact `appium driver install <name>` commands for any missing driver.
 
-- Pass/fail per scenario
-- Duration per step
-- Which locators were used
-- Which waits timed out
-- Comparison with previous run
+---
 
-I ran tests via direct CLI and manually parsed the output.
+### LS-03 — `end_appium_session` False Success
 
-**Fix needed:** Return structured JSON results:
+**Symptom**
+After all failed session starts, `end_appium_session` returned `"Appium session terminated."` even though no session was ever established.
 
-```json
-{
-"scenarios": [{"name": "...", "status": "passed", "duration": 73600, "steps": [...]}],
-"locatorsUsed": ["login.passwordField", ...],
-"timeoutsHit": [],
-"comparedToPrevious": {"faster": true, "delta": "-2.3s"}
+**Fix (already implemented)**
+`endSession()` now returns an explicit state enum. The tool dispatcher returns:
+- `{ status: "terminated" }` — session existed and was closed.
+- `{ status: "no_active_session" }` — nothing was running, nothing terminated.
+
+**Status**: ✅ Fixed on `feature/token-optimization`.
+
+---
+
+### LS-04 — Session Is Read-Only: XML Only From Launch Screen
+
+**Symptom**
+When asked to "navigate to the login screen and capture its hierarchy", the AI could not do it. `start_appium_session` returned the launch screen XML — and that was the only screen AppForge could ever see. Subsequent calls to `inspect_ui_hierarchy` showed unchanged data because no navigation occurred.
+
+**Root cause**
+This is an architectural gap. AppForge has **no MCP tool to interact with the device**. The full live tool inventory is:
+
+| Tool | Capability |
+|------|-----------|
+| `start_appium_session` | Open session, fetch launch-screen XML + screenshot |
+| `inspect_ui_hierarchy` | Parse/return XML — operates on what was passed in or the launch page source |
+| `verify_selector` | Check if a selector exists on the current screen |
+| `end_appium_session` | Close session |
+
+None of these tools drive the app. `AppiumSessionService` has an internal `executeMobile()` method and a live `driver` reference, but neither is exposed to the MCP layer.
+
+**Impact**
+- Cannot navigate past the launch/splash screen.
+- Cannot test any flow that requires interaction (login, checkout, settings, etc.).
+- Live session feature is effectively limited to scanning one static screen.
+
+**Fix plan — new `perform_action` tool**
+See LS-06 below.
+
+---
+
+### LS-05 — `inspect_ui_hierarchy` Operates On Provided XML, Not Live Session
+
+**Symptom**
+When called without arguments after an active session, `inspect_ui_hierarchy` re-parsed the stale XML that was captured at session start. It does not poll the current device state.
+
+**Root cause**
+The tool's dispatcher calls `executionService.inspectHierarchy(args.xmlDump, ...)`. If `args.xmlDump` is empty, it falls through to cached or previously provided XML. There is no path from `inspect_ui_hierarchy → appiumSessionService.getPageSource()`.
+
+**Fix plan**
+When `xmlDump` is omitted and a session is active, `inspect_ui_hierarchy` should automatically call `appiumSessionService.getPageSource()` to fetch the current live screen XML. This makes the tool behave intuitively for live sessions.
+
+Pseudocode change in dispatcher:
+```typescript
+case "inspect_ui_hierarchy": {
+let xml = args.xmlDump;
+if (!xml && this.appiumSessionService.isSessionActive()) {
+xml = await this.appiumSessionService.getPageSource();
+}
+const result = await this.executionService.inspectHierarchy(xml, args.screenshotBase64 ?? '');
+return this.textResult(JSON.stringify(result, null, 2));
 }
 ```
 
----
-
-## 4. Summary of Recommended MCP Tool Fixes
-
-| Priority | Fix | Impact |
-| -------- | -------------------------------------------------------- | ------------------------------------------------------------ |
-| 🔴 High | Add `analyze_code_quality` tool for existing code review | Enables framework audits without manual file-by-file reading |
-| 🔴 High | Add lightweight `analyze_codebase_summary` mode | Prevents token overflow on real projects |
-| 🔴 High | `validate_and_write` should accept plain file content | Makes the tool usable for non-generation writes |
-| 🟡 Med | Add `predict_flakiness` mode to self_heal_test | Catches issues before they cause failures |
-| 🟡 Med | `audit_mobile_locators` should return actionable diffs | Saves manual work converting warnings to code changes |
-| 🟡 Med | `train_on_example` needs deduplication and verification | Prevents rule bloat and ensures rules are actually used |
-| 🟡 Med | Higher-level sandbox APIs for common analysis tasks | Reduces friction vs. Cline native tools |
-| 🟢 Low | `run_cucumber_test` should return structured JSON | Enables automated analysis of test results |
-| 🟢 Low | Add rule management (list/edit/delete) to training | Maintains learning quality over time |
+**Status**: ✅ Fixed on `feature/token-optimization`. When `xmlDump` is empty and `isSessionActive()` is true, the dispatcher now calls `appiumSessionService.getPageSource()` automatically.
 
 ---
 
-## 5. Verdict
+### LS-06 — Missing `perform_action` Tool (Critical Architectural Gap)
 
-**AppForge MCP v1 is a solid foundation for test GENERATION but lacks tools for test MAINTENANCE and REFACTORING.**
+**Symptom**
+AppForge cannot follow any user instruction that requires interacting with the app (tap, type, swipe, scroll, navigate back). The AI can see the first screen and nothing more.
 
-In this session, ~90% of the work was done with Cline's native tools (`read_file`, `write_to_file`, `replace_in_file`, `search_files`, `execute_command`). AppForge was only used for initial discovery and final learning persistence. The gap is particularly acute for:
+**Root cause**
+No interaction MCP tool exists. The registered tool list contains zero action primitives.
 
-1. **Code quality analysis** — no tool to detect duplicated patterns, magic numbers, inconsistent APIs
-2. **Preventive flakiness detection** — only reactive self-healing after failures
-3. **Existing code refactoring** — all tools assume new generation, not modification of existing code
+**Fix plan — implement `perform_action`**
 
-The `train_on_example` concept is the strongest feature — persisting team-specific rules for future generation is exactly right. But it needs validation, deduplication, and proof that rules are actually applied.
+#### Tool schema
 
-**Model recommendation:** Claude 3.5 Sonnet performed well for this task. The ability to read multiple files, identify cross-cutting patterns, and make surgical edits with `replace_in_file` was essential. The main bottleneck was waiting for test execution (3+ minutes per run), not LLM reasoning.
+```jsonc
+{
+"name": "perform_action",
+"description": "[EXECUTOR] Perform an interaction on the live Appium session (tap, type, swipe, back, screenshot). Pass captureAfter: true to get updated XML + screenshot after the action — essential for multi-step navigation flows.",
+"inputSchema": {
+"type": "object",
+"properties": {
+"action": {
+"type": "string",
+"enum": ["tap", "type", "clear", "swipe", "back", "home", "screenshot"],
+"description": "The interaction to perform."
+},
+"selector": {
+"type": "string",
+"description": "Target element selector (e.g. '~loginButton', 'id=com.app:id/btn'). Required for tap, type, clear."
+},
+"value": {
+"type": "string",
+"description": "Text for 'type'; swipe direction ('up'|'down'|'left'|'right') for 'swipe'."
+},
+"captureAfter": {
+"type": "boolean",
+"description": "If true, return updated page source XML and screenshot after the action. Default: true."
+}
+},
+"required": ["action"]
+}
+}
+```
+
+#### Service implementation (additions to `AppiumSessionService`)
+
+```typescript
+public async performAction(
+action: 'tap' | 'type' | 'clear' | 'swipe' | 'back' | 'home' | 'screenshot',
+selector?: string,
+value?: string
+): Promise<{ success: boolean; pageSource?: string; screenshot?: string }> {
+this.ensureSession();
+const d = this.driver!;
+
+switch (action) {
+case 'tap': {
+const el = await d.$(selector!);
+await el.waitForDisplayed({ timeout: 10000 });
+await el.click();
+break;
+}
+case 'type': {
+const el = await d.$(selector!);
+await el.waitForDisplayed({ timeout: 10000 });
+await el.setValue(value ?? '');
+break;
+}
+case 'clear': {
+const el = await d.$(selector!);
+await el.clearValue();
+break;
+}
+case 'swipe': {
+const dir = value ?? 'up';
+const dirs: Record<string, object> = {
+up: { direction: 'up' },
+down: { direction: 'down' },
+left: { direction: 'left' },
+right: { direction: 'right' },
+};
+await d.execute('mobile: scroll', dirs[dir] ?? dirs['up']);
+break;
+}
+case 'back':
+await d.back();
+break;
+case 'home':
+await d.execute('mobile: pressButton', { name: 'home' });
+break;
+case 'screenshot':
+break; // screenshot captured below regardless
+}
+
+return {
+success: true,
+pageSource: await d.getPageSource(),
+screenshot: await d.takeScreenshot(),
+};
+}
+```
+
+#### Expected output
+
+```jsonc
+{
+"action": "tap",
+"selector": "~loginButton",
+"success": true,
+"pageSource": "<hierarchy>...</hierarchy>",
+"screenshot": "<base64>",
+"message": "tap on ~loginButton succeeded. Page source captured after action."
+}
+```
+
+#### Usage flow this unlocks
+
+```
+start_appium_session → sees launch / splash screen
+perform_action tap ~continueButton captureAfter:true → navigates to login
+perform_action tap ~usernameField → focuses field
+perform_action type value:"user@test.com" → types email
+perform_action tap ~loginButton captureAfter:true → submits, sees home screen
+inspect_ui_hierarchy → reads full home screen XML
+generate_cucumber_pom → AI writes tests from live context
+```
+
+---
+
+**Status**: ✅ Fixed on `feature/token-optimization`. `performAction()` added to `AppiumSessionService`, `perform_action` tool registered in `index.ts`.
+
+## Fix Delivery Order
+
+| Priority | ID | Work item | File(s) |
+|----------|----|-----------|---------|
+| P0 | LS-06 | Add `perform_action` service method | `src/services/AppiumSessionService.ts` |
+| P0 | LS-06 | Register + dispatch `perform_action` MCP tool | `src/index.ts` |
+| P1 | LS-05 | Auto-fetch live XML in `inspect_ui_hierarchy` when session active | `src/index.ts` |
+| P1 | LS-02 | Add driver-presence check to `check_environment` | `src/services/EnvironmentCheckService.ts` |
+
+## Acceptance Criteria
+
+- `perform_action tap <selector>` navigates to a new screen; returns updated XML + screenshot.
+- `perform_action type <selector> value:<text>` fills an input field.
+- `perform_action swipe up` scrolls the current view down.
+- `inspect_ui_hierarchy` with no arguments returns live current-screen XML when a session is active.
+- `check_environment` warns when the required Appium platform driver is not installed, with exact install command.

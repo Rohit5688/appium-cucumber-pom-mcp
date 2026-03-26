@@ -114,16 +114,37 @@ export class EnvironmentCheckService {
     try {
       const { stdout } = await execAsync('appium driver list --installed --json');
       const drivers = JSON.parse(stdout);
+      const driverKeys = Object.keys(drivers).map(k => k.toLowerCase());
 
-      const needed = platform === 'ios' ? 'xcuitest' : 'uiautomator2';
-      const driverKeys = Object.keys(drivers);
+      // Determine required drivers based on platform
+      const needed: string[] = [];
+      if (platform === 'android' || platform === 'both') needed.push('uiautomator2');
+      if (platform === 'ios' || platform === 'both') needed.push('xcuitest');
 
-      if (driverKeys.some(k => k.toLowerCase().includes(needed))) {
-        return { name: 'Appium Driver', status: 'pass', message: `${needed} driver installed` };
+      const missing = needed.filter(d => !driverKeys.some(k => k.includes(d)));
+
+      if (missing.length === 0) {
+        return {
+          name: 'Appium Drivers',
+          status: 'pass',
+          message: `Required driver(s) installed: ${needed.join(', ')}`
+        };
       }
-      return { name: 'Appium Driver', status: 'fail', message: `${needed} driver not installed`, fixHint: `Install the driver:\n  appium driver install ${needed}` };
+
+      const installCmds = missing.map(d => `  appium driver install ${d}`).join('\n');
+      return {
+        name: 'Appium Drivers',
+        status: 'fail',
+        message: `Missing driver(s): ${missing.join(', ')}`,
+        fixHint: `Install the missing driver(s):\n${installCmds}\n\nThen restart Appium: npx appium`
+      };
     } catch {
-      return { name: 'Appium Driver', status: 'warn', message: 'Could not check drivers', fixHint: 'Install Appium 2.x and drivers:\n  npm install -g appium\n  appium driver install uiautomator2\n  appium driver install xcuitest' };
+      return {
+        name: 'Appium Drivers',
+        status: 'warn',
+        message: 'Could not check installed drivers (appium CLI not found or --json flag unsupported)',
+        fixHint: 'Install Appium 2.x and required drivers:\n  npm install -g appium\n  appium driver install uiautomator2\n  appium driver install xcuitest'
+      };
     }
   }
 

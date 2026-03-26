@@ -242,7 +242,7 @@ class AppForgeServer {
         },
         {
           name: "inspect_ui_hierarchy",
-          description: "[PROMPT-BUILDER] Parses Appium XML page source + Base64 screenshot and returns a structured hierarchy for vision analysis. Pass the output's xmlDump to generate_cucumber_pom for accurate locator generation.",
+          description: "[PROMPT-BUILDER] Parses Appium XML page source + Base64 screenshot and returns a structured hierarchy for vision analysis. When xmlDump is omitted and a session is active, automatically fetches the current live screen XML. Pass the output's xmlDump to generate_cucumber_pom for accurate locator generation.",
           inputSchema: {
             type: "object",
             properties: {
@@ -598,7 +598,34 @@ class AppForgeServer {
             },
             required: ["script"],
           },
-        }
+        },
+        {
+          name: "perform_action",
+          description: "[EXECUTOR] Perform an interaction on the live Appium session (tap, type, clear, swipe, back, home, screenshot). Always returns updated pageSource + screenshot after the action. Essential for multi-step navigation flows: start_appium_session → perform_action → inspect_ui_hierarchy → generate_cucumber_pom.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              action: {
+                type: "string",
+                enum: ["tap", "type", "clear", "swipe", "back", "home", "screenshot"],
+                description: "The interaction to perform."
+              },
+              selector: {
+                type: "string",
+                description: "Target element selector (e.g. '~loginButton', 'id=com.app:id/btn'). Required for tap, type, clear."
+              },
+              value: {
+                type: "string",
+                description: "Text input for 'type'; swipe direction ('up'|'down'|'left'|'right') for 'swipe'."
+              },
+              captureAfter: {
+                type: "boolean",
+                description: "If true (default), returns updated page source XML and screenshot after the action."
+              }
+            },
+            required: ["action"]
+          }
+        },
       ],
     }));
 
@@ -764,10 +791,26 @@ class AppForgeServer {
             return this.textResult(JSON.stringify(result, null, 2));
           }
 
-          case "inspect_ui_hierarchy": {
-            const result = await this.executionService.inspectHierarchy(args.xmlDump, args.screenshotBase64 ?? '');
-            return this.textResult(JSON.stringify(result, null, 2));
+        case "inspect_ui_hierarchy": {
+          // LS-05: When xmlDump is not provided, auto-fetch live page source
+          // from the active session instead of operating on stale/empty XML.
+          let liveXml = args.xmlDump;
+          if (!liveXml && this.appiumSessionService.isSessionActive()) {
+            liveXml = await this.appiumSessionService.getPageSource();
           }
+          if (!liveXml) {
+            return {
+              content: [{ type: 'text' as const, text: JSON.stringify({
+                code: 'NO_XML_SOURCE',
+                message: 'No xmlDump provided and no active Appium session. Either pass xmlDump or call start_appium_session first.',
+                hint: 'Start a session with start_appium_session, then call inspect_ui_hierarchy without arguments to get live XML.'
+              }, null, 2) }],
+              isError: true
+            };
+          }
+          const result = await this.executionService.inspectHierarchy(liveXml, args.screenshotBase64 ?? '');
+          return this.textResult(JSON.stringify(result, null, 2));
+        }
 
           case "self_heal_test": {
             const healResult = await this.selfHealingService.healWithRetry(
@@ -1027,6 +1070,47 @@ class AppForgeServer {
             }
 
             return this.textResult(JSON.stringify(verification, null, 2));
+          }
+
+          case "perform_action": {
+            // LS-06: Drive the live Appium session — tap, type, swipe, back, home, screenshot
+            const actionValidation = this.validateArgs(args, ['action']);
+            if (actionValidation) return actionValidation;
+
+            if (!this.appiumSessionService.isSessionActive()) {
+              return {
+                content: [{ type: 'text' as const, text: JSON.stringify({
+                  code: 'NO_ACTIVE_SESSION',
+                  message: 'No active Appium session. Call start_appium_session first.',
+                  hint: 'Use start_appium_session to connect to a device, then use perform_action to interact.'
+                }, null, 2) }],
+                isError: true
+              };
+            }
+
+            const actionResult = await this.appiumSessionService.performAction(
+              args.action,
+              args.selector,
+              args.value,
+              args.captureAfter !== false // default true
+            );
+
+            const successMsg = actionResult.success
+              ? `${args.action}${args.selector ? ` on ${args.selector}` : ''} succeeded.${
+                  actionResult.pageSource ? ' Page source captured after action.' : ''
+                }`
+              : `${args.action} failed: ${actionResult.error}`;
+
+            return this.textResult(JSON.stringify({
+              action: args.action,
+              selector: args.selector ?? null,
+              value: args.value ?? null,
+              success: actionResult.success,
+              error: actionResult.error ?? null,
+              pageSource: actionResult.pageSource ?? null,
+              screenshot: actionResult.screenshot ?? null,
+              message: successMsg,
+            }, null, 2));
           }
 
           case "execute_sandbox_code": {

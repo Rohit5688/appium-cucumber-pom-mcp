@@ -160,6 +160,95 @@ export class AppiumSessionService {
   }
 
   /**
+   * LS-06: Perform a device interaction on the live Appium session.
+   *
+   * Supported actions:
+   *   tap       — click a UI element by selector
+   *   type      — setValue on an input field
+   *   clear     — clearValue on an input field
+   *   swipe     — mobile: scroll in a direction (up/down/left/right)
+   *   back      — press the device back button
+   *   home      — press the device home button (mobile: pressButton)
+   *   screenshot — capture current screen without interaction
+   *
+   * Always returns { success, pageSource, screenshot } so the AI sees the
+   * resulting screen state after every action.
+   */
+  public async performAction(
+    action: 'tap' | 'type' | 'clear' | 'swipe' | 'back' | 'home' | 'screenshot',
+    selector?: string,
+    value?: string,
+    captureAfter: boolean = true
+  ): Promise<{ success: boolean; pageSource?: string; screenshot?: string; error?: string }> {
+    this.ensureSession();
+    const d = this.driver!;
+
+    try {
+      switch (action) {
+        case 'tap': {
+          if (!selector) throw new Error('"tap" requires a selector argument.');
+          const el = await d.$(selector);
+          await el.waitForDisplayed({ timeout: 10000 });
+          await el.click();
+          break;
+        }
+        case 'type': {
+          if (!selector) throw new Error('"type" requires a selector argument.');
+          const el = await d.$(selector);
+          await el.waitForDisplayed({ timeout: 10000 });
+          await el.setValue(value ?? '');
+          break;
+        }
+        case 'clear': {
+          if (!selector) throw new Error('"clear" requires a selector argument.');
+          const el = await d.$(selector);
+          await el.clearValue();
+          break;
+        }
+        case 'swipe': {
+          const dir = (value ?? 'up').toLowerCase();
+          const dirMap: Record<string, object> = {
+            up:    { direction: 'up' },
+            down:  { direction: 'down' },
+            left:  { direction: 'left' },
+            right: { direction: 'right' },
+          };
+          await d.execute('mobile: scroll', dirMap[dir] ?? dirMap['up']);
+          break;
+        }
+        case 'back':
+          await d.back();
+          break;
+        case 'home':
+          await d.execute('mobile: pressButton', { name: 'home' });
+          break;
+        case 'screenshot':
+          // No interaction — just capture below
+          break;
+        default:
+          throw new Error(`Unknown action: "${action}". Valid: tap, type, clear, swipe, back, home, screenshot.`);
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err?.message || String(err),
+      };
+    }
+
+    if (!captureAfter) {
+      return { success: true };
+    }
+
+    // Capture updated screen state after the action
+    const [pageSource, screenshot] = await Promise.all([
+      d.getPageSource().catch(() => ''),
+      d.takeScreenshot().catch(() => ''),
+    ]);
+
+    return { success: true, pageSource, screenshot };
+  }
+
+  /**
    * Returns current session status.
    */
   public isSessionActive(): boolean {
