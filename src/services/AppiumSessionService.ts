@@ -4,6 +4,18 @@ import fs from 'fs';
 import path from 'path';
 import http from 'http';
 
+export interface TopElement {
+  label: string;
+  type: string;
+  selector: string;
+}
+
+export interface CompactPageSummary {
+  elementCount: number;
+  screenTitle: string;
+  topElements: TopElement[];
+}
+
 export interface SessionInfo {
   sessionId: string;
   platformName: string;
@@ -15,6 +27,8 @@ export interface SessionInfo {
   screenshot: string;
   /** Detected Appium server path: '/' for Appium 2, '/wd/hub' for Appium 1 */
   serverPath: string;
+  /** Compact summary of the launch screen — top elements with real selectors */
+  launchSummary: CompactPageSummary;
 }
 
 /**
@@ -28,6 +42,12 @@ export interface SessionInfo {
 export class AppiumSessionService {
   private driver: Browser | null = null;
   private configService = new McpConfigService();
+
+  // ─── LS-08: Workflow state ─────────────────────────────
+  // Persisted for the lifetime of a session so the AI can re-orient itself
+  // from perform_action responses alone, even after context-window eviction.
+  private workflowSteps: string[] = [];
+  private currentStepIndex: number = 0;
 
   // ─── P7-02: Deduplication log buffer ──────────────────
   // Prevents repeated identical error lines from flooding structured MCP output
@@ -48,10 +68,23 @@ export class AppiumSessionService {
    * Auto-detects Appium server version (1 vs 2) by probing the /status endpoint.
    * All WebdriverIO verbose logs are suppressed to prevent stdout JSON corruption.
    */
-  public async startSession(projectRoot: string, profileName?: string): Promise<SessionInfo> {
+  /**
+   * Starts a new Appium session using capabilities from mcp-config.json.
+   * Accepts an optional workflowSteps array (LS-08) so the AI's task plan is
+   * persisted server-side and echoed in every perform_action response.
+   */
+  public async startSession(
+    projectRoot: string,
+    profileName?: string,
+    workflowSteps?: string[]
+  ): Promise<SessionInfo> {
     if (this.driver) {
       await this.endSession();
     }
+
+    // LS-08: Persist workflow for the duration of this session
+    this.workflowSteps = workflowSteps ?? [];
+    this.currentStepIndex = 0;
 
     const config = this.configService.read(projectRoot);
     const capabilities = this.resolveCapabilities(config, profileName);
@@ -94,6 +127,7 @@ export class AppiumSessionService {
         initialPageSource: pageSource,
         screenshot,
         serverPath,
+        launchSummary: this.compactPageSummary(pageSource),  // LS-09
       };
     } catch (error: any) {
       this.driver = null;
@@ -162,24 +196,29 @@ export class AppiumSessionService {
   /**
    * LS-06: Perform a device interaction on the live Appium session.
    *
-   * Supported actions:
-   *   tap       — click a UI element by selector
-   *   type      — setValue on an input field
-   *   clear     — clearValue on an input field
-   *   swipe     — mobile: scroll in a direction (up/down/left/right)
-   *   back      — press the device back button
-   *   home      — press the device home button (mobile: pressButton)
-   *   screenshot — capture current screen without interaction
+   * Supported actions: tap, type, clear, swipe, back, home, screenshot
    *
-   * Always returns { success, pageSource, screenshot } so the AI sees the
-   * resulting screen state after every action.
+   * LS-07: Returns a COMPACT summary by default (~1 KB) instead of raw XML +
+   * Base64 screenshot (~500 KB). Pass verboseCapture=true to get pageSource +
+   * screenshot for locator deep-dives.
+   *
+   * LS-08: Advances the workflow step counter and injects workflowProgress
+   * into the response so the AI can re-orient itself after context eviction.
    */
   public async performAction(
     action: 'tap' | 'type' | 'clear' | 'swipe' | 'back' | 'home' | 'screenshot',
     selector?: string,
     value?: string,
-    captureAfter: boolean = true
-  ): Promise<{ success: boolean; pageSource?: string; screenshot?: string; error?: string }> {
+    captureAfter: boolean = true,
+    verboseCapture: boolean = false
+  ): Promise<{
+    success: boolean;
+    summary?: CompactPageSummary;
+    pageSource?: string;
+    screenshot?: string;
+    workflowProgress?: object;
+    error?: string;
+  }> {
     this.ensureSession();
     const d = this.driver!;
 
@@ -229,23 +268,35 @@ export class AppiumSessionService {
           throw new Error(`Unknown action: "${action}". Valid: tap, type, clear, swipe, back, home, screenshot.`);
       }
     } catch (err: any) {
-      return {
-        success: false,
-        error: err?.message || String(err),
-      };
+      return { success: false, error: err?.message || String(err) };
+    }
+
+    // LS-08: Advance workflow step
+    if (this.workflowSteps.length > 0) {
+      this.currentStepIndex = Math.min(this.currentStepIndex + 1, this.workflowSteps.length);
     }
 
     if (!captureAfter) {
-      return { success: true };
+      return { success: true, workflowProgress: this.buildWorkflowProgress() };
     }
 
     // Capture updated screen state after the action
-    const [pageSource, screenshot] = await Promise.all([
-      d.getPageSource().catch(() => ''),
-      d.takeScreenshot().catch(() => ''),
-    ]);
+    const rawXml = await d.getPageSource().catch(() => '');
 
-    return { success: true, pageSource, screenshot };
+    // LS-07: Compact summary is always built; verbose data only on request
+    const summary = this.compactPageSummary(rawXml);
+    const result: ReturnType<AppiumSessionService['performAction']> extends Promise<infer R> ? R : never = {
+      success: true,
+      summary,
+      workflowProgress: this.buildWorkflowProgress(),
+    };
+
+    if (verboseCapture) {
+      result.pageSource = rawXml;
+      result.screenshot = await d.takeScreenshot().catch(() => '');
+    }
+
+    return result;
   }
 
   /**
@@ -282,6 +333,87 @@ export class AppiumSessionService {
       );
     }
   }
+
+  /**
+   * LS-08: Builds the workflow re-orientation block injected into every
+   * perform_action response. Allows the AI to recover its task plan even
+   * after the original prompt turn has been evicted from the context window.
+   */
+  private buildWorkflowProgress(): object | undefined {
+    if (this.workflowSteps.length === 0) return undefined;
+    const nextStep = this.workflowSteps[this.currentStepIndex] ?? null;
+    const remaining = this.workflowSteps.slice(this.currentStepIndex);
+    return {
+      currentStep: this.currentStepIndex,
+      totalSteps: this.workflowSteps.length,
+      nextStep,
+      remainingSteps: remaining,
+    };
+  }
+
+  /**
+   * LS-07/09: Extracts the top 8 interactive elements from an Appium XML
+   * page source using lightweight regex (no external XML parser needed).
+   * Returns label, XCUIElement/UiAutomator type, and the best selector to use.
+   *
+   * Selector priority:
+   *   1. accessibility-id (~label) — preferred for stability
+   *   2. resource-id / name attribute
+   *   3. type + index as fallback
+   */
+  private extractTopElements(xml: string): TopElement[] {
+    const elements: TopElement[] = [];
+    if (!xml) return elements;
+
+    // Match elements that have a label/name/content-desc attribute
+    // Covers both iOS XCUITest and Android UiAutomator2 XML formats
+    const pattern = /<([A-Za-z]+(?:Type)?[A-Za-z0-9]*)\s+[^>]*?(?:label|name|content-desc|text)="([^"]+)"[^>]*>/g;
+    const typePattern = /<([A-Za-z0-9]+)\s/;
+
+    let match: RegExpExecArray | null;
+    const seen = new Set<string>();
+
+    while ((match = pattern.exec(xml)) !== null && elements.length < 8) {
+      const rawType = match[1];
+      const label = match[2]?.trim();
+      if (!label || label.length === 0) continue;
+
+      // Skip containers and structural elements — only interactive ones
+      const skip = ['XCUIElementTypeOther', 'XCUIElementTypeWindow', 'XCUIElementTypeApplication',
+                    'android.view.View', 'android.widget.FrameLayout', 'android.widget.RelativeLayout',
+                    'android.widget.LinearLayout', 'android.widget.ScrollView'];
+      if (skip.some(s => rawType.includes(s))) continue;
+
+      const dedupeKey = `${rawType}::${label}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      // Best selector: accessibility-id is most stable
+      const selector = `~${label}`;
+
+      elements.push({ label, type: rawType, selector });
+    }
+
+    return elements;
+  }
+
+  /**
+   * LS-09: Wraps extractTopElements into a CompactPageSummary.
+   * Used in start_appium_session (launch screen) and perform_action (post-action screen).
+   */
+  private compactPageSummary(xml: string): CompactPageSummary {
+    const topElements = this.extractTopElements(xml);
+
+    // Extract screen title: first static text / text view element value
+    const titleMatch = xml.match(/(?:XCUIElementTypeStaticText|android\.widget\.TextView)[^>]*?(?:label|text)="([^"]+)"/);
+    const screenTitle = titleMatch?.[1]?.trim() ?? '';
+
+    // Element count: rough count of XML start-tags (proxy for element count)
+    const elementCount = (xml.match(/<[A-Z][A-Za-z0-9]*/g) ?? []).length;
+
+    return { elementCount, screenTitle, topElements };
+  }
+
 
   /**
    * Auto-detects Appium server version path.

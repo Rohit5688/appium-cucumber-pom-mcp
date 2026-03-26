@@ -556,12 +556,17 @@ class AppForgeServer {
         },
         {
           name: "start_appium_session",
-          description: "[EXECUTOR] Starts a live Appium session on a device/emulator and returns session ID, device info, and initial page source. Required first step before using inspect_ui_hierarchy or verify_selector in live mode. Supports Appium 1 and Appium 2 (auto-detected).",
+          description: "[EXECUTOR] Starts a live Appium session on a device/emulator and returns session ID, device info, and initial page source. Required first step before using inspect_ui_hierarchy or verify_selector in live mode. Supports Appium 1 and Appium 2 (auto-detected). Pass workflowSteps to anchor the AI's task plan server-side — every subsequent perform_action response will include the remaining steps so the AI can re-orient itself after context eviction.",
           inputSchema: {
             type: "object",
             properties: {
               projectRoot: { type: "string" },
-              profileName: { type: "string", description: "Optional capability profile name from mcp-config.json." }
+              profileName: { type: "string", description: "Optional capability profile name from mcp-config.json." },
+              workflowSteps: {
+                type: "array",
+                items: { type: "string" },
+                description: "Optional: plain-English list of steps for this session (e.g. ['Tap Sign In', 'Enter username', 'Tap Login']). Persisted server-side and echoed as workflowProgress in every perform_action response."
+              }
             },
             required: ["projectRoot"]
           }
@@ -601,7 +606,7 @@ class AppForgeServer {
         },
         {
           name: "perform_action",
-          description: "[EXECUTOR] Perform an interaction on the live Appium session (tap, type, clear, swipe, back, home, screenshot). Always returns updated pageSource + screenshot after the action. Essential for multi-step navigation flows: start_appium_session → perform_action → inspect_ui_hierarchy → generate_cucumber_pom.",
+          description: "[EXECUTOR] Perform an interaction on the live Appium session (tap, type, clear, swipe, back, home, screenshot). Returns a compact summary by default (~1 KB) — element count, screen title, and top interactive elements with selectors. Pass verboseCapture: true for full pageSource + screenshot when you need deep locator inspection. Essential for multi-step navigation flows: start_appium_session → perform_action → inspect_ui_hierarchy → generate_cucumber_pom.",
           inputSchema: {
             type: "object",
             properties: {
@@ -620,7 +625,11 @@ class AppForgeServer {
               },
               captureAfter: {
                 type: "boolean",
-                description: "If true (default), returns updated page source XML and screenshot after the action."
+                description: "If true (default), returns compact summary of the screen state after the action."
+              },
+              verboseCapture: {
+                type: "boolean",
+                description: "If true, includes full pageSource XML and Base64 screenshot in the response. Use only for locator deep-dives — this significantly increases response size."
               }
             },
             required: ["action"]
@@ -1034,15 +1043,29 @@ class AppForgeServer {
             return this.textResult(`⚠️ SYSTEM HALT — HUMAN INPUT REQUIRED\n\n**Question**: ${args.question}\n\n**Context**: ${args.context}\n${args.options ? '\n**Options**:\n' + args.options.map((o: string, i: number) => `${i + 1}. ${o}`).join('\n') : ''}\n\nPlease answer the question above before continuing.`);
 
           case "start_appium_session": {
-            const sessionInfo = await this.appiumSessionService.startSession(args.projectRoot, args.profileName);
+            // LS-08: accept workflowSteps to persist the AI's task plan server-side
+            const sessionInfo = await this.appiumSessionService.startSession(
+              args.projectRoot,
+              args.profileName,
+              args.workflowSteps
+            );
+            const ls = sessionInfo.launchSummary;
             return this.textResult(JSON.stringify({
               sessionId: sessionInfo.sessionId,
               platform: sessionInfo.platformName,
               device: sessionInfo.deviceName,
               appPackage: sessionInfo.appPackage,
               bundleId: sessionInfo.bundleId,
-              elementsFound: this.executionService['parseXmlElements'](sessionInfo.initialPageSource).length,
-              message: `Session started on ${sessionInfo.deviceName} (${sessionInfo.platformName}). Use inspect_ui_hierarchy (no args) to fetch live XML.`
+              // LS-09/10: return semantic topElements instead of just a count
+              elementCount: ls.elementCount,
+              screenTitle: ls.screenTitle,
+              topElements: ls.topElements,
+              workflowSteps: args.workflowSteps ?? null,
+              message: `Session started on ${sessionInfo.deviceName} (${sessionInfo.platformName}). ` +
+                `${ls.elementCount} elements on launch screen. ` +
+                (ls.topElements.length > 0
+                  ? `Top elements: ${ls.topElements.map(e => `${e.label} (${e.selector})`).join(', ')}.`
+                  : 'Use inspect_ui_hierarchy (no args) to fetch live XML.'),
             }, null, 2));
           }
 
@@ -1073,7 +1096,7 @@ class AppForgeServer {
           }
 
           case "perform_action": {
-            // LS-06: Drive the live Appium session — tap, type, swipe, back, home, screenshot
+            // LS-06/07/08: Drive the live Appium session with compact-by-default responses
             const actionValidation = this.validateArgs(args, ['action']);
             if (actionValidation) return actionValidation;
 
@@ -1092,13 +1115,18 @@ class AppForgeServer {
               args.action,
               args.selector,
               args.value,
-              args.captureAfter !== false // default true
+              args.captureAfter !== false,    // default true
+              args.verboseCapture === true     // LS-07: opt-in only; default false
             );
 
+            const screenInfo = actionResult.summary
+              ? `${actionResult.summary.elementCount} elements on new screen${
+                  actionResult.summary.screenTitle ? ` — "${actionResult.summary.screenTitle}"` : ''
+                }.`
+              : '';
+
             const successMsg = actionResult.success
-              ? `${args.action}${args.selector ? ` on ${args.selector}` : ''} succeeded.${
-                  actionResult.pageSource ? ' Page source captured after action.' : ''
-                }`
+              ? `${args.action}${args.selector ? ` on ${args.selector}` : ''} succeeded. ${screenInfo}`
               : `${args.action} failed: ${actionResult.error}`;
 
             return this.textResult(JSON.stringify({
@@ -1107,8 +1135,12 @@ class AppForgeServer {
               value: args.value ?? null,
               success: actionResult.success,
               error: actionResult.error ?? null,
+              // LS-07: compact summary always present; raw data only if verboseCapture
+              summary: actionResult.summary ?? null,
               pageSource: actionResult.pageSource ?? null,
               screenshot: actionResult.screenshot ?? null,
+              // LS-08: workflow re-orientation anchor
+              workflowProgress: actionResult.workflowProgress ?? null,
               message: successMsg,
             }, null, 2));
           }
