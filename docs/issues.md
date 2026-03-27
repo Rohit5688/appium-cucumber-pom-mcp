@@ -16,14 +16,15 @@ Focus areas:
 ## Status Summary
 
 | ID | Issue | Severity | Status |
-|----|-------|----------|--------|
+|----|-------|----------|---------|
+| LS-02 | `check_environment` does not check for installed Appium drivers — missing driver discovered too late, causing session startup failures and wasted context | P1 | ✅ Fixed — `appium driver list --installed` check added with exact install command hint |
 | LS-07 | `perform_action` returns full raw XML + Base64 screenshot every step — exhausts AI context budget mid-flow | P0 | ✅ Fixed — compact default, LS-11/12 prevent verbosity |
 | LS-11 | `verboseCapture` flag exposed in `perform_action` schema — LLM correctly sends it for any locator-capture task, defeating compact default | P0 | ✅ Fixed — removed from schema |
 | LS-12 | `inspect_ui_hierarchy` schema has `required: ["xmlDump"]` — LLM cannot discover no-arg live-fetch path; falls back to verbose `perform_action` | P0 | ✅ Fixed — made optional, description rewritten |
 | LS-13 | `run_cucumber_test` returns raw WDIO output and inlines failure screenshot/XML — failed or timed-out runs can exhaust 128K context | P0 | ✅ Fixed — compact response, artifact paths |
 | LS-14 | Generated projects fail to run tests with `require() cannot be used on ESM graph with top-level await` — scaffolding doesn't configure ts-node ESM | P1 | ✅ Fixed — ts-node ESM config added |
 | LS-15 | `validate_and_write` always fails with `error TS5042: Option 'project' cannot be mixed with source files on a command line` when project has a `tsconfig.json` | P0 | ✅ Fixed — temporary scoped tsconfig used for validation |
-| LS-16 | `train_on_example` crashes with `Cannot read properties of undefined (reading 'toLowerCase')` — prevents team from persisting learned patterns to `.appium-mcp/mcp-learning.json` | P1 | ✅ Fixed — input validation & defensive null checks added
+| LS-16 | `train_on_example` crashes with `Cannot read properties of undefined (reading 'toLowerCase')` — prevents team from persisting learned patterns to `.appium-mcp/mcp-learning.json` | P1 | ✅ Fixed — input validation & defensive null checks added |
 
 ## Delivery Order
 
@@ -247,12 +248,18 @@ if (!s || typeof s !== 'string') return '';
 
 ### LS-02 — No Preflight Check for Missing Appium Drivers
 
-Session startup still discovers missing Appium drivers too late. This increases retries, error output, and wasted context.
+Session startup was discovering missing Appium drivers too late, increasing retry loops, error output, and wasted context.
 
-**Planned fix:**
-- Run `appium driver list --installed` during `check_environment`.
-- Cross-check required driver by platform.
-- Return the exact install command when missing.
+**✅ Fixed in `src/services/EnvironmentCheckService.ts` (`checkAppiumDrivers()` method):**
+- Runs `appium driver list --installed --json` during `check_environment`.
+- Parses JSON output and cross-checks required driver by platform (`uiautomator2` for Android, `xcuitest` for iOS).
+- Returns `status: 'fail'` with the exact install command(s) when a driver is missing:
+  ```
+  appium driver install uiautomator2
+  appium driver install xcuitest
+  ```
+- Falls back to `status: 'warn'` if `appium` CLI is not found, with full install instructions.
+- Called unconditionally at step 3 of the `check()` flow, before SDK and device checks.
 
 ## Acceptance Criteria
 
