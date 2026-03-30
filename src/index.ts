@@ -61,7 +61,7 @@ class AppiumMcpServer {
 
   constructor() {
     this.server = new Server(
-      { name: "appium-cucumber-pom-mcp", version: "1.0.0" },
+      { name: "AppForge", version: "1.0.0" },
       { capabilities: { tools: {} } }
     );
     this.setupToolHandlers();
