@@ -53,11 +53,7 @@ export class ProjectMaintenanceService {
       const config = JSON.parse(raw);
       
       if (config.paths && Object.keys(config.paths).length > 0) {
-        Questioner.clarify(
-          "Custom paths detected in mcp-config.json. Should upgrade overwrite paths to defaults?",
-          "You have custom paths configured. Upgrading might reset or impact them depending on the new defaults.",
-          ["Yes, overwrite to defaults", "No, keep my custom paths"]
-        );
+        logs.push('⚠️ Custom paths detected in mcp-config.json. Keeping existing paths and skipping default path regeneration.');
       }
       
       if (!config.version) {

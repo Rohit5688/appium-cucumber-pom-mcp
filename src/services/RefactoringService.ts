@@ -12,23 +12,23 @@ export class RefactoringService {
     suggestions.push('### 🧹 Codebase Refactoring & Maintenance Report\n');
 
     // 1. Detect duplicate step patterns (same pattern in multiple files)
-    const stepMap = new Map<string, string[]>();
+    const stepMap = new Map<string, Set<string>>();
     for (const def of analysis.existingStepDefinitions) {
       for (const step of def.steps) {
         const key = `${step.type}:${step.pattern}`;
-        const files = stepMap.get(key) || [];
-        files.push(def.file);
+        const files = stepMap.get(key) || new Set<string>();
+        files.add(def.file);
         stepMap.set(key, files);
       }
     }
 
-    const duplicates = [...stepMap.entries()].filter(([_, files]) => files.length > 1);
+    const duplicates = [...stepMap.entries()].filter(([_, files]) => files.size > 1);
     if (duplicates.length > 0) {
       suggestions.push('#### 👯 Duplicate Step Definitions');
       suggestions.push('The following steps have identical patterns in multiple files. This causes Cucumber compilation errors. **Merge these into a common steps file:**\n');
       for (const [pattern, files] of duplicates) {
         suggestions.push(`- **Pattern**: \`${pattern}\``);
-        for (const f of files) {
+        for (const f of Array.from(files)) {
           suggestions.push(`  - Found in: \`${f}\``);
         }
       }
@@ -38,13 +38,13 @@ export class RefactoringService {
     }
 
     // 2. Detect unused Page Object methods (not referenced by any step)
-    const allStepBodies = analysis.existingStepDefinitions.flatMap(d => d.steps.map(s => s.pattern.toLowerCase()));
+    const allStepBodies = analysis.existingStepDefinitions.flatMap(d => d.steps.map(s => (s.bodyText || '').toLowerCase()));
     const unusedPomMethods: { page: string; methods: string[] }[] = [];
 
     for (const po of analysis.existingPageObjects) {
       const unused = po.publicMethods.filter(method => {
         const methodLower = method.toLowerCase();
-        // Very basic heuristic: check if the method name appears in any step pattern
+        // Very basic heuristic: check if the method name appears in any step body
         return !allStepBodies.some(body => body.includes(methodLower));
       });
       if (unused.length > 0) {
@@ -54,7 +54,8 @@ export class RefactoringService {
 
     if (unusedPomMethods.length > 0) {
       suggestions.push('#### 🗑️ Potentially Unused Page Object Methods');
-      suggestions.push('The following methods exist in Page Objects but are not referenced by any step pattern. Consider deleting them:\n');
+      suggestions.push('> [!WARNING]\n> **High False-Positive Risk:** This check scans step definition bodies. Methods called indirectly through utility wrappers or inherited classes might be falsely flagged. Do not delete without manual verification.\n');
+      suggestions.push('The following methods exist in Page Objects but were not detected in any step definition body:\n');
       for (const po of unusedPomMethods) {
         for (const method of po.methods) {
           suggestions.push(`- **${method}** (File: \`${po.page}\`)`);

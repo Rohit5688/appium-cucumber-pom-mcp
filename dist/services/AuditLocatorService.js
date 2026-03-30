@@ -6,53 +6,82 @@ export class AuditLocatorService {
      * Scans all Page Objects in the project and audits their locator strategies.
      * Flags brittle XPaths and generates a Markdown report with recommendations.
      */
-    async audit(projectRoot, pagesRoot = 'pages') {
-        const pagesDir = path.join(projectRoot, pagesRoot);
-        const pageFiles = await this.listTsFiles(pagesDir);
+    async audit(projectRoot, dirsToScan = ['pages', 'src/pages', 'locators', 'src/locators']) {
+        const pageFiles = [];
+        for (const dirName of dirsToScan) {
+            const dirPath = path.join(projectRoot, dirName);
+            pageFiles.push(...(await this.listFiles(dirPath, ['.ts', '.yaml', '.yml'])));
+        }
         const entries = [];
         if (pageFiles.length > 0) {
-            const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
-            for (const f of pageFiles) {
-                project.addSourceFileAtPath(f);
+            const tsFiles = pageFiles.filter(f => f.endsWith('.ts'));
+            const yamlFiles = pageFiles.filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+            // Process YAML files
+            for (const f of yamlFiles) {
+                try {
+                    const content = await fs.readFile(f, 'utf-8');
+                    const relPath = path.relative(projectRoot, f);
+                    const className = path.basename(f, path.extname(f));
+                    const yamlPattern = /^[\s]*([\w-]+):\s*(['"]?)(.+?)\2\s*$/gm;
+                    let match;
+                    while ((match = yamlPattern.exec(content)) !== null) {
+                        const key = match[1];
+                        const val = match[3];
+                        // Only add if it looks like a realistic selector
+                        if (val.startsWith('~') || val.startsWith('//') || val.startsWith('/') || val.includes(':id/')) {
+                            entries.push(this.classifyEntry(relPath, className, key, val));
+                        }
+                    }
+                }
+                catch {
+                    // Ignore read errors
+                }
             }
-            for (const sourceFile of project.getSourceFiles()) {
-                for (const cls of sourceFile.getClasses()) {
-                    const className = cls.getName() ?? 'AnonymousClass';
-                    const relPath = path.relative(projectRoot, sourceFile.getFilePath());
-                    // BUG-08 FIX: Match all common WDIO selector call styles:
-                    //   $('sel')              — WDIO shorthand (original, still supported)
-                    //   driver.$('sel')       — WDIO v8 explicit driver reference
-                    //   browser.$('sel')      — WDIO browser global
-                    //   driver.findElement()  — W3C WebDriver API
-                    // Previously only $(...) was scanned — any modern project using driver.$ or
-                    // browser.$ returned 0 locators making the audit completely useless.
-                    const SELECTOR_PATTERN = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/;
-                    const SELECTOR_PATTERN_ALL = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/g;
-                    const FIND_ELEMENT_PATTERN = /(?:driver|browser)\.findElement\s*\(\s*['"`]?([^)]+?)['"`]?\s*\)/g;
-                    // Scan getters
-                    for (const getter of cls.getGetAccessors()) {
-                        const body = getter.getBody()?.getText() ?? '';
-                        const match = body.match(SELECTOR_PATTERN);
-                        if (match) {
-                            entries.push(this.classifyEntry(relPath, className, getter.getName(), match[1]));
+            // Process TS files AST
+            if (tsFiles.length > 0) {
+                const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
+                for (const f of tsFiles) {
+                    project.addSourceFileAtPath(f);
+                }
+                for (const sourceFile of project.getSourceFiles()) {
+                    for (const cls of sourceFile.getClasses()) {
+                        const className = cls.getName() ?? 'AnonymousClass';
+                        const relPath = path.relative(projectRoot, sourceFile.getFilePath());
+                        // BUG-08 FIX: Match all common WDIO selector call styles:
+                        //   $('sel')              — WDIO shorthand (original, still supported)
+                        //   driver.$('sel')       — WDIO v8 explicit driver reference
+                        //   browser.$('sel')      — WDIO browser global
+                        //   driver.findElement()  — W3C WebDriver API
+                        // Previously only $(...) was scanned — any modern project using driver.$ or
+                        // browser.$ returned 0 locators making the audit completely useless.
+                        const SELECTOR_PATTERN = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/;
+                        const SELECTOR_PATTERN_ALL = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/g;
+                        const FIND_ELEMENT_PATTERN = /(?:driver|browser)\.findElement\s*\(\s*['"`]?([^)]+?)['"`]?\s*\)/g;
+                        // Scan getters
+                        for (const getter of cls.getGetAccessors()) {
+                            const body = getter.getBody()?.getText() ?? '';
+                            const match = body.match(SELECTOR_PATTERN);
+                            if (match) {
+                                entries.push(this.classifyEntry(relPath, className, getter.getName(), match[1]));
+                            }
                         }
-                    }
-                    // Scan properties  
-                    for (const prop of cls.getProperties()) {
-                        const initializer = prop.getInitializer()?.getText() ?? '';
-                        const match = initializer.match(SELECTOR_PATTERN);
-                        if (match) {
-                            entries.push(this.classifyEntry(relPath, className, prop.getName(), match[1]));
+                        // Scan properties  
+                        for (const prop of cls.getProperties()) {
+                            const initializer = prop.getInitializer()?.getText() ?? '';
+                            const match = initializer.match(SELECTOR_PATTERN);
+                            if (match) {
+                                entries.push(this.classifyEntry(relPath, className, prop.getName(), match[1]));
+                            }
                         }
-                    }
-                    // Scan method bodies for inline selectors (all WDIO patterns + findElement)
-                    for (const method of cls.getMethods()) {
-                        const body = method.getBody()?.getText() ?? '';
-                        for (const m of body.matchAll(SELECTOR_PATTERN_ALL)) {
-                            entries.push(this.classifyEntry(relPath, className, `${method.getName()}() inline`, m[1]));
-                        }
-                        for (const m of body.matchAll(FIND_ELEMENT_PATTERN)) {
-                            entries.push(this.classifyEntry(relPath, className, `${method.getName()}() findElement`, m[1]));
+                        // Scan method bodies for inline selectors (all WDIO patterns + findElement)
+                        for (const method of cls.getMethods()) {
+                            const body = method.getBody()?.getText() ?? '';
+                            for (const m of body.matchAll(SELECTOR_PATTERN_ALL)) {
+                                entries.push(this.classifyEntry(relPath, className, `${method.getName()}() inline`, m[1]));
+                            }
+                            for (const m of body.matchAll(FIND_ELEMENT_PATTERN)) {
+                                entries.push(this.classifyEntry(relPath, className, `${method.getName()}() findElement`, m[1]));
+                            }
                         }
                     }
                 }
@@ -142,16 +171,18 @@ export class AuditLocatorService {
         }
         return lines.join('\n');
     }
-    async listTsFiles(dir) {
+    async listFiles(dir, exts) {
         let results = [];
         try {
             const entries = await fs.readdir(dir, { withFileTypes: true });
             for (const entry of entries) {
+                if (entry.name === 'node_modules' || entry.name.startsWith('.'))
+                    continue;
                 const fullPath = path.join(dir, entry.name);
                 if (entry.isDirectory()) {
-                    results = results.concat(await this.listTsFiles(fullPath));
+                    results = results.concat(await this.listFiles(fullPath, exts));
                 }
-                else if (entry.name.endsWith('.ts')) {
+                else if (exts.some(ext => entry.name.endsWith(ext))) {
                     results.push(fullPath);
                 }
             }

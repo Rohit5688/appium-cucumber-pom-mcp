@@ -29,7 +29,7 @@ export interface CodebaseAnalysisResult {
   existingFeatures: string[];
   existingStepDefinitions: {
     file: string;
-    steps: { type: string; pattern: string }[];
+    steps: { type: string; pattern: string; bodyText?: string }[];
   }[];
   existingPageObjects: {
     path: string;
@@ -335,7 +335,10 @@ export class CodebaseAnalyzerService {
 
         if (isPageObject) {
           if (result.detectedPaths.pagesRoot === (customPaths?.pagesRoot ?? 'pages')) {
-             result.detectedPaths.pagesRoot = path.dirname(relativePath);
+             const dir = path.dirname(relativePath);
+             if (!dir.toLowerCase().includes('util') && !dir.toLowerCase().includes('helper') && !dir.toLowerCase().includes('support')) {
+               result.detectedPaths.pagesRoot = dir;
+             }
           }
           continue;
         }
@@ -501,7 +504,7 @@ export class CodebaseAnalyzerService {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
+        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git' || entry.name === '.venv' || entry.name.startsWith('.')) continue;
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
           results = results.concat(await this.listFilesWithExtensions(fullPath, extensions));
@@ -518,8 +521,8 @@ export class CodebaseAnalyzerService {
   /**
    * Uses AST to find Given/When/Then calls with their patterns.
    */
-  private extractStepsAST(sourceFile: any): { type: string; pattern: string }[] {
-    const steps: { type: string; pattern: string }[] = [];
+  private extractStepsAST(sourceFile: any): { type: string; pattern: string; bodyText?: string }[] {
+    const steps: { type: string; pattern: string; bodyText?: string }[] = [];
     const stepTypes = ['Given', 'When', 'Then', 'And', 'But'];
 
     sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression).forEach((call: any) => {
@@ -530,7 +533,12 @@ export class CodebaseAnalyzerService {
           let pattern = args[0].getText();
           // Remove quotes/backticks/regex delimiters
           pattern = pattern.replace(/^['"`\/]|['"`\/]$/g, '');
-          steps.push({ type: exprText, pattern });
+          
+          let bodyText = '';
+          if (args.length > 1) {
+             bodyText = args[args.length - 1].getText();
+          }
+          steps.push({ type: exprText, pattern, bodyText });
         }
       }
     });
@@ -600,6 +608,7 @@ export class CodebaseAnalyzerService {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
+        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git' || entry.name === '.venv' || entry.name === 'crew_ai' || entry.name.startsWith('.')) continue;
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
           results = results.concat(await this.listFilesAbsolute(fullPath, ext));

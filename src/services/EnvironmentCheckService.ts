@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import http from 'http';
-import { Questioner } from '../utils/Questioner.js';
+
 
 const execAsync = promisify(exec);
 
@@ -34,13 +34,6 @@ export class EnvironmentCheckService {
     // 2. Appium Server
     const appiumCheck = await this.checkAppiumServer();
     checks.push(appiumCheck);
-    if (appiumCheck.status === 'warn' && appiumCheck.message.includes('1.x')) {
-      Questioner.clarify(
-        "Migrate to Appium 2.x?",
-        "Appium 1.x detected. Appium 1 is deprecated and lacks W3C compliance required for modern automation.",
-        ["Yes (npm install -g appium@latest)", "No, keep 1.x"]
-      );
-    }
 
     // 3. Appium CLI / drivers
     checks.push(await this.checkAppiumDrivers(platform));
@@ -154,14 +147,8 @@ export class EnvironmentCheckService {
         return { name: 'Android Device', status: 'pass', message: `${lines.length} device(s) connected` };
       }
       
-      Questioner.clarify(
-        "No device detected. Do you want help starting an emulator?",
-        "adb devices returned no connected devices or emulators.",
-        ["Yes — show AVD list", "No — I'll connect manually"]
-      );
       return { name: 'Android Device', status: 'fail', message: 'No devices connected', fixHint: 'Start an emulator:\n  emulator -avd <avd_name>\n\nOr connect a physical device via USB with USB debugging enabled.\nList available AVDs: emulator -list-avds' };
     } catch (e: any) {
-      if (e instanceof Error && e.name === 'ClarificationRequired') throw e;
       return { name: 'Android Device', status: 'fail', message: 'adb not found', fixHint: 'Add Android SDK platform-tools to PATH:\n  Windows: %ANDROID_HOME%\\platform-tools\n  macOS/Linux: $ANDROID_HOME/platform-tools' };
     }
   }

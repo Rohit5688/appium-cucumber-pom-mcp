@@ -26,17 +26,46 @@ export class AuditLocatorService {
    * Scans all Page Objects in the project and audits their locator strategies.
    * Flags brittle XPaths and generates a Markdown report with recommendations.
    */
-  public async audit(projectRoot: string, pagesRoot: string = 'pages'): Promise<LocatorAuditReport> {
-    const pagesDir = path.join(projectRoot, pagesRoot);
-    const pageFiles = await this.listTsFiles(pagesDir);
+  public async audit(projectRoot: string, dirsToScan: string[] = ['pages', 'src/pages', 'locators', 'src/locators']): Promise<LocatorAuditReport> {
+    const pageFiles: string[] = [];
+    for (const dirName of dirsToScan) {
+      const dirPath = path.join(projectRoot, dirName);
+      pageFiles.push(...(await this.listFiles(dirPath, ['.ts', '.yaml', '.yml'])));
+    }
 
     const entries: LocatorAuditEntry[] = [];
 
     if (pageFiles.length > 0) {
-      const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
-      for (const f of pageFiles) {
-        project.addSourceFileAtPath(f);
+      const tsFiles = pageFiles.filter(f => f.endsWith('.ts'));
+      const yamlFiles = pageFiles.filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+
+      // Process YAML files
+      for (const f of yamlFiles) {
+        try {
+          const content = await fs.readFile(f, 'utf-8');
+          const relPath = path.relative(projectRoot, f);
+          const className = path.basename(f, path.extname(f));
+          const yamlPattern = /^[\s]*([\w-]+):\s*(['"]?)(.+?)\2\s*$/gm;
+          let match;
+          while ((match = yamlPattern.exec(content)) !== null) {
+            const key = match[1];
+            const val = match[3];
+            // Only add if it looks like a realistic selector
+            if (val.startsWith('~') || val.startsWith('//') || val.startsWith('/') || val.includes(':id/')) {
+              entries.push(this.classifyEntry(relPath, className, key, val));
+            }
+          }
+        } catch {
+          // Ignore read errors
+        }
       }
+
+      // Process TS files AST
+      if (tsFiles.length > 0) {
+        const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
+        for (const f of tsFiles) {
+          project.addSourceFileAtPath(f);
+        }
 
       for (const sourceFile of project.getSourceFiles()) {
         for (const cls of sourceFile.getClasses()) {
@@ -84,6 +113,7 @@ export class AuditLocatorService {
           }
         }
       }
+    }
     }
 
     const accessibilityIdCount = entries.filter(e => e.strategy === 'accessibility-id').length;
@@ -181,15 +211,16 @@ export class AuditLocatorService {
     return lines.join('\n');
   }
 
-  private async listTsFiles(dir: string): Promise<string[]> {
+  private async listFiles(dir: string, exts: string[]): Promise<string[]> {
     let results: string[] = [];
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          results = results.concat(await this.listTsFiles(fullPath));
-        } else if (entry.name.endsWith('.ts')) {
+          results = results.concat(await this.listFiles(fullPath, exts));
+        } else if (exts.some(ext => entry.name.endsWith(ext))) {
           results.push(fullPath);
         }
       }

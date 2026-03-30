@@ -45,7 +45,8 @@ export class SummarySuiteService {
 
     for (const feature of features) {
       for (const element of (feature.elements ?? [])) {
-        if (element.type !== 'scenario') continue;
+        const isScenario = element.type?.toLowerCase() === 'scenario' || element.keyword?.toLowerCase().includes('scenario');
+        if (!isScenario) continue;
         totalScenarios++;
 
         const steps = element.steps ?? [];
@@ -77,7 +78,10 @@ export class SummarySuiteService {
       }
     }
 
-    const durationSec = Math.round(totalDurationNs / 1_000_000_000);
+    // Auto-detect unit: WDIO cucumber reporter uses ms, native cucumber uses ns
+    const durationSec = totalDurationNs > 10_000_000 
+      ? Math.round(totalDurationNs / 1_000_000_000) 
+      : Math.round(totalDurationNs / 1_000);
     const durationStr = durationSec > 60
       ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`
       : `${durationSec}s`;

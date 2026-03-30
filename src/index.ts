@@ -136,7 +136,8 @@ class AppForgeServer {
             properties: {
               projectRoot: { type: "string" },
               platform: { type: "string", enum: ["android", "ios"] },
-              appPath: { type: "string" }
+              appPath: { type: "string" },
+              forceWrite: { type: "boolean", description: "If true, saves the path even if it does not exist locally (useful for CI paths)." }
             },
             required: ["projectRoot", "platform", "appPath"]
           }
@@ -221,7 +222,8 @@ class AppForgeServer {
               projectRoot: { type: "string" },
               tags: { type: "string", description: "Cucumber tag expression, e.g. '@smoke and @android'" },
               platform: { type: "string", enum: ["android", "ios"] },
-              specificArgs: { type: "string" }
+              specificArgs: { type: "string" },
+              overrideCommand: { type: "string", description: "Full custom execution command (e.g. 'npm run test'). Bypasses mcp-config.json executionCommand." }
             },
             required: ["projectRoot"]
           }
@@ -518,7 +520,7 @@ class AppForgeServer {
             }
 
           case "inject_app_build":
-            this.configService.updateAppPath(args.projectRoot, args.platform, args.appPath);
+            this.configService.updateAppPath(args.projectRoot, args.platform, args.appPath, args.forceWrite);
             return this.textResult(`Updated ${args.platform} app path to: ${args.appPath}`);
 
           case "analyze_codebase": {
@@ -534,11 +536,7 @@ class AppForgeServer {
             const analysis = await this.analyzerService.analyze(args.projectRoot, paths);
             
             if (analysis.existingPageObjects.length === 0) {
-              Questioner.clarify(
-                "No page objects detected. Are you starting a fresh project, or is your paths config wrong?",
-                `The codebase analyzer found 0 page objects in ${paths.pagesRoot}.`,
-                ["Fresh project (generate my first PO)", "Wrong path (let me update mcp-config.json)"]
-              );
+              console.warn(`[AppForge] ⚠️ No page objects detected in ${paths.pagesRoot}. Proceeding with fresh generation.`);
             }
             
             const learningPrompt = this.learningService.getKnowledgePromptInjection(args.projectRoot);
@@ -572,28 +570,15 @@ class AppForgeServer {
             const result = await this.executionService.runTest(args.projectRoot, {
               tags: args.tags,
               platform: args.platform,
-              specificArgs: args.specificArgs
+              specificArgs: args.specificArgs,
+              overrideCommand: args.overrideCommand
             });
             return this.textResult(JSON.stringify(result, null, 2));
           }
 
           case "inspect_ui_hierarchy": {
-            // If xmlDump not provided, auto-fetch live page source from the active session.
-            let liveXml = args.xmlDump;
-            if (!liveXml && this.appiumSessionService.isSessionActive()) {
-              liveXml = await this.appiumSessionService.getPageSource();
-            }
-            if (!liveXml) {
-              return {
-                content: [{ type: 'text' as const, text: JSON.stringify({
-                  code: 'NO_XML_SOURCE',
-                  message: 'No xmlDump provided and no active Appium session. Either pass xmlDump or call start_appium_session first.',
-                  hint: 'Start a session with start_appium_session, then call inspect_ui_hierarchy without arguments to get live XML.'
-                }, null, 2) }],
-                isError: true
-              };
-            }
-            const result = await this.executionService.inspectHierarchy(liveXml, args.screenshotBase64 ?? '');
+            // Pass raw arguments down. ExecutionService will auto-fetch XML + screenshot if xmlDump is missing.
+            const result = await this.executionService.inspectHierarchy(args.xmlDump, args.screenshotBase64);
             return this.textResult(JSON.stringify(result, null, 2));
           }
 
@@ -604,7 +589,10 @@ class AppForgeServer {
               args.screenshotBase64 ?? '',
               args.attempt ?? 1
             );
-            return this.textResult(healResult.prompt);
+            return this.textResult(JSON.stringify({
+              candidates: healResult.instruction.alternativeSelectors || [],
+              promptForLLM: healResult.prompt
+            }, null, 2));
           }
 
           case "set_credentials":
@@ -616,7 +604,7 @@ class AppForgeServer {
           case "audit_mobile_locators": {
             const config = this.configService.read(args.projectRoot);
             const paths = this.configService.getPaths(config);
-            const report = await this.auditLocatorService.audit(args.projectRoot, paths.pagesRoot);
+            const report = await this.auditLocatorService.audit(args.projectRoot, [paths.pagesRoot, 'locators', 'src/locators']);
             return this.textResult(report.markdownReport);
           }
 
@@ -631,9 +619,28 @@ class AppForgeServer {
           }
 
           case "generate_ci_workflow": {
+            const config = this.configService.read(args.projectRoot);
+            
+            // Extract best-effort CI parameters from config
+            const executionCommand = config.project?.executionCommand;
+            
+            let deviceName = args.platform === 'ios' ? 'iPhone 14' : 'Pixel_6';
+            for (const profile of Object.values(config.mobile?.capabilitiesProfiles || {})) {
+              if (profile.platformName?.toLowerCase() === args.platform && profile['appium:deviceName']) {
+                deviceName = profile['appium:deviceName'];
+                break;
+              }
+            }
+
+            // WDIO commonly uses _results_ or reports/
+            const reportPath = executionCommand?.includes('wdio') ? '_results_/' : 'reports/';
+
             const workflow = this.ciWorkflowService.generate(args.provider, args.platform, {
               nodeVersion: args.nodeVersion,
-              appiumVersion: args.appiumVersion
+              appiumVersion: args.appiumVersion,
+              executionCommand,
+              deviceName,
+              reportPath
             });
             // Write the workflow file to the project
             const fs = await import('fs');

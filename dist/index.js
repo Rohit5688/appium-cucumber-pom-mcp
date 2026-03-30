@@ -26,11 +26,12 @@ import { CoverageAnalysisService } from "./services/CoverageAnalysisService.js";
 import { MigrationService } from "./services/MigrationService.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
+import { executeSandbox } from "./services/SandboxEngine.js";
 /**
- * Appium Cucumber POM MCP Server
+ * AppForge — Mobile Automation MCP Server
  * Orchestrates Mobile Automation (Android/iOS) using WebdriverIO + Cucumber
  */
-class AppiumMcpServer {
+class AppForgeServer {
     server;
     projectSetupService = new ProjectSetupService();
     configService = new McpConfigService();
@@ -123,20 +124,33 @@ class AppiumMcpServer {
                         properties: {
                             projectRoot: { type: "string" },
                             platform: { type: "string", enum: ["android", "ios"] },
-                            appPath: { type: "string" }
+                            appPath: { type: "string" },
+                            forceWrite: { type: "boolean", description: "If true, saves the path even if it does not exist locally (useful for CI paths)." }
                         },
                         required: ["projectRoot", "platform", "appPath"]
                     }
                 },
                 {
                     name: "analyze_codebase",
-                    description: "Scan existing codebase using AST for reusable steps, page methods, and utils.",
+                    description: "⚠️ TOKEN-INTENSIVE (LEGACY): Scan existing codebase using AST for reusable steps, page methods, and utils. Only use this for very small projects (< 5 files). FOR LARGE PROJECTS, ALWAYS USE 'execute_sandbox_code' (Turbo Mode) instead to save up to 98% in tokens.",
                     inputSchema: {
                         type: "object",
                         properties: {
                             projectRoot: { type: "string" }
                         },
                         required: ["projectRoot"]
+                    }
+                },
+                {
+                    name: "execute_sandbox_code",
+                    description: "🚀 TURBO MODE (RECOMMENDED): Execute a JavaScript snippet inside a secure V8 sandbox to analyze code, find existing steps, or inspect DOMs. Use this tool FOR ALL RESEARCH AND ANALYSIS tasks to prevent token overflow. The script has access to `forge.api.*` and returns only the filtered data you need. Available APIs: forge.api.analyzeCodebase(projectRoot), forge.api.runTests(projectRoot), forge.api.readFile(filePath), forge.api.getConfig(projectRoot).",
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            script: { type: "string", description: "The JavaScript code to execute. Use `return` to send a value back. Use `await forge.api.*()` to call server services. Keep scripts focused and small." },
+                            timeoutMs: { type: "number", description: "Optional execution timeout in milliseconds. Default: 10000 (10s)." }
+                        },
+                        required: ["script"]
                     }
                 },
                 {
@@ -195,7 +209,8 @@ class AppiumMcpServer {
                             projectRoot: { type: "string" },
                             tags: { type: "string", description: "Cucumber tag expression, e.g. '@smoke and @android'" },
                             platform: { type: "string", enum: ["android", "ios"] },
-                            specificArgs: { type: "string" }
+                            specificArgs: { type: "string" },
+                            overrideCommand: { type: "string", description: "Full custom execution command (e.g. 'npm run test'). Bypasses mcp-config.json executionCommand." }
                         },
                         required: ["projectRoot"]
                     }
@@ -206,10 +221,10 @@ class AppiumMcpServer {
                     inputSchema: {
                         type: "object",
                         properties: {
-                            xmlDump: { type: "string" },
+                            xmlDump: { type: "string", description: "Optional: Appium XML page source. When omitted, live XML is fetched automatically from the active session." },
                             screenshotBase64: { type: "string" }
                         },
-                        required: ["xmlDump"]
+                        required: []
                     }
                 },
                 {
@@ -480,7 +495,7 @@ class AppiumMcpServer {
                             return this.textResult("Configuration updated successfully.");
                         }
                     case "inject_app_build":
-                        this.configService.updateAppPath(args.projectRoot, args.platform, args.appPath);
+                        this.configService.updateAppPath(args.projectRoot, args.platform, args.appPath, args.forceWrite);
                         return this.textResult(`Updated ${args.platform} app path to: ${args.appPath}`);
                     case "analyze_codebase": {
                         const config = this.configService.read(args.projectRoot);
@@ -493,7 +508,7 @@ class AppiumMcpServer {
                         const paths = this.configService.getPaths(config);
                         const analysis = await this.analyzerService.analyze(args.projectRoot, paths);
                         if (analysis.existingPageObjects.length === 0) {
-                            Questioner.clarify("No page objects detected. Are you starting a fresh project, or is your paths config wrong?", `The codebase analyzer found 0 page objects in ${paths.pagesRoot}.`, ["Fresh project (generate my first PO)", "Wrong path (let me update mcp-config.json)"]);
+                            console.warn(`[AppForge] ⚠️ No page objects detected in ${paths.pagesRoot}. Proceeding with fresh generation.`);
                         }
                         const learningPrompt = this.learningService.getKnowledgePromptInjection(args.projectRoot);
                         const prompt = this.generationService.generateAppiumPrompt(args.projectRoot, args.testDescription, config, analysis, args.testName, learningPrompt, args.screenXml, args.screenshotBase64);
@@ -514,17 +529,22 @@ class AppiumMcpServer {
                         const result = await this.executionService.runTest(args.projectRoot, {
                             tags: args.tags,
                             platform: args.platform,
-                            specificArgs: args.specificArgs
+                            specificArgs: args.specificArgs,
+                            overrideCommand: args.overrideCommand
                         });
                         return this.textResult(JSON.stringify(result, null, 2));
                     }
                     case "inspect_ui_hierarchy": {
-                        const result = await this.executionService.inspectHierarchy(args.xmlDump, args.screenshotBase64 ?? '');
+                        // Pass raw arguments down. ExecutionService will auto-fetch XML + screenshot if xmlDump is missing.
+                        const result = await this.executionService.inspectHierarchy(args.xmlDump, args.screenshotBase64);
                         return this.textResult(JSON.stringify(result, null, 2));
                     }
                     case "self_heal_test": {
                         const healResult = await this.selfHealingService.healWithRetry(args.testOutput, args.xmlHierarchy, args.screenshotBase64 ?? '', args.attempt ?? 1);
-                        return this.textResult(healResult.prompt);
+                        return this.textResult(JSON.stringify({
+                            candidates: healResult.instruction.alternativeSelectors || [],
+                            promptForLLM: healResult.prompt
+                        }, null, 2));
                     }
                     case "set_credentials":
                         return this.textResult(await this.credentialService.setEnv(args.projectRoot, args.credentials));
@@ -533,7 +553,7 @@ class AppiumMcpServer {
                     case "audit_mobile_locators": {
                         const config = this.configService.read(args.projectRoot);
                         const paths = this.configService.getPaths(config);
-                        const report = await this.auditLocatorService.audit(args.projectRoot, paths.pagesRoot);
+                        const report = await this.auditLocatorService.audit(args.projectRoot, [paths.pagesRoot, 'locators', 'src/locators']);
                         return this.textResult(report.markdownReport);
                     }
                     case "summarize_suite": {
@@ -545,9 +565,24 @@ class AppiumMcpServer {
                         return this.textResult(report.summary);
                     }
                     case "generate_ci_workflow": {
+                        const config = this.configService.read(args.projectRoot);
+                        // Extract best-effort CI parameters from config
+                        const executionCommand = config.project?.executionCommand;
+                        let deviceName = args.platform === 'ios' ? 'iPhone 14' : 'Pixel_6';
+                        for (const profile of Object.values(config.mobile?.capabilitiesProfiles || {})) {
+                            if (profile.platformName?.toLowerCase() === args.platform && profile['appium:deviceName']) {
+                                deviceName = profile['appium:deviceName'];
+                                break;
+                            }
+                        }
+                        // WDIO commonly uses _results_ or reports/
+                        const reportPath = executionCommand?.includes('wdio') ? '_results_/' : 'reports/';
                         const workflow = this.ciWorkflowService.generate(args.provider, args.platform, {
                             nodeVersion: args.nodeVersion,
-                            appiumVersion: args.appiumVersion
+                            appiumVersion: args.appiumVersion,
+                            executionCommand,
+                            deviceName,
+                            reportPath
                         });
                         // Write the workflow file to the project
                         const fs = await import('fs');
@@ -612,6 +647,51 @@ class AppiumMcpServer {
                         }
                         return this.textResult(JSON.stringify(verification, null, 2));
                     }
+                    case "execute_sandbox_code": {
+                        const v = this.validateArgs(args, ['script']);
+                        if (v)
+                            return v;
+                        const apiRegistry = {
+                            analyzeCodebase: async (projectRoot) => {
+                                const config = this.configService.read(projectRoot);
+                                const paths = this.configService.getPaths(config);
+                                return this.analyzerService.analyze(projectRoot, paths);
+                            },
+                            runTests: async (projectRoot) => {
+                                return this.executionService.runTest(projectRoot, {});
+                            },
+                            readFile: async (filePath) => {
+                                const fs = await import('fs');
+                                return fs.default.readFileSync(filePath, 'utf8');
+                            },
+                            getConfig: async (projectRoot) => {
+                                return this.configService.read(projectRoot);
+                            },
+                        };
+                        const sandboxResult = await executeSandbox(args.script, apiRegistry, { timeoutMs: args.timeoutMs });
+                        if (sandboxResult.success) {
+                            const parts = [];
+                            if (sandboxResult.logs.length > 0) {
+                                parts.push(`[Sandbox Logs]\n${sandboxResult.logs.join('\n')}`);
+                            }
+                            if (sandboxResult.result != null) {
+                                parts.push(typeof sandboxResult.result === 'string'
+                                    ? sandboxResult.result
+                                    : JSON.stringify(sandboxResult.result, null, 2));
+                            }
+                            else if (sandboxResult.logs.length === 0) {
+                                parts.push('⚠️ Sandbox executed successfully but returned no data. Ensure your script uses `return <value>` to send results back.');
+                            }
+                            parts.push(`\n⏱️ Executed in ${sandboxResult.durationMs}ms`);
+                            return this.textResult(parts.join('\n\n'));
+                        }
+                        else {
+                            return {
+                                content: [{ type: "text", text: `❌ SANDBOX ERROR:\n${sandboxResult.error}\n\nLogs:\n${sandboxResult.logs.join('\n')}\n\n⏱️ Failed after ${sandboxResult.durationMs}ms` }],
+                                isError: true
+                            };
+                        }
+                    }
                     default:
                         throw new Error(`Unknown tool: ${request.params.name}`);
                 }
@@ -648,6 +728,23 @@ class AppiumMcpServer {
             }
         });
     }
+    validateArgs(args, requiredFields) {
+        const missing = requiredFields.filter(f => args[f] === undefined || args[f] === null || args[f] === '');
+        if (missing.length === 0)
+            return null;
+        return {
+            content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        code: 'VALIDATION_ERROR',
+                        message: `Missing required argument(s): ${missing.join(', ')}`,
+                        invalidFields: missing,
+                        hint: 'Provide all required fields and retry.'
+                    }, null, 2)
+                }],
+            isError: true
+        };
+    }
     textResult(text) {
         return { content: [{ type: "text", text }] };
     }
@@ -683,5 +780,5 @@ class AppiumMcpServer {
         }
     }
 }
-const server = new AppiumMcpServer();
+const server = new AppForgeServer();
 server.run().catch(console.error);

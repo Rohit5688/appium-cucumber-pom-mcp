@@ -3,7 +3,6 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { UtilAuditService } from './UtilAuditService.js';
-import { Questioner } from '../utils/Questioner.js';
 const execAsync = promisify(exec);
 import { ProjectSetupService } from './ProjectSetupService.js';
 export class ProjectMaintenanceService {
@@ -43,7 +42,7 @@ export class ProjectMaintenanceService {
             const raw = fs.readFileSync(configPath, 'utf8');
             const config = JSON.parse(raw);
             if (config.paths && Object.keys(config.paths).length > 0) {
-                Questioner.clarify("Custom paths detected in mcp-config.json. Should upgrade overwrite paths to defaults?", "You have custom paths configured. Upgrading might reset or impact them depending on the new defaults.", ["Yes, overwrite to defaults", "No, keep my custom paths"]);
+                logs.push('⚠️ Custom paths detected in mcp-config.json. Keeping existing paths and skipping default path regeneration.');
             }
             if (!config.version) {
                 config.version = '1.0.0';

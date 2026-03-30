@@ -132,13 +132,9 @@ export class McpConfigService {
     fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf-8');
   }
 
-  public updateAppPath(projectRoot: string, platform: 'android' | 'ios', appPath: string): void {
-    if (!fs.existsSync(appPath) && !appPath.startsWith('http')) {
-      Questioner.clarify(
-        `File not found at ${appPath}. Save path anyway (for CI), or provide correct path?`,
-        `The appPath provided for platform ${platform} does not exist on disk.`,
-        ["Save path anyway (I'll do it manually)", "I will provide a corrected path"]
-      );
+  public updateAppPath(projectRoot: string, platform: 'android' | 'ios', appPath: string, forceWrite: boolean = false): void {
+    if (!fs.existsSync(appPath) && !appPath.startsWith('http') && !forceWrite) {
+      console.warn(`[AppForge] ⚠️ appPath does not exist on disk: ${appPath}. Saving anyway (forceWrite was not set but proceeding defensively).`);
     }
     const config = this.read(projectRoot);
     for (const profileName in config.mobile.capabilitiesProfiles) {

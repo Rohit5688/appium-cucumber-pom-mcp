@@ -83,9 +83,9 @@ export class McpConfigService {
         const newConfig = { ...existingConfig, ...config };
         fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf-8');
     }
-    updateAppPath(projectRoot, platform, appPath) {
-        if (!fs.existsSync(appPath) && !appPath.startsWith('http')) {
-            Questioner.clarify(`File not found at ${appPath}. Save path anyway (for CI), or provide correct path?`, `The appPath provided for platform ${platform} does not exist on disk.`, ["Save path anyway (I'll do it manually)", "I will provide a corrected path"]);
+    updateAppPath(projectRoot, platform, appPath, forceWrite = false) {
+        if (!fs.existsSync(appPath) && !appPath.startsWith('http') && !forceWrite) {
+            console.warn(`[AppForge] ⚠️ appPath does not exist on disk: ${appPath}. Saving anyway (forceWrite was not set but proceeding defensively).`);
         }
         const config = this.read(projectRoot);
         for (const profileName in config.mobile.capabilitiesProfiles) {

@@ -36,14 +36,17 @@ export class AppiumSessionService {
     }
 
     const config = this.configService.read(projectRoot);
-    const capabilities = this.resolveCapabilities(config, profileName);
-
     // LIVE-SESSION FIX: Force noReset:true for live inspection sessions.
     // When noReset is false, Appium reinstalls the app from scratch before creating the session.
     // On iOS/XCUITest this blocks for 30-55 seconds, exceeding the MCP client's response timeout
     // and causing a 'Connection closed' error. start_appium_session is an inspection tool —
     // the app must already be installed and in the desired state before calling it.
-    capabilities['appium:noReset'] = true;
+    const profileName_ = profileName ?? Object.keys(config.mobile.capabilitiesProfiles)[0];
+    if (config.mobile.capabilitiesProfiles[profileName_]) {
+      config.mobile.capabilitiesProfiles[profileName_]['appium:noReset'] = true;
+    }
+
+    const capabilities = this.resolveCapabilities(config, profileName);
 
     const serverUrl = this.resolveServerUrl(config);
 

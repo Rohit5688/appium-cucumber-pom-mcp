@@ -30,8 +30,12 @@ export class UtilAuditService {
                 projectUtilMethods.add(namePart.toLowerCase());
             }
         }
-        // Also scan conventional util dirs by convention (utils/, helpers/, support/, lib/)
-        const candidateUtilDirs = ['utils', 'helpers', 'support', 'lib']
+        // Also scan conventional util dirs by convention (including src/ and tests/ nests)
+        const candidateUtilDirs = [
+            'utils', 'helpers', 'support', 'lib',
+            'src/utils', 'src/helpers', 'src/support', 'src/lib',
+            'tests/utils', 'tests/helpers', 'tests/support'
+        ]
             .map(d => path.join(projectRoot, d))
             .filter(d => fs.existsSync(d));
         for (const utilsDir of candidateUtilDirs) {

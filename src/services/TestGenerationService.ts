@@ -68,15 +68,15 @@ ${testName ? `Test Name: "${testName}"` : ''}
 ## ENVIRONMENT
 - Default Platform: ${platform}
 - Detected Architecture: **${analysis.architecturePattern}**
-- Locator Priority: ${locatorOrder.join(' ΓåÆ ')}
+- Locator Priority: ${locatorOrder.join(' -> ')}
 - Features Dir: ${paths.featuresRoot}/
 - Steps Dir: ${paths.stepsRoot}/
 - Pages Dir: ${paths.pagesRoot}/
 - Utils Dir: ${paths.utilsRoot}/
 ${analysis.yamlLocatorFiles.length > 0 ? `- YAML Locator Files: ${analysis.yamlLocatorFiles.join(', ')}` : ''}
 
-${screenXml ? `## ≡ƒô▒ LIVE UI HIERARCHY (XML)\nUse this to extract EXACT locators instead of guessing.\n\\\`\\\`\\\`xml\n${screenXml}\n\\\`\\\`\\\`\n` : ''}
-${screenshotBase64 ? `## ≡ƒû╝∩╕Å SCREENSHOT\nA Base64 screenshot is attached. Use it to visually confirm elements before creating locators.\n` : ''}
+${screenXml ? `## [XML] LIVE UI HIERARCHY\nUse this to extract EXACT locators instead of guessing.\n\\\`\\\`\\\`xml\n${screenXml}\n\\\`\\\`\\\`\n` : ''}
+${screenshotBase64 ? `## [IMAGE] SCREENSHOT\nA Base64 screenshot is attached. Use it to visually confirm elements before creating locators.\n` : ''}
 
 ## REQUIRED SCENARIO COVERAGE
 1. **Happy Path**: Implement the primary user flow.
@@ -84,7 +84,7 @@ ${screenshotBase64 ? `## ≡ƒû╝∩╕Å SCREENSHOT\nA Base64 screenshot is a
 3. **Accessibility**: Include steps to verify significant elements have TalkBack/VoiceOver labels.
 4. **[PHASE 4: STATE-MACHINE MICRO-PROMPTING]**: If this request requires generating a very large Page Object AND complex step definitions simultaneously across multiple files, you MUST serialize your work. Generate and invoke \`validate_and_write\` for ONLY the \`jsonPageObjects\` first. Wait for the compilation success response before generating the \`.feature\` and \`.steps.ts\` files in a subsequent attempt. Do NOT overwhelm your context window.
 
-## EXISTING CODE (REUSE THESE ΓÇö DO NOT DUPLICATE)
+## EXISTING CODE (REUSE THESE -- DO NOT DUPLICATE)
 ${conflictsWarning}
 ${aliasesWarning}
 ### Existing Step Definitions:
@@ -143,9 +143,9 @@ DO NOT include any text outside the JSON block. DO NOT use markdown code fences 
     const arch = analysis.architecturePattern;
 
     if (arch === 'yaml-locators' || arch === 'facade') {
-      const yamlFiles = analysis.yamlLocatorFiles?.join(', ') || '(none yet — create new ones)';
+      const yamlFiles = analysis.yamlLocatorFiles?.join(', ') || '(none yet - create new ones)';
       return `
-## STRICT RULES — YAML LOCATOR ARCHITECTURE (Detected: ${arch})
+## STRICT RULES - YAML LOCATOR ARCHITECTURE (Detected: ${arch})
 
 This project uses **YAML-based locator files** with a resolver function. Follow this pattern EXACTLY:
 
@@ -174,7 +174,7 @@ username_field:
 
     if (arch === 'hybrid') {
       return `
-## STRICT RULES — HYBRID ARCHITECTURE (Detected: ${arch})
+## STRICT RULES - HYBRID ARCHITECTURE (Detected: ${arch})
 
 This project uses BOTH Page Object classes AND YAML locator files. Follow the EXISTING pattern:
 
@@ -197,7 +197,7 @@ This project uses BOTH Page Object classes AND YAML locator files. Follow the EX
       : "15. **Environment Setup**: Do NOT inject `import 'dotenv/config';`. Use the project's native configuration strategy as inferred from existing Page Objects or Utility helpers.";
 
     return `
-## STRICT RULES — PAGE OBJECT MODEL (Detected: ${arch})
+## STRICT RULES - PAGE OBJECT MODEL (Detected: ${arch})
 
 1. **BDD Triad**: Generate a Gherkin \`.feature\` file, a \`.steps.ts\` file, and a \`.page.ts\` file.
 2. **Strict POM**: ALL locators and driver commands belong ONLY inside Page Object methods. Step definitions MUST call page methods only.
@@ -216,9 +216,9 @@ ${platform === 'both' ? `
 ## CROSS-PLATFORM RULES (platform: both)
 
 When platform is "both", generate SEPARATE Page Objects per platform:
-- \`pages/LoginPage.android.ts\` ΓÇö Uses Android locators
-- \`pages/LoginPage.ios.ts\` ΓÇö Uses iOS locators
-- \`pages/LoginPage.ts\` ΓÇö Platform router
+- \`pages/LoginPage.android.ts\` -- Uses Android locators
+- \`pages/LoginPage.ios.ts\` -- Uses iOS locators
+- \`pages/LoginPage.ts\` -- Platform router
 ` : ''}
 `;
   }

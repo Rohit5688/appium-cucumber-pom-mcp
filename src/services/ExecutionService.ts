@@ -56,19 +56,18 @@ export class ExecutionService {
         config = null;
       }
       
+      const fs = await import('fs');
       let command = '';
       if (options?.overrideCommand) {
         command = options.overrideCommand;
-      } else if (config?.project.executionCommand) {
+      } else if (config?.project?.executionCommand) {
         command = config.project.executionCommand;
       } else {
-        Questioner.clarify(
-          "No default test script found in mcp-config.json. What command runs your tests? (e.g., npm run test)",
-          "run_cucumber_test needs to know how to execute the suite. You can provide an overrideCommand via arguments or define executionCommand in mcp-config.json.",
-          ["npm run test", "npx wdio run wdio.conf.ts", "npm run e2e:android"]
-        );
+        const defaultConf = fs.existsSync(path.join(projectRoot, 'wdio.conf.ts'))
+          ? 'wdio.conf.ts' : 'wdio.conf.js';
+        command = `npx wdio run ${defaultConf}`;
+        console.warn(`[AppForge] ⚠️ No executionCommand in mcp-config.json — using default: ${command}`);
       }
-      const fs = await import('fs');
       
       // We only append specific arguments if we're dealing with a wdio execution command natively
       // Otherwise we just run the custom execution command as-is
@@ -224,18 +223,29 @@ export class ExecutionService {
       const attrs = match[2];
 
       const idMatch = attrs.match(/(?:resource-id|content-desc|accessibility-id|name)="([^"]*)"/);
-      const textMatch = attrs.match(/text="([^"]*)"/);
+      const textMatch = attrs.match(/(?:text|value)="([^"]*)"/);
       const boundsMatch = attrs.match(/bounds="([^"]*)"/);
       const clickableMatch = attrs.match(/clickable="true"/);
       const enabledMatch = attrs.match(/enabled="true"/);
 
+      let boundsStr = boundsMatch?.[1] ?? '';
+      if (!boundsStr) {
+        const x = attrs.match(/x="([^"]*)"/)?.[1];
+        const y = attrs.match(/y="([^"]*)"/)?.[1];
+        const w = attrs.match(/width="([^"]*)"/)?.[1];
+        const h = attrs.match(/height="([^"]*)"/)?.[1];
+        if (x && y && w && h) {
+          boundsStr = `x=${x},y=${y},w=${w},h=${h}`;
+        }
+      }
+
       // Only include interactable or identifiable elements
-      if (idMatch || textMatch || clickableMatch) {
+      if (idMatch || textMatch || clickableMatch || boundsStr) {
         elements.push({
           tag,
           id: idMatch?.[1] ?? '',
           text: textMatch?.[1] ?? '',
-          bounds: boundsMatch?.[1] ?? ''
+          bounds: boundsStr
         });
       }
     }

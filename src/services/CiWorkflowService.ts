@@ -10,18 +10,24 @@ export class CiWorkflowService {
       appPath?: string;
       nodeVersion?: string;
       appiumVersion?: string;
+      executionCommand?: string;
+      deviceName?: string;
+      reportPath?: string;
     }
   ): { filename: string; content: string } {
     const nodeVersion = options?.nodeVersion ?? '20';
     const appiumVersion = options?.appiumVersion ?? 'latest';
+    const executionCommand = options?.executionCommand ?? (platform === 'ios' ? "npx cucumber-js --tags '@ios'" : "npx cucumber-js --tags '@android'");
+    const deviceName = options?.deviceName ?? (platform === 'ios' ? 'iPhone 14' : 'Pixel_6');
+    const reportPath = options?.reportPath ?? 'reports/';
 
     if (provider === 'github') {
-      return this.generateGitHub(platform, nodeVersion, appiumVersion, options?.appPath);
+      return this.generateGitHub(platform, nodeVersion, appiumVersion, executionCommand, deviceName, reportPath, options?.appPath);
     }
-    return this.generateGitLab(platform, nodeVersion, appiumVersion, options?.appPath);
+    return this.generateGitLab(platform, nodeVersion, appiumVersion, executionCommand, deviceName, reportPath, options?.appPath);
   }
 
-  private generateGitHub(platform: string, nodeVersion: string, appiumVersion: string, appPath?: string): { filename: string; content: string } {
+  private generateGitHub(platform: string, nodeVersion: string, appiumVersion: string, execCmd: string, deviceName: string, reportDir: string, appPath?: string): { filename: string; content: string } {
     const isAndroid = platform !== 'ios';
     const content = `name: Appium Mobile Tests
 
@@ -59,19 +65,19 @@ ${isAndroid ? `
           api-level: 34
           target: google_apis
           arch: x86_64
-          profile: pixel_6
+          profile: ${deviceName}
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
             npm install -g appium@${appiumVersion}
             appium driver install uiautomator2
             appium &
             sleep 5
-            npx cucumber-js --tags '@android'
+            ${execCmd}
 ` : `
       - name: Start iOS Simulator
         run: |
-          xcrun simctl boot "iPhone 14" || true
-          xcrun simctl bootstatus "iPhone 14" -b
+          xcrun simctl boot "${deviceName}" || true
+          xcrun simctl bootstatus "${deviceName}" -b
 
       - name: Install Appium
         run: |
@@ -85,20 +91,20 @@ ${isAndroid ? `
         run: sleep 5
 
       - name: Run Tests
-        run: npx cucumber-js --tags '@ios'
+        run: ${execCmd}
 `}
       - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: reports/
+          path: ${reportDir}
           retention-days: 14
 `;
     return { filename: '.github/workflows/appium-tests.yml', content };
   }
 
-  private generateGitLab(platform: string, nodeVersion: string, appiumVersion: string, appPath?: string): { filename: string; content: string } {
+  private generateGitLab(platform: string, nodeVersion: string, appiumVersion: string, execCmd: string, deviceName: string, reportDir: string, appPath?: string): { filename: string; content: string } {
     const isAndroid = platform !== 'ios';
     const content = `stages:
   - test
@@ -117,7 +123,7 @@ ${isAndroid ? `
       alias: android-emulator
 
   variables:
-    EMULATOR_DEVICE: "Samsung Galaxy S10"
+    EMULATOR_DEVICE: "${deviceName}"
     WEB_VNC: "true"
 
   before_script:
@@ -128,7 +134,7 @@ ${isAndroid ? `
     - sleep 10
 
   script:
-    - npx cucumber-js --tags '@android'
+    - ${execCmd}
 ` : `
   tags:
     - macos
@@ -137,17 +143,17 @@ ${isAndroid ? `
     - npm ci
     - npm install -g appium@\${APPIUM_VERSION}
     - appium driver install xcuitest
-    - xcrun simctl boot "iPhone 14" || true
+    - xcrun simctl boot "${deviceName}" || true
     - appium &
     - sleep 5
 
   script:
-    - npx cucumber-js --tags '@ios'
+    - ${execCmd}
 `}
   artifacts:
     when: always
     paths:
-      - reports/
+      - ${reportDir}
     expire_in: 14 days
 `;
     return { filename: '.gitlab-ci.yml', content };
