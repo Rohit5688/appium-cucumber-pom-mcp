@@ -28,7 +28,7 @@ Before the `validate_and_write` tool writes new files to disk, it performs a sta
 *   **AI Warning**: If a violation is caught, the server returns a 🔒 **SECURITY AUDIT FAILURE** message to the AI, forcing it to regenerate the code using secure practices (e.g., using `dotenv`).
 
 ### 4. Atomic Backups & Dry-Run Mode
-*   **Backups**: Every file overwrite is preceded by a snapshot save to `.appium-mcp/backups/`. 
+*   **Backups**: Every file overwrite is preceded by a snapshot save to `.AppForge/backups/`. 
 *   **Dry-Run**: The `validate_and_write` tool supports a `dryRun: true` parameter. This allows the AI to "test" its generation against the security auditor and TypeScript compiler without ever touching the user's disk.
 
 ### 5. Config Control

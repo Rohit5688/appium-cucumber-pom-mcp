@@ -28,7 +28,7 @@ export class ProjectMaintenanceService {
             logs.push(`❌ Failed to update dependencies: ${error.message}`);
         }
         // 3. Ensure backup directory exists
-        const backupDir = path.join(projectRoot, '.appium-mcp', 'backups');
+        const backupDir = path.join(projectRoot, '.AppForge', 'backups');
         if (!fs.existsSync(backupDir)) {
             fs.mkdirSync(backupDir, { recursive: true });
             logs.push(`✅ Created backup directory at ${backupDir}`);

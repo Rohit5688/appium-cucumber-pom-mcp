@@ -578,7 +578,7 @@ reports/
 
   private scaffoldMcpConfig(projectRoot: string, platform: string) {
     const config = {
-      $schema: "./.appium-mcp/configSchema.json",
+      $schema: "./.AppForge/configSchema.json",
       version: "1.1.0",
       project: {
         language: "typescript",

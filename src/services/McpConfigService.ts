@@ -66,7 +66,7 @@ export class McpConfigService {
       // Auto-migration
       if (!raw.version || raw.version === '1.0.0') {
         raw.version = this.CURRENT_VERSION;
-        raw.$schema = './.appium-mcp/configSchema.json'; // Enables IDE autocompletion
+        raw.$schema = './.AppForge/configSchema.json'; // Enables IDE autocompletion
         this.write(projectRoot, raw);
         this.generateSchema(projectRoot);
       }
@@ -90,7 +90,7 @@ export class McpConfigService {
    * Generates a JSON schema file for IDE autocompletion.
    */
   private generateSchema(projectRoot: string) {
-    const schemaDir = path.join(projectRoot, '.appium-mcp');
+    const schemaDir = path.join(projectRoot, '.AppForge');
     if (!fs.existsSync(schemaDir)) {
       fs.mkdirSync(schemaDir, { recursive: true });
     }

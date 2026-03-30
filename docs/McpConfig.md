@@ -8,7 +8,7 @@ The `mcp-config.json` file dictates project-level rules for test generation, exe
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `$schema` | `string` | Link to the local `.appium-mcp/configSchema.json` for IDE autocompletion. |
+| `$schema` | `string` | Link to the local `.AppForge/configSchema.json` for IDE autocompletion. |
 | `version` | `string` | Configuration schema version (e.g., `"1.1.0"`). Used for auto-migrations. |
 | `project.language` | `enum` | Always `"typescript"`. |
 | `project.client` | `enum` | Always `"webdriverio-appium"`. |

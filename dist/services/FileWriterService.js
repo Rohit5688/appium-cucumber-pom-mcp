@@ -109,7 +109,7 @@ export class FileWriterService {
             }, null, 2);
         }
         // Step 4: Backup existing files before overwrite (Atomic Prep)
-        const backupDir = path.join(projectRoot, '.appium-mcp', 'backups', new Date().toISOString().replace(/[:.]/g, '-'));
+        const backupDir = path.join(projectRoot, '.AppForge', 'backups', new Date().toISOString().replace(/[:.]/g, '-'));
         const overwrittenFiles = [];
         const newFiles = [];
         for (const file of files) {

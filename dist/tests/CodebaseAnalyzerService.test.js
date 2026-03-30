@@ -33,7 +33,7 @@ describe('CodebaseAnalyzerService (AppForge Unit Tests)', () => {
         await fs.unlink(pagePath);
         const authPage = result.existingPageObjects.find(p => p.className === 'NativeAuthPage');
         assert.ok(authPage, 'NativeAuthPage should be detected');
-        assert.deepEqual(authPage?.publicMethods, ['login()'], 'Should only extract public methods with ()');
+        assert.deepEqual(authPage?.publicMethods, ['login'], 'Should only extract public methods');
     });
     test('should detect Page Registries in Appium apps (BUG-04 Extracted Feature)', async () => {
         const registryPom = `

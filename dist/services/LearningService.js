@@ -7,7 +7,7 @@ import path from 'path';
  */
 export class LearningService {
     getStoragePath(projectRoot) {
-        const dir = path.join(projectRoot, '.appium-mcp');
+        const dir = path.join(projectRoot, '.AppForge');
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }

@@ -1,6 +1,6 @@
 # 👥 Team Collaboration & Mobile Learning
 
-The Appium-Cucumber MCP Server doesn't just write code—it **Learns** from your mobile team's unique patterns. Mobile testing is full of tribal knowledge (e.g., "Always wait for the splash screen animation before clicking 'Login'"), and this MCP has a persistent memory (`.appium-mcp/mcp-learning.json`) to capture it.
+The Appium-Cucumber MCP Server doesn't just write code—it **Learns** from your mobile team's unique patterns. Mobile testing is full of tribal knowledge (e.g., "Always wait for the splash screen animation before clicking 'Login'"), and this MCP has a persistent memory (`.AppForge/mcp-learning.json`) to capture it.
 
 ---
 
@@ -31,7 +31,7 @@ async submitPayment() { ... }
 ---
 
 ## 📄 `export_team_knowledge`
-As your mobile automation suite grows, so does the `.appium-mcp/mcp-learning.json` brain. You can convert this raw data into a human-readable Markdown document (`docs/team-knowledge.md`) for your team to review.
+As your mobile automation suite grows, so does the `.AppForge/mcp-learning.json` brain. You can convert this raw data into a human-readable Markdown document (`docs/team-knowledge.md`) for your team to review.
 
 **Example Prompt to AI:**
 > *"Export your current team knowledge base. I want to see a summary of all the mobile-specific rules you've learned so far."*

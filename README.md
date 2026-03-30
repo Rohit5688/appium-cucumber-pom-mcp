@@ -106,7 +106,7 @@ Add the local server to your MCP Client settings:
 ---
 
 ## 🔒 Safety First
-* **Non-Destructive**: Revisions are safely backed up to `.appium-mcp/backups/`.
+* **Non-Destructive**: Revisions are safely backed up to `.AppForge/backups/`.
 * **Idempotent Analysis**: AST parsing guarantees non-breaking detection of existing test artifacts. 
 
 *(Built for enterprise scale AI workflows by abstracting the friction of mobile configuration and brittle selectors.)*

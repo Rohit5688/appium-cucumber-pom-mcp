@@ -316,7 +316,7 @@ class AppiumMcpServer {
                 },
                 {
                     name: "train_on_example",
-                    description: "Teach the AI a team-specific pattern or fix. Persisted to .appium-mcp/mcp-learning.json and injected into all future generation prompts.",
+                    description: "Teach the AI a team-specific pattern or fix. Persisted to .AppForge/mcp-learning.json and injected into all future generation prompts.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -330,7 +330,7 @@ class AppiumMcpServer {
                 },
                 {
                     name: "export_team_knowledge",
-                    description: "Export the AI's learned rules (.appium-mcp/mcp-learning.json) as a human-readable Markdown document.",
+                    description: "Export the AI's learned rules (.AppForge/mcp-learning.json) as a human-readable Markdown document.",
                     inputSchema: {
                         type: "object",
                         properties: {

@@ -72,7 +72,7 @@ Most MCP clients (like Claude Desktop or Cursor) support registering Server-Sent
 ```json
 {
   "mcpServers": {
-    "remote-appium-mcp": {
+    "remote-AppForge": {
       "type": "sse",
       "url": "https://mcp.your-domain.com/sse"
     }
@@ -84,9 +84,9 @@ Most MCP clients (like Claude Desktop or Cursor) support registering Server-Sent
 
 ## 📂 4. Best Practices for Dockerized Mobile Testing
 
-1.  **Mounting the AI Brain**: To ensure the AI's "Learning" is persistent across container restarts, mount the `.appium-mcp` knowledge folder as a volume:
+1.  **Mounting the AI Brain**: To ensure the AI's "Learning" is persistent across container restarts, mount the `.AppForge` knowledge folder as a volume:
     ```bash
-    -v /path/to/project/.appium-mcp:/app/workspace/.appium-mcp
+    -v /path/to/project/.AppForge:/app/workspace/.AppForge
     ```
 2.  **Environment Secrets**: Pass Cloud Device testing credentials (e.g., BrowserStack, Sauce Labs, LambdaTest) via Docker environment variables instead of hardcoding them:
     ```bash

@@ -22,7 +22,7 @@ export interface LearningSchema {
 export class LearningService {
 
   private getStoragePath(projectRoot: string): string {
-    const dir = path.join(projectRoot, '.appium-mcp');
+    const dir = path.join(projectRoot, '.AppForge');
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }

@@ -76,7 +76,7 @@ Provides three layers of security validations:
 Uses a secure staging system:
 1. Parses the AI's JSON output (`filesToCreate`, `filesToUpdate`).
 2. Runs AST linting.
-3. Backs up the *existing* files to `.appium-mcp/backups/<timestamp>`.
+3. Backs up the *existing* files to `.AppForge/backups/<timestamp>`.
 4. Commits writes atomicaly. Supports a `--dryRun` boolean to bypass disk writes entirely.
 5. **Cross-Platform Verification**: If `mcp-config.json` is set to `platform: both`, the service rejects POM generation unless the LLM yielded both `Page.android.ts` and `Page.ios.ts`.
 
