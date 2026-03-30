@@ -54,7 +54,7 @@ class AppiumMcpServer {
     coverageAnalysisService = new CoverageAnalysisService();
     migrationService = new MigrationService();
     constructor() {
-        this.server = new Server({ name: "appium-cucumber-pom-mcp", version: "1.0.0" }, { capabilities: { tools: {} } });
+        this.server = new Server({ name: "AppForge", version: "1.0.0" }, { capabilities: { tools: {} } });
         this.setupToolHandlers();
         this.server.onerror = (error) => console.error("[MCP Error]", error);
         // Inject live session service into services that need it
