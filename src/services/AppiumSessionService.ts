@@ -2,6 +2,9 @@ import { remote, type Browser } from 'webdriverio';
 import { McpConfigService, type McpConfig } from './McpConfigService.js';
 import fs from 'fs';
 import path from 'path';
+import http from 'http';
+import { Questioner } from '../utils/Questioner.js';
+import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
 
 export interface SessionInfo {
   sessionId: string;
@@ -33,16 +36,38 @@ export class AppiumSessionService {
     }
 
     const config = this.configService.read(projectRoot);
+    // LIVE-SESSION FIX: Force noReset:true for live inspection sessions.
+    // When noReset is false, Appium reinstalls the app from scratch before creating the session.
+    // On iOS/XCUITest this blocks for 30-55 seconds, exceeding the MCP client's response timeout
+    // and causing a 'Connection closed' error. start_appium_session is an inspection tool —
+    // the app must already be installed and in the desired state before calling it.
+    const profileName_ = profileName ?? Object.keys(config.mobile.capabilitiesProfiles)[0];
+    if (config.mobile.capabilitiesProfiles[profileName_]) {
+      config.mobile.capabilitiesProfiles[profileName_]['appium:noReset'] = true;
+    }
+
     const capabilities = this.resolveCapabilities(config, profileName);
+
     const serverUrl = this.resolveServerUrl(config);
+
+    const parsedUrl = new URL(serverUrl);
+    const hostname = parsedUrl.hostname;
+    const port = parseInt(parsedUrl.port || '4723', 10);
+
+    // Auto-detect Appium version: probe /status (Appium 2/3 → path '/') then /wd/hub/status (Appium 1 → path '/wd/hub/')
+    const serverPath = await this.detectAppiumPath(hostname, port);
+    console.error(`[AppForge] Detected Appium server path: ${serverPath} at ${hostname}:${port}`);
 
     try {
       this.driver = await remote({
         protocol: 'http',
-        hostname: new URL(serverUrl).hostname,
-        port: parseInt(new URL(serverUrl).port || '4723'),
-        path: '/wd/hub',
-        capabilities
+        hostname,
+        port,
+        path: serverPath,
+        capabilities,
+        // CRITICAL: Suppress WebdriverIO stdout logs to prevent MCP JSON-RPC pipe corruption.
+        // Log output must ONLY go to stderr (console.error), never stdout.
+        logLevel: 'error',
       });
 
       const caps = this.driver.capabilities as any;
@@ -62,19 +87,22 @@ export class AppiumSessionService {
     } catch (error: any) {
       const msg = error.message || String(error);
       if (msg.includes('ECONNREFUSED')) {
-        throw new Error(
+        throw new AppForgeError(ErrorCode.E002_DEVICE_OFFLINE,
           `Cannot connect to Appium at ${serverUrl}. ` +
           `Make sure Appium is running:\n  npx appium\n` +
-          `Or start it with a specific port:\n  npx appium --port 4723`
+          `Or start it with a specific port:\n  npx appium --port 4723`,
+          ["Start Appium on localhost:4723"]
         );
       }
       if (msg.includes('session not created') || msg.includes('Could not start')) {
-        throw new Error(
-          `Appium session creation failed. Check:\n` +
-          `1. Is an emulator/simulator running? (adb devices / xcrun simctl list)\n` +
-          `2. Is the app installed? (app path: ${capabilities['appium:app'] ?? 'not set'})\n` +
-          `3. Are the capabilities correct?\n` +
-          `Raw error: ${msg}`
+        throw new AppForgeError(ErrorCode.E001_NO_SESSION,
+          `Appium session creation failed.\n` +
+          `Raw error: ${msg}`,
+          [
+            "Is an emulator/simulator running? (adb devices / xcrun simctl list)",
+            `Is the app installed? (app path: ${capabilities['appium:app'] ?? 'not set'})`,
+            "Are the capabilities correct?"
+          ]
         );
       }
       throw error;
@@ -136,10 +164,33 @@ export class AppiumSessionService {
   }
 
   /**
-   * Returns current session status.
+   * BUG-06 FIX: Returns true only if driver reference exists AND the session is
+   * still alive on the Appium server. Previously returned this.driver !== null,
+   * which lies when the device disconnects or the Appium server crashes.
+   *
+   * Sync fast-path: returns false immediately if driver is null.
+   * For a definitive live check, use isSessionAlive() (async).
    */
   public isSessionActive(): boolean {
     return this.driver !== null;
+  }
+
+  /**
+   * Async liveness ping — confirms the session is genuinely alive on the server.
+   * Use this before any critical operation to avoid misleading session-not-found errors.
+   */
+  public async isSessionAlive(): Promise<boolean> {
+    if (!this.driver) return false;
+    try {
+      // getStatus() calls the Appium /status endpoint — fast, no side effects.
+      // If the server or device is gone, this throws immediately.
+      await (this.driver as any).getStatus();
+      return true;
+    } catch {
+      // Session is dead — clean up the stale reference so future callers get false
+      this.driver = null;
+      return false;
+    }
   }
 
   /**
@@ -168,6 +219,43 @@ export class AppiumSessionService {
   }
 
   /**
+   * Auto-detects Appium server version path.
+   * - Appium 2: base path is '/' — /status returns JSON with Appium version info
+   * - Appium 1: base path is '/wd/hub' — /wd/hub/status returns JSON
+   *
+   * Strategy: Try Appium 2 root first (GET /status), then fall back to Appium 1.
+   */
+  private async detectAppiumPath(hostname: string, port: number): Promise<string> {
+    const appium2Works = await this.probeStatusEndpoint(hostname, port, '/status');
+    if (appium2Works) return '/';
+
+    const appium1Works = await this.probeStatusEndpoint(hostname, port, '/wd/hub/status');
+    if (appium1Works) return '/wd/hub/';
+
+    // Default to Appium 2 root with a warning — startSession error handling will give actionable guidance
+    console.error(
+      `[AppForge] ⚠️ Could not probe Appium at ${hostname}:${port}. ` +
+      `Defaulting to Appium 2 path '/'. Ensure Appium is running: npx appium`
+    );
+    return '/';
+  }
+
+  /**
+   * Probes a status endpoint. Returns true if it responds with HTTP 200.
+   */
+  private probeStatusEndpoint(hostname: string, port: number, statusPath: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const req = http.request(
+        { hostname, port, path: statusPath, method: 'GET', timeout: 3000 },
+        (res) => { resolve(res.statusCode === 200); res.resume(); }
+      );
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => { req.destroy(); resolve(false); });
+      req.end();
+    });
+  }
+
+  /**
    * Resolves capabilities from mcp-config.json.
    * Picks a named profile or the first one available.
    */
@@ -189,6 +277,22 @@ export class AppiumSessionService {
     const activeBuild = this.configService.getActiveBuild(config);
     if (activeBuild?.appPath) {
       caps['appium:app'] = activeBuild.appPath;
+    }
+
+    if (!caps['appium:app'] && !caps['appium:noReset'] && caps.browserName !== 'Chrome' && caps.browserName !== 'Safari') {
+      Questioner.clarify(
+        "No app or browser specified in capabilities. Provide path to .apk/.ipa, or choose 'noReset: true' for already-installed app?",
+        "Appium requires an 'appium:app' path, a 'browserName', or 'appium:noReset' to start a session.",
+        ["Provide path to app", "Use noReset (app already installed)", "Set browserName (e.g. Chrome, Safari)"]
+      );
+    }
+
+    if (caps.platformName?.toLowerCase() === 'ios' && caps['appium:noReset'] && !caps['appium:bundleId'] && !caps['appium:app']) {
+      Questioner.clarify(
+        "iOS bundleId missing. What is the bundle identifier of your app?",
+        "When starting an iOS test without reinstalling the app (noReset: true), Appium requires the 'appium:bundleId' (e.g., com.apple.Preferences) to launch the app.",
+        ["Provide bundleId"]
+      );
     }
 
     return caps;

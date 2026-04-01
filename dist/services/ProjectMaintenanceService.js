@@ -1,14 +1,28 @@
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
-const execAsync = promisify(exec);
+import { UtilAuditService } from './UtilAuditService.js';
+import { validateProjectRoot } from '../utils/SecurityUtils.js';
+const execFileAsync = promisify(execFile);
+import { ProjectSetupService } from './ProjectSetupService.js';
 export class ProjectMaintenanceService {
+    utilAuditService = new UtilAuditService();
+    projectSetupService = new ProjectSetupService();
     /**
      * Idempotent tool to upgrade project dependencies and structural aspects.
+     *
+     * CB-1 FIX: Validates projectRoot to prevent shell injection attacks
      */
     async upgradeProject(projectRoot) {
         const logs = [];
+        // CB-1 FIX: Validate projectRoot before any operations
+        try {
+            validateProjectRoot(projectRoot);
+        }
+        catch (error) {
+            throw new Error(`Invalid projectRoot: ${error.message}`);
+        }
         // 1. Auto-detect project structure
         if (!fs.existsSync(path.join(projectRoot, 'package.json'))) {
             throw new Error("No package.json found. Is this a valid project root?");
@@ -16,14 +30,24 @@ export class ProjectMaintenanceService {
         // 2. Upgrade dependencies
         try {
             logs.push("Updating core dependencies...");
-            await execAsync('npm install webdriverio@latest @cucumber/cucumber@latest', { cwd: projectRoot });
+            // CB-1 FIX: Use execFile with args array instead of shell command string
+            await execFileAsync('npm', [
+                'install',
+                'webdriverio@latest',
+                '@cucumber/cucumber@latest',
+                '@wdio/cli@latest',
+                '@wdio/local-runner@latest',
+                '@wdio/cucumber-framework@latest',
+                '@wdio/appium-service@latest',
+                '@wdio/spec-reporter@latest'
+            ], { cwd: projectRoot });
             logs.push("✅ Core dependencies updated to latest.");
         }
         catch (error) {
             logs.push(`❌ Failed to update dependencies: ${error.message}`);
         }
         // 3. Ensure backup directory exists
-        const backupDir = path.join(projectRoot, '.appium-mcp', 'backups');
+        const backupDir = path.join(projectRoot, '.AppForge', 'backups');
         if (!fs.existsSync(backupDir)) {
             fs.mkdirSync(backupDir, { recursive: true });
             logs.push(`✅ Created backup directory at ${backupDir}`);
@@ -37,6 +61,9 @@ export class ProjectMaintenanceService {
             // Add version tag if missing
             const raw = fs.readFileSync(configPath, 'utf8');
             const config = JSON.parse(raw);
+            if (config.paths && Object.keys(config.paths).length > 0) {
+                logs.push('⚠️ Custom paths detected in mcp-config.json. Keeping existing paths and skipping default path regeneration.');
+            }
             if (!config.version) {
                 config.version = '1.0.0';
                 fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -50,7 +77,47 @@ export class ProjectMaintenanceService {
                 logs.push('   > Run `setup_project` with `platform: "both"` to auto-generate the new split configuration files!');
             }
         }
+        try {
+            const audit = await this.utilAuditService.audit(projectRoot);
+            logs.push(`\n📊 Utility Coverage: ${audit.coveragePercent}%`);
+            if (audit.missing.length > 0) {
+                logs.push(`⚠️ Missing recommended utilities:`);
+                audit.actionableSuggestions.forEach(s => logs.push(`   - ${s}`));
+            }
+        }
+        catch (e) {
+            // ignore
+        }
+        try {
+            logs.push("Verifying project structure...");
+            await this.repairProject(projectRoot, "android");
+            logs.push("✅ Standard scaffolding files verified/repaired.");
+        }
+        catch (e) {
+            logs.push("⚠️ Could not verify standard files structure.");
+        }
         const summary = logs.join('\n');
         return summary;
+    }
+    /**
+     * Safe to run at any time — only generates files that are missing and never overwrites existing ones.
+     *
+     * CB-1 FIX: Validates projectRoot to prevent shell injection attacks
+     */
+    async repairProject(projectRoot, platform = 'android') {
+        // CB-1 FIX: Validate projectRoot before any operations
+        try {
+            validateProjectRoot(projectRoot);
+        }
+        catch (error) {
+            throw new Error(`Invalid projectRoot: ${error.message}`);
+        }
+        try {
+            await this.projectSetupService.setup(projectRoot, platform, 'RepairedApp');
+            return "✅ Project repair completed. Missing baseline files were regenerated.";
+        }
+        catch (error) {
+            throw new Error(`Failed to repair project: ${error.message}`);
+        }
     }
 }

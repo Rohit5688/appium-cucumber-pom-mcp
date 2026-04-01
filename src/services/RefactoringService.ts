@@ -12,23 +12,23 @@ export class RefactoringService {
     suggestions.push('### 🧹 Codebase Refactoring & Maintenance Report\n');
 
     // 1. Detect duplicate step patterns (same pattern in multiple files)
-    const stepMap = new Map<string, string[]>();
+    const stepMap = new Map<string, Set<string>>();
     for (const def of analysis.existingStepDefinitions) {
       for (const step of def.steps) {
         const key = `${step.type}:${step.pattern}`;
-        const files = stepMap.get(key) || [];
-        files.push(def.file);
+        const files = stepMap.get(key) || new Set<string>();
+        files.add(def.file);
         stepMap.set(key, files);
       }
     }
 
-    const duplicates = [...stepMap.entries()].filter(([_, files]) => files.length > 1);
+    const duplicates = [...stepMap.entries()].filter(([_, files]) => files.size > 1);
     if (duplicates.length > 0) {
       suggestions.push('#### 👯 Duplicate Step Definitions');
       suggestions.push('The following steps have identical patterns in multiple files. This causes Cucumber compilation errors. **Merge these into a common steps file:**\n');
       for (const [pattern, files] of duplicates) {
         suggestions.push(`- **Pattern**: \`${pattern}\``);
-        for (const f of files) {
+        for (const f of Array.from(files)) {
           suggestions.push(`  - Found in: \`${f}\``);
         }
       }
@@ -38,29 +38,97 @@ export class RefactoringService {
     }
 
     // 2. Detect unused Page Object methods (not referenced by any step)
-    const allStepBodies = analysis.existingStepDefinitions.flatMap(d => d.steps.map(s => s.pattern.toLowerCase()));
-    const unusedPomMethods: { page: string; methods: string[] }[] = [];
+    const allStepBodies = analysis.existingStepDefinitions.flatMap(d => d.steps.map(s => (s.bodyText || '').toLowerCase()));
+    const unusedPomMethods: { page: string; methods: string[]; confidence: 'low' | 'medium' | 'high' }[] = [];
 
     for (const po of analysis.existingPageObjects) {
       const unused = po.publicMethods.filter(method => {
         const methodLower = method.toLowerCase();
-        // Very basic heuristic: check if the method name appears in any step pattern
-        return !allStepBodies.some(body => body.includes(methodLower));
+        
+        // Strategy 1: Simple substring match (lowest confidence)
+        const simpleMatch = allStepBodies.some(body => body.includes(methodLower));
+        if (simpleMatch) return false;
+        
+        // Strategy 2: Instance variable pattern (e.g., "loginPage.method()")
+        const instanceMatch = allStepBodies.some(body => {
+          const instancePattern = new RegExp(`\\w+\\.${methodLower}\\s*\\(`, 'i');
+          return instancePattern.test(body);
+        });
+        if (instanceMatch) return false;
+        
+        // Strategy 3: await pattern (e.g., "await page.method()")
+        const awaitMatch = allStepBodies.some(body => {
+          return body.includes('await') && body.includes(methodLower);
+        });
+        if (awaitMatch) return false;
+        
+        // Strategy 4: Common wrapper patterns (e.g., "wrapperFn(page.method)")
+        const wrapperMatch = allStepBodies.some(body => {
+          const wrapperPattern = new RegExp(`\\w+\\(.*${methodLower}.*\\)`, 'i');
+          return wrapperPattern.test(body);
+        });
+        if (wrapperMatch) return false;
+        
+        // If all strategies failed, likely unused
+        return true;
       });
+      
       if (unused.length > 0) {
-        unusedPomMethods.push({ page: po.path, methods: unused });
+        // Calculate confidence based on ratio of unused to total methods
+        const unusedRatio = unused.length / Math.max(po.publicMethods.length, 1);
+        let confidence: 'low' | 'medium' | 'high';
+        
+        if (unusedRatio > 0.8) {
+          // If >80% of methods flagged, likely all are false positives
+          confidence = 'low';
+        } else if (unusedRatio > 0.5) {
+          // If 50-80% flagged, medium confidence
+          confidence = 'medium';
+        } else {
+          // If <50% flagged, higher confidence these are truly unused
+          confidence = 'high';
+        }
+        
+        unusedPomMethods.push({ page: po.path, methods: unused, confidence });
       }
     }
 
     if (unusedPomMethods.length > 0) {
       suggestions.push('#### 🗑️ Potentially Unused Page Object Methods');
-      suggestions.push('The following methods exist in Page Objects but are not referenced by any step pattern. Consider deleting them:\n');
-      for (const po of unusedPomMethods) {
-        for (const method of po.methods) {
-          suggestions.push(`- **${method}** (File: \`${po.page}\`)`);
+      suggestions.push('> [!WARNING]\n> **False-Positive Risk:** This analysis uses pattern matching on step definition bodies. Methods called indirectly (via wrappers, inheritance, or dynamic calls) might be incorrectly flagged. **Always verify manually before deleting.**\n');
+      
+      // Group by confidence level
+      const highConfidence = unusedPomMethods.filter(p => p.confidence === 'high');
+      const mediumConfidence = unusedPomMethods.filter(p => p.confidence === 'medium');
+      const lowConfidence = unusedPomMethods.filter(p => p.confidence === 'low');
+      
+      if (highConfidence.length > 0) {
+        suggestions.push('**High Confidence** (likely genuinely unused):\n');
+        for (const po of highConfidence) {
+          for (const method of po.methods) {
+            suggestions.push(`- **${method}** (File: \`${po.page}\`) ✓`);
+          }
         }
+        suggestions.push('');
       }
-      suggestions.push('');
+      
+      if (mediumConfidence.length > 0) {
+        suggestions.push('**Medium Confidence** (verify before deleting):\n');
+        for (const po of mediumConfidence) {
+          for (const method of po.methods) {
+            suggestions.push(`- **${method}** (File: \`${po.page}\`) ⚠️`);
+          }
+        }
+        suggestions.push('');
+      }
+      
+      if (lowConfidence.length > 0) {
+        suggestions.push('**Low Confidence** (likely false positives - most/all methods flagged):\n');
+        for (const po of lowConfidence) {
+          suggestions.push(`- Page \`${po.page}\`: ${po.methods.length} methods flagged (likely incorrect - verify page object is properly imported)`);
+        }
+        suggestions.push('');
+      }
     } else {
       suggestions.push('\n✅ No unused Page Object methods detected.');
     }

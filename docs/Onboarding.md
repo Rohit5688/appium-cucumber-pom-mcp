@@ -1,4 +1,4 @@
-# 🚀 Appium-Cucumber MCP Onboarding & Configuration Guide
+# 🚀 AppForge Onboarding & Configuration Guide
 
 This guide provides the essential "First Contact" prompts and a configuration questionnaire to ensure the MCP tool is perfectly aligned with your project's unique mobile architecture.
 
@@ -15,7 +15,7 @@ When you connect this MCP to your AI assistant (e.g., Claude Desktop, Cursor, An
 > "Check my environment using `check_environment`. Ensure the Appium server is reachable and tell me if I need to install any missing Android SDKs or iOS drivers. If my emulator isn't booted, please provide the exact command to start it."
 
 ### Step 3: Adaptive Upgrading
-> "Based on your analysis, run `upgrade_project` to ensure my directory structure supports the latest Appium-Cucumber standards (like the `utils/MobileGestures.ts` and `.appium-mcp/` brain). Make sure you don't overwrite my existing capabilities if they work."
+> "Based on your analysis, run `upgrade_project` to ensure my directory structure supports the latest AppForge standards (like the `utils/MobileGestures.ts` and `.AppForge/` brain). Make sure you don't overwrite my existing capabilities if they work."
 
 ---
 

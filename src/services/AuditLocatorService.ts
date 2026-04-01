@@ -26,27 +26,79 @@ export class AuditLocatorService {
    * Scans all Page Objects in the project and audits their locator strategies.
    * Flags brittle XPaths and generates a Markdown report with recommendations.
    */
-  public async audit(projectRoot: string, pagesRoot: string = 'pages'): Promise<LocatorAuditReport> {
-    const pagesDir = path.join(projectRoot, pagesRoot);
-    const pageFiles = await this.listTsFiles(pagesDir);
+  public async audit(projectRoot: string, dirsToScan: string[] = ['pages', 'src/pages', 'locators', 'src/locators']): Promise<LocatorAuditReport> {
+    const pageFiles: string[] = [];
+    for (const dirName of dirsToScan) {
+      const dirPath = path.join(projectRoot, dirName);
+      pageFiles.push(...(await this.listFiles(dirPath, ['.ts', '.yaml', '.yml'])));
+    }
 
     const entries: LocatorAuditEntry[] = [];
 
     if (pageFiles.length > 0) {
-      const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
-      for (const f of pageFiles) {
-        project.addSourceFileAtPath(f);
+      const tsFiles = pageFiles.filter(f => f.endsWith('.ts'));
+      const yamlFiles = pageFiles.filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+
+      // Process YAML files
+      for (const f of yamlFiles) {
+        try {
+          const content = await fs.readFile(f, 'utf-8');
+          const relPath = path.relative(projectRoot, f);
+          const className = path.basename(f, path.extname(f));
+          const yamlPattern = /^[\s]*([\w-]+):\s*(['"]?)(.+?)\2\s*$/gm;
+          let match;
+          while ((match = yamlPattern.exec(content)) !== null) {
+            const key = match[1];
+            const val = match[3];
+            // ISSUE #18 FIX: Expanded selector detection to include all 5 types:
+            // 1. ~ (accessibility-id)
+            // 2. // or / (xpath)
+            // 3. :id/ (resource-id Android format)
+            // 4. id= (WebdriverIO id selector prefix)
+            // 5. . or # (CSS class/ID selectors)
+            // Previously only detected types 1-3, missing id= and CSS selectors
+            if (val.startsWith('~') || 
+                val.startsWith('//') || 
+                val.startsWith('/') || 
+                val.includes(':id/') ||
+                val.startsWith('id=') ||
+                val.startsWith('.') ||
+                val.startsWith('#')) {
+              entries.push(this.classifyEntry(relPath, className, key, val));
+            }
+          }
+        } catch {
+          // Ignore read errors
+        }
       }
+
+      // Process TS files AST
+      if (tsFiles.length > 0) {
+        const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
+        for (const f of tsFiles) {
+          project.addSourceFileAtPath(f);
+        }
 
       for (const sourceFile of project.getSourceFiles()) {
         for (const cls of sourceFile.getClasses()) {
           const className = cls.getName() ?? 'AnonymousClass';
           const relPath = path.relative(projectRoot, sourceFile.getFilePath());
 
+          // BUG-08 FIX: Match all common WDIO selector call styles:
+          //   $('sel')              — WDIO shorthand (original, still supported)
+          //   driver.$('sel')       — WDIO v8 explicit driver reference
+          //   browser.$('sel')      — WDIO browser global
+          //   driver.findElement()  — W3C WebDriver API
+          // Previously only $(...) was scanned — any modern project using driver.$ or
+          // browser.$ returned 0 locators making the audit completely useless.
+          const SELECTOR_PATTERN = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/;
+          const SELECTOR_PATTERN_ALL = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/g;
+          const FIND_ELEMENT_PATTERN = /(?:driver|browser)\.findElement\s*\(\s*['"`]?([^)]+?)['"`]?\s*\)/g;
+
           // Scan getters
           for (const getter of cls.getGetAccessors()) {
             const body = getter.getBody()?.getText() ?? '';
-            const match = body.match(/\$\(\s*['"`](.+?)['"`]\s*\)/);
+            const match = body.match(SELECTOR_PATTERN);
             if (match) {
               entries.push(this.classifyEntry(relPath, className, getter.getName(), match[1]));
             }
@@ -55,22 +107,25 @@ export class AuditLocatorService {
           // Scan properties  
           for (const prop of cls.getProperties()) {
             const initializer = prop.getInitializer()?.getText() ?? '';
-            const match = initializer.match(/\$\(\s*['"`](.+?)['"`]\s*\)/);
+            const match = initializer.match(SELECTOR_PATTERN);
             if (match) {
               entries.push(this.classifyEntry(relPath, className, prop.getName(), match[1]));
             }
           }
 
-          // Scan method bodies for inline selectors
+          // Scan method bodies for inline selectors (all WDIO patterns + findElement)
           for (const method of cls.getMethods()) {
             const body = method.getBody()?.getText() ?? '';
-            const inlineMatches = body.matchAll(/\$\(\s*['"`](.+?)['"`]\s*\)/g);
-            for (const m of inlineMatches) {
+            for (const m of body.matchAll(SELECTOR_PATTERN_ALL)) {
               entries.push(this.classifyEntry(relPath, className, `${method.getName()}() inline`, m[1]));
+            }
+            for (const m of body.matchAll(FIND_ELEMENT_PATTERN)) {
+              entries.push(this.classifyEntry(relPath, className, `${method.getName()}() findElement`, m[1]));
             }
           }
         }
       }
+    }
     }
 
     const accessibilityIdCount = entries.filter(e => e.strategy === 'accessibility-id').length;
@@ -102,6 +157,11 @@ export class AuditLocatorService {
       strategy = 'xpath';
       severity = 'critical';
       recommendation = '🔴 BRITTLE — XPath will break on UI changes. Add testID/accessibility-id to the app source.';
+    } else if (selector.startsWith('id=')) {
+      // ISSUE #18 FIX: Properly classify id= prefix selectors
+      strategy = 'resource-id';
+      severity = 'warning';
+      recommendation = '🟡 Acceptable — id= selector is stable but prefer accessibility-id for cross-platform.';
     } else if (selector.includes(':id/')) {
       strategy = 'resource-id';
       severity = 'warning';
@@ -168,15 +228,16 @@ export class AuditLocatorService {
     return lines.join('\n');
   }
 
-  private async listTsFiles(dir: string): Promise<string[]> {
+  private async listFiles(dir: string, exts: string[]): Promise<string[]> {
     let results: string[] = [];
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          results = results.concat(await this.listTsFiles(fullPath));
-        } else if (entry.name.endsWith('.ts')) {
+          results = results.concat(await this.listFiles(fullPath, exts));
+        } else if (exts.some(ext => entry.name.endsWith(ext))) {
           results.push(fullPath);
         }
       }

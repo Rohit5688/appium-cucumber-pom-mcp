@@ -1,11 +1,12 @@
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { auditGeneratedCode, auditFeatureFile } from '../utils/SecurityUtils.js';
+import { auditGeneratedCode, auditFeatureFile, validateProjectRoot, validateFilePath } from '../utils/SecurityUtils.js';
+import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface FileToWrite {
   path: string;
@@ -21,6 +22,9 @@ export class FileWriterService {
   /**
    * Validates generated TypeScript files using tsc --noEmit, then writes if valid.
    * Retries up to maxRetries times, returning error details for LLM to self-heal.
+   * 
+   * CB-1 FIX: Validates projectRoot to prevent shell injection attacks
+   * CB-2 FIX: Validates all file paths to prevent directory traversal attacks
    */
   public async validateAndWrite(
     projectRoot: string,
@@ -28,6 +32,32 @@ export class FileWriterService {
     maxRetries: number = 3,
     dryRun: boolean = false
   ): Promise<string> {
+    // CB-1 FIX: Validate projectRoot before any operations
+    try {
+      validateProjectRoot(projectRoot);
+    } catch (error: any) {
+      return JSON.stringify({
+        success: false,
+        phase: 'security-validation',
+        error: error.message,
+        message: 'Invalid projectRoot: security validation failed.'
+      }, null, 2);
+    }
+
+    // CB-2 FIX: Validate all file paths to prevent directory traversal
+    for (const file of files) {
+      try {
+        validateFilePath(projectRoot, file.path);
+      } catch (error: any) {
+        return JSON.stringify({
+          success: false,
+          phase: 'security-validation',
+          error: error.message,
+          file: file.path,
+          message: 'Invalid file path: directory traversal detected.'
+        }, null, 2);
+      }
+    }
     // Step 1: Write files to a temp staging area first
     const stagingDir = path.join(projectRoot, '.mcp-staging');
     if (!fs.existsSync(stagingDir)) {
@@ -50,12 +80,13 @@ export class FileWriterService {
       if (!validation.valid) {
         // Clean up staging
         await this.cleanStaging(stagingDir);
-        return JSON.stringify({
-          success: false,
-          phase: 'validation',
-          errors: validation.errors,
-          hint: 'Fix the TypeScript errors and call validate_and_write again.'
-        }, null, 2);
+        throw new AppForgeError(ErrorCode.E006_TS_COMPILE_FAIL, 
+          "TypeScript compilation failed during validation.",
+          [
+            "Review the tsc output below and fix the generated TypeScript files.",
+            ...validation.errors
+          ]
+        );
       }
     }
 
@@ -135,7 +166,7 @@ export class FileWriterService {
     }
 
     // Step 4: Backup existing files before overwrite (Atomic Prep)
-    const backupDir = path.join(projectRoot, '.appium-mcp', 'backups', new Date().toISOString().replace(/[:.]/g, '-'));
+    const backupDir = path.join(projectRoot, '.AppForge', 'backups', new Date().toISOString().replace(/[:.]/g, '-'));
     const overwrittenFiles: string[] = [];
     const newFiles: string[] = [];
 
@@ -218,16 +249,59 @@ export class FileWriterService {
     tsFiles: FileToWrite[]
   ): Promise<ValidationResult> {
     try {
-      // Check if tsconfig exists in project root
+      // BUG-05 FIX: Previously used `tsc --project projectRoot/tsconfig.json` with
+      // file paths pointing into .mcp-staging/. This causes tsc to resolve relative
+      // imports from the staging path, failing on valid `import '../pages/BasePage'`
+      // because there's no pages/ dir inside staging. Mitigation: write a minimal
+      // tsconfig into staging that extends the real one and redirects rootDir/baseUrl
+      // to the project root so all cross-file imports resolve correctly.
       const tsconfigPath = path.join(projectRoot, 'tsconfig.json');
       const hasTsConfig = fs.existsSync(tsconfigPath);
 
-      const filePaths = tsFiles.map(f => path.join(stagingDir, f.path)).join(' ');
-      const cmd = hasTsConfig
-        ? `npx tsc --noEmit --project "${tsconfigPath}" ${filePaths}`
-        : `npx tsc --noEmit --strict --esModuleInterop --skipLibCheck ${filePaths}`;
+      // Write a patched tsconfig into the staging dir
+      const stagingTsconfigPath = path.join(stagingDir, 'tsconfig.json');
+      if (hasTsConfig) {
+        const stagingTsconfig = {
+          extends: tsconfigPath,
+          compilerOptions: {
+            // Resolve imports relative to projectRoot so `../pages/BasePage` works
+            baseUrl: projectRoot,
+            rootDir: projectRoot,
+            noEmit: true
+          },
+          // Include staging files + project source for cross-reference
+          include: [
+            path.join(stagingDir, '**/*.ts'),
+            path.join(projectRoot, '**/*.ts')
+          ],
+          exclude: [
+            path.join(projectRoot, 'node_modules'),
+            path.join(projectRoot, '.mcp-staging')
+          ]
+        };
+        fs.writeFileSync(stagingTsconfigPath, JSON.stringify(stagingTsconfig, null, 2), 'utf8');
+      }
 
-      await execAsync(cmd, { cwd: projectRoot });
+      // CB-1 FIX: Use execFile with args array instead of shell command string
+      // to prevent shell injection via projectRoot parameter
+      if (hasTsConfig) {
+        await execFileAsync('npx', ['tsc', '--noEmit', '--project', stagingTsconfigPath], {
+          cwd: projectRoot
+        });
+      } else {
+        const filePaths = tsFiles.map(f => path.join(stagingDir, f.path));
+        await execFileAsync('npx', [
+          'tsc',
+          '--noEmit',
+          '--strict',
+          '--esModuleInterop',
+          '--skipLibCheck',
+          ...filePaths
+        ], {
+          cwd: projectRoot
+        });
+      }
+      
       return { valid: true, errors: [] };
     } catch (error: any) {
       const stderr = error.stderr || error.stdout || error.message;

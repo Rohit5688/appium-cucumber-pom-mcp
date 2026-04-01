@@ -1,13 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { McpConfigError } from '../utils/Errors.js';
+import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
 /** Returns safe default paths merged with config paths. */
 function resolvePaths(config) {
     return {
         featuresRoot: config.paths?.featuresRoot ?? 'features',
         pagesRoot: config.paths?.pagesRoot ?? 'pages',
         stepsRoot: config.paths?.stepsRoot ?? 'step-definitions',
-        utilsRoot: config.paths?.utilsRoot ?? 'utils'
+        utilsRoot: config.paths?.utilsRoot ?? 'utils',
+        testDataRoot: config.paths?.testDataRoot ?? 'src/test-data'
     };
 }
 export class McpConfigService {
@@ -16,14 +17,14 @@ export class McpConfigService {
     read(projectRoot) {
         const configPath = path.join(projectRoot, this.configFileName);
         if (!fs.existsSync(configPath)) {
-            throw new McpConfigError(`Configuration file not found at ${configPath}. Please run setup_project first.`);
+            throw new AppForgeError(ErrorCode.E008_PRECONDITION_FAIL, `Configuration file not found at ${configPath}. Please run setup_project first.`, ["Run setup_project"]);
         }
         try {
             const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
             // Auto-migration
             if (!raw.version || raw.version === '1.0.0') {
                 raw.version = this.CURRENT_VERSION;
-                raw.$schema = './.appium-mcp/configSchema.json'; // Enables IDE autocompletion
+                raw.$schema = './.AppForge/configSchema.json'; // Enables IDE autocompletion
                 this.write(projectRoot, raw);
                 this.generateSchema(projectRoot);
             }
@@ -32,14 +33,14 @@ export class McpConfigService {
             return raw;
         }
         catch (error) {
-            throw new McpConfigError(`Failed to parse mcp-config.json: ${error.message}`);
+            throw new AppForgeError(ErrorCode.E005_CONFIG_CORRUPT, `Failed to parse mcp-config.json: ${error.message}. Fix the JSON syntax error (trailing comma, missing brace, etc.) and retry.`, ["Fix the JSON syntax error in mcp-config.json", "Run: npx jsonlint mcp-config.json"]);
         }
     }
     /**
      * Generates a JSON schema file for IDE autocompletion.
      */
     generateSchema(projectRoot) {
-        const schemaDir = path.join(projectRoot, '.appium-mcp');
+        const schemaDir = path.join(projectRoot, '.AppForge');
         if (!fs.existsSync(schemaDir)) {
             fs.mkdirSync(schemaDir, { recursive: true });
         }
@@ -79,7 +80,10 @@ export class McpConfigService {
         const newConfig = { ...existingConfig, ...config };
         fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf-8');
     }
-    updateAppPath(projectRoot, platform, appPath) {
+    updateAppPath(projectRoot, platform, appPath, forceWrite = false) {
+        if (!fs.existsSync(appPath) && !appPath.startsWith('http') && !forceWrite) {
+            console.warn(`[AppForge] ⚠️ appPath does not exist on disk: ${appPath}. Saving anyway (forceWrite was not set but proceeding defensively).`);
+        }
         const config = this.read(projectRoot);
         for (const profileName in config.mobile.capabilitiesProfiles) {
             const profile = config.mobile.capabilitiesProfiles[profileName];

@@ -1,4 +1,4 @@
-# Dockerfile for Appium-Cucumber-POM-MCP
+# Dockerfile for AppForge
 # Uses Node base image. Appium and WebdriverIO will be executed natively within the container.
 # Note: This image contains the MCP server and Node dependencies. To test against local mobile emulators (Android/iOS), 
 # you must configure the Docker container to access the host machine's network (e.g., --add-host=host.docker.internal:host-gateway).

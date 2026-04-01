@@ -222,27 +222,34 @@ ${screenshotBase64 ? '### 🖼️ VISION CONTEXT\nA Base64 screenshot of the cur
     return 'unknown';
   }
 
-  /**
-   * Scans the XML hierarchy for elements that could be alternatives to the failed selector.
-   */
   private findAlternatives(xml: string, failedSelector: string): string[] {
     const alternatives: string[] = [];
     if (!failedSelector || failedSelector === 'unknown') return alternatives;
 
-    // Extract the "intent" from the failed selector (e.g., "login" from "~loginButton")
-    const intent = failedSelector
+    // Extract the "intent" from the failed selector (e.g., "apply" from "~credit_card_apply.button")
+    const intentBase = failedSelector
       .replace(/^[~#/.]/, '')
       .replace(/^\/+/, '')
       .replace(/\[.*?\]/g, '')
       .toLowerCase();
 
-    // Search XML for elements with matching content-desc, resource-id, or text
+    // Remove common prefixes/suffixes to get core identifying words
+    const intent = intentBase
+      .replace(/^(card[0-9]*|btn|button|lbl|label|txt|text|input|field)_/i, '')
+      .replace(/[._-](btn|button|lbl|label|txt|text|input|field)$/i, '');
+
+    const searchTerms = intent.split(/[._-]/).filter(p => p.length > 2);
+    if (searchTerms.length === 0) searchTerms.push(intentBase);
+
+    // Search XML for elements with matching content-desc, resource-id, text, name, label, or value
     const patterns = [
       /content-desc="([^"]*)"/g,
       /resource-id="([^"]*)"/g,
       /text="([^"]*)"/g,
       /accessibility-id="([^"]*)"/g,
-      /name="([^"]*)"/g
+      /name="([^"]*)"/g,
+      /label="([^"]*)"/g,
+      /value="([^"]*)"/g
     ];
 
     const seen = new Set<string>();
@@ -251,7 +258,13 @@ ${screenshotBase64 ? '### 🖼️ VISION CONTEXT\nA Base64 screenshot of the cur
       let match;
       while ((match = pattern.exec(xml)) !== null) {
         const value = match[1];
-        if (value && value.toLowerCase().includes(intent) && !seen.has(value)) {
+        if (!value) continue;
+        
+        const lowerValue = value.toLowerCase();
+        // Check if any significant search term is found in this XML attribute
+        const matchesIntent = searchTerms.some(term => lowerValue.includes(term));
+
+        if (matchesIntent && !seen.has(value)) {
           seen.add(value);
           // Determine the best selector strategy for this match
           if (match[0].startsWith('content-desc') || match[0].startsWith('accessibility-id') || match[0].startsWith('name')) {

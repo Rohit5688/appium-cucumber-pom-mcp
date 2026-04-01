@@ -1,6 +1,6 @@
 # ⚙️ MCP AI Conversation Workflows: Appium Edition
 
-This document outlines the standard operational workflows when conversing with an AI powered by the Appium-Cucumber POM MCP server.
+This document outlines the standard operational workflows when conversing with an AI powered by the AppForge server.
 
 ---
 
