@@ -1,6 +1,6 @@
 # 🛠️ Continuous Integration & Bug Reporting
 
-Moving your mobile automation code from your local machine to production requires pipelines and reporting. The Appium-Cucumber MCP natively scaffolds these flows.
+Moving your mobile automation code from your local machine to production requires pipelines and reporting. The AppForge natively scaffolds these flows.
 
 ---
 

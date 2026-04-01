@@ -1,4 +1,4 @@
-# ⚙️ Appium-Cucumber POM MCP Configuration Guide
+# ⚙️ AppForge Configuration Guide
 
 The `mcp-config.json` file dictates project-level rules for test generation, execution, and mobile device capabilities. The AI reads this file to understand the environment parameters it must operate under.
 

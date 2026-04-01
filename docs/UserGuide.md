@@ -1,6 +1,6 @@
-# 📱 Appium-Cucumber POM MCP: Ultimate User Guide
+# 📱 AppForge: Ultimate User Guide
 
-Welcome to the future of mobile automation! This guide will walk you through setting up, mastering, and troubleshooting your Appium-Cucumber MCP integration. No more fighting with brittle XPaths or complex Appium configs—let's get your mobile tests running at light speed. 🚀
+Welcome to the future of mobile automation! This guide will walk you through setting up, mastering, and troubleshooting your AppForge integration. No more fighting with brittle XPaths or complex Appium configs—let's get your mobile tests running at light speed. 🚀
 
 ---
 

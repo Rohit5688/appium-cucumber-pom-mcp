@@ -1,6 +1,6 @@
-# 📈 Appium-Cucumber POM MCP: Technical Evolution Analysis
+# 📈 AppForge: Technical Evolution Analysis
 
-This analysis documents the technical journey of the Appium-Cucumber POM MCP tool, tracing its evolution from a foundational mobile test generator to a sophisticated, autonomous mobile automation system.
+This analysis documents the technical journey of the AppForge tool, tracing its evolution from a foundational mobile test generator to a sophisticated, autonomous mobile automation system.
 
 ---
 
@@ -31,7 +31,7 @@ This analysis documents the technical journey of the Appium-Cucumber POM MCP too
 
 ## 🧠 4. The Intelligence Era (Phase 12)
 **Focus**: Advanced QA, Migration, and Learning.
-*   **Migration Engine**: Introduction of `migrate_test` for translating legacy Espresso, XCUITest, and Detox tests into modern Appium-Cucumber code.
+*   **Migration Engine**: Introduction of `migrate_test` for translating legacy Espresso, XCUITest, and Detox tests into modern AppForge code.
 *   **Coverage Heatmaps**: `analyze_coverage` tool for identify missing negative scenarios and accessibility (TalkBack/VoiceOver) gaps.
 *   **The Autonomous Brain**: Integration of the `LearningService`. Verified self-heals are now automatically learned into the project's knowledge base, informing all future AI generations.
 

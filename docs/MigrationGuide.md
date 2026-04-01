@@ -1,8 +1,8 @@
 # 🚚 Legacy Migration Guide: Native to Appium
 
-Porting legacy native mobile tests (Espresso, XCUITest, Detox) to modern Appium-Cucumber is notoriously difficult due to fundamental differences in locator strategies, synchronization, and execution environments.
+Porting legacy native mobile tests (Espresso, XCUITest, Detox) to modern AppForge is notoriously difficult due to fundamental differences in locator strategies, synchronization, and execution environments.
 
-The Appium-Cucumber MCP Server solves this using a **Heuristic Migration Engine**. By leveraging the `migrate_test` tool, the AI acts as a translation compiler that understands logical flow paradigms, not just 1-to-1 syntax mapping.
+The AppForge Server solves this using a **Heuristic Migration Engine**. By leveraging the `migrate_test` tool, the AI acts as a translation compiler that understands logical flow paradigms, not just 1-to-1 syntax mapping.
 
 ---
 

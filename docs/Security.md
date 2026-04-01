@@ -1,4 +1,4 @@
-# 🛡️ Appium-Cucumber POM MCP Security Architecture
+# 🛡️ AppForge Security Architecture
 
 This document details the layered defensive security implementation of the Appium Cucumber POM MCP server. Because this server writes to disk, interfaces with Appium APIs, and executes shell commands, it utilizes multiple guards to prevent data leakage and sandbox escapes.
 
