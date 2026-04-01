@@ -1015,7 +1015,7 @@ Validate:
 
 ## 11. 🔧 Troubleshooting
 
-### 10.1 Generic Troubleshooting
+### 11.1 Generic Troubleshooting
 ```
 Help me debug the following issue:
 
@@ -1039,7 +1039,7 @@ Troubleshooting Steps:
 
 ---
 
-### 10.2 Performance Issues
+### 11.2 Performance Issues
 ```
 My tests are running slowly. Help optimize:
 
@@ -1063,7 +1063,7 @@ Provide:
 
 ---
 
-### 10.3 Flaky Test Investigation
+### 11.3 Flaky Test Investigation
 ```
 This test is flaky and fails intermittently:
 
