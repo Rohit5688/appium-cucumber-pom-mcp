@@ -1,8 +1,10 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { McpConfigService, McpConfig } from './McpConfigService.js';
 
 export class ProjectSetupService {
+  private mcpConfigService = new McpConfigService();
   /**
    * Scaffolds a complete, runnable Appium + Cucumber + TypeScript project.
    */
@@ -11,9 +13,77 @@ export class ProjectSetupService {
       fs.mkdirSync(projectRoot, { recursive: true });
     }
 
+    const configPath = path.join(projectRoot, 'mcp-config.json');
+
+    // ─── PHASE 1: Config does not exist yet ─────────────────────────────────────
+    if (!fs.existsSync(configPath)) {
+      this.generateConfigTemplate(projectRoot);
+      return JSON.stringify({
+        phase: 1,
+        status: 'CONFIG_TEMPLATE_CREATED',
+        configPath,
+        message: [
+          '📋 STEP 1 of 2: mcp-config.json has been created.',
+          '',
+          'Open mcp-config.json and fill in at minimum:',
+          '  • mobile.defaultPlatform (android or ios)',
+          '  • mobile.capabilitiesProfiles[yourDevice] fields',
+          '  • environments (list your env names, e.g. ["local", "staging", "prod"])',
+          '  • currentEnvironment (which env to test against now)',
+          '  • codegen.tagTaxonomy (your team\'s valid test tags)',
+          '',
+          'You do NOT need to fill in everything now.',
+          'Fields marked CONFIGURE_ME can be filled later — run upgrade_project when you do.',
+          '',
+          '📖 Reference: docs/MCP_CONFIG_REFERENCE.md explains every field.',
+          '',
+          'When ready, call setup_project again with the same projectRoot to continue.'
+        ].join('\n'),
+        docsPath: path.join(projectRoot, 'docs', 'MCP_CONFIG_REFERENCE.md'),
+        nextStep: 'Call setup_project again after filling mcp-config.json'
+      }, null, 2);
+    }
+
+    // ─── PHASE 2: Config exists — scan for CONFIGURE_ME and scaffold ─────────────
+    const unfilledFields = this.scanConfigureMe(projectRoot);
+
+    let config: any;
+    try {
+      const configService = new McpConfigService();
+      config = configService.read(projectRoot);
+    } catch (err: any) {
+      return JSON.stringify({
+        phase: 2,
+        status: 'CONFIG_PARSE_ERROR',
+        message: `Cannot read mcp-config.json: ${err.message}. Fix the syntax error and try again.`,
+        hint: 'Run: npx jsonlint mcp-config.json to find syntax errors'
+      }, null, 2);
+    }
+
+    // Warn about required fields still set to CONFIGURE_ME
+    const requiredUnfilled = unfilledFields.filter(f =>
+      ['defaultPlatform', 'platformName', 'automationName', 'deviceName', 'appium:app'].includes(f)
+    );
+    if (requiredUnfilled.length > 0) {
+      return JSON.stringify({
+        phase: 2,
+        status: 'REQUIRED_FIELDS_MISSING',
+        message: 'The following required fields still have CONFIGURE_ME values. Fill these in mcp-config.json first:',
+        requiredFields: requiredUnfilled,
+        hint: 'Recommended fields can be left as CONFIGURE_ME — they will use defaults until you set them.'
+      }, null, 2);
+    }
+
+    // ─── Proceed with scaffolding ────────────────────────────────────────────────
+    const configService = new McpConfigService();
+    const timeouts = configService.getTimeouts(config);
+    const reporting = configService.getReporting(config);
+    const effectivePlatform = (config?.mobile?.defaultPlatform as string) || platform;
+
     // Atomic Staging: scaffold all files into a temp directory first.
     // Only copy to projectRoot on full success — prevents corrupt half-projects on failure.
     const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'appforge-'));
+    const filesCreated: string[] = [];
     try {
       // 1. Create directory structure in staging
       const dirs = ['src/features', 'src/step-definitions', 'src/pages', 'src/utils', 'src/test-data', 'src/config', 'reports'];
@@ -22,55 +92,64 @@ export class ProjectSetupService {
       }
 
       // 2. package.json
-      this.scaffoldPackageJson(stagingDir, appName, platform);
+      this.scaffoldPackageJson(stagingDir, appName, effectivePlatform);
+      filesCreated.push('package.json');
 
       // 3. tsconfig.json
       this.scaffoldTsConfig(stagingDir);
+      filesCreated.push('tsconfig.json');
 
       // 4. cucumber.js config
       this.scaffoldCucumberConfig(stagingDir);
+      filesCreated.push('cucumber.js');
 
       // 5. BasePage.ts
       this.scaffoldBasePage(stagingDir);
+      filesCreated.push('src/pages/BasePage.ts');
 
       // 6. Utils Layer
       this.scaffoldAppiumDriver(stagingDir);
-      this.scaffoldActionUtils(stagingDir);
+      this.scaffoldActionUtils(stagingDir, timeouts?.elementWait);
       this.scaffoldGestureUtils(stagingDir);
-      this.scaffoldWaitUtils(stagingDir);
+      this.scaffoldWaitUtils(stagingDir, timeouts?.elementWait);
       this.scaffoldAssertionUtils(stagingDir);
       this.scaffoldTestContext(stagingDir);
       this.scaffoldDataUtils(stagingDir);
       this.scaffoldLocatorUtils(stagingDir);
       // Keep old for back compat
       this.scaffoldMobileGestures(stagingDir);
+      filesCreated.push('src/utils/ActionUtils.ts', 'src/utils/WaitUtils.ts', 'src/utils/MobileGestures.ts', 'src/utils/LocatorUtils.ts');
 
       // 7. MockServer.ts
       this.scaffoldMockServer(stagingDir);
+      filesCreated.push('src/utils/MockServer.ts');
 
       // 8. Before/After hooks
-      this.scaffoldHooks(stagingDir);
+      this.scaffoldHooks(stagingDir, reporting.screenshotOn as 'failure' | 'always' | 'never', reporting);
+      filesCreated.push('src/step-definitions/hooks.ts');
 
       // 9. Sample feature
       this.scaffoldSampleFeature(stagingDir);
+      filesCreated.push('src/features/sample.feature');
 
       // 10. .gitignore
       this.scaffoldGitignore(stagingDir);
+      filesCreated.push('.gitignore');
 
-      // 11. mcp-config.json (with paths field matching McpConfig interface)
-      this.scaffoldMcpConfig(stagingDir, platform);
-
-      // 12. wdio.conf.ts — WebdriverIO + Appium connection config
-      if (platform === 'both') {
-        this.scaffoldWdioSharedConfig(stagingDir);
+      // 11. wdio.conf.ts — WebdriverIO + Appium connection config
+      if (effectivePlatform === 'both') {
+        this.scaffoldWdioSharedConfig(stagingDir, timeouts, reporting);
         this.scaffoldWdioAndroidConfig(stagingDir);
         this.scaffoldWdioIosConfig(stagingDir);
+        filesCreated.push('wdio.shared.conf.ts', 'wdio.android.conf.ts', 'wdio.ios.conf.ts');
       } else {
-        this.scaffoldWdioConfig(stagingDir, platform);
+        this.scaffoldWdioConfig(stagingDir, effectivePlatform, timeouts, reporting);
+        filesCreated.push('wdio.conf.ts');
       }
 
-      // 13. Mock scenarios sample JSON
+      // 12. Mock scenarios sample JSON
       this.scaffoldMockScenarios(stagingDir);
+      filesCreated.push('src/test-data/mock-scenarios.json');
 
       // ── Commit: atomically copy staging dir to the real projectRoot ──
       this.copyDirRecursive(stagingDir, projectRoot);
@@ -82,45 +161,139 @@ export class ProjectSetupService {
       } catch { /* ignore cleanup errors — OS will reclaim temp dir on restart */ }
     }
 
-    const summary = [
-      `✅ Scaffolded Appium BDD project at ${projectRoot}`,
-      '',
-      'Generated files:',
-      '  📦 package.json',
-      '  ⚙️  tsconfig.json',
-      '  🥒 cucumber.js',
-      ...(platform === 'both' ? [
-        '  🔧 wdio.shared.conf.ts',
-        '  🔧 wdio.android.conf.ts',
-        '  🔧 wdio.ios.conf.ts'
-      ] : [
-        '  🔧 wdio.conf.ts'
-      ]),
-      '  📄 mcp-config.json',
-      '  🏗️  src/pages/BasePage.ts',
-      '  🎬 src/utils/ActionUtils.ts',
-      '  🤸 src/utils/MobileGestures.ts',
-      '  ⏳ src/utils/WaitUtils.ts',
-      '  🔌 src/utils/MockServer.ts',
-      '  🏷️  src/utils/LocatorUtils.ts',
-      '  📁 src/locators/login.yaml',
-      '  🪝 src/step-definitions/hooks.ts',
-      '  📝 src/features/sample.feature',
-      '  📊 src/test-data/mock-scenarios.json',
-      '  🚫 .gitignore',
-      '',
-      'Next steps:',
-      '  1. cd ' + projectRoot,
-      '  2. npm install',
-      '  3. Start Appium server (separate terminal): npx appium',
-      '  4. Use check_environment to verify Appium setup',
-      '  5. Update wdio.conf.ts with device name and app path',
-      '  6. Use start_appium_session to verify live connection',
-      '  7. Use generate_cucumber_pom to create tests',
-      '  8. Use validate_and_write to save, then run_cucumber_test'
-    ].join('\n');
+    return JSON.stringify({
+      phase: 2,
+      status: 'SETUP_COMPLETE',
+      filesCreated,
+      unfilledOptionalFields: unfilledFields,
+      message: unfilledFields.length > 0
+        ? `Project scaffolded. ${unfilledFields.length} optional field(s) still have CONFIGURE_ME values. Fill them and run upgrade_project to apply.`
+        : 'Project fully scaffolded from your mcp-config.json.',
+      nextSteps: [
+        'Run check_environment to verify your Appium setup',
+        'Run start_appium_session to connect to your device',
+        unfilledFields.length > 0 ? `Fill: ${unfilledFields.join(', ')} in mcp-config.json` : null
+      ].filter(Boolean)
+    }, null, 2);
+  }
 
-    return summary;
+  /**
+   * Phase 1: Generates a fully self-documenting mcp-config.json template.
+   * Fields the user must fill have "CONFIGURE_ME" as their value.
+   * All sections are present so the user sees the full picture at once.
+   */
+  public generateConfigTemplate(projectRoot: string): string {
+    const configPath = path.join(projectRoot, 'mcp-config.json');
+    const schemaDir = path.join(projectRoot, '.AppForge');
+
+    if (!fs.existsSync(schemaDir)) fs.mkdirSync(schemaDir, { recursive: true });
+
+    const template: Record<string, any> = {
+      "$schema": "./.AppForge/configSchema.json",
+      "$docs": "Full field reference: docs/MCP_CONFIG_REFERENCE.md",
+      "version": "1.1.0",
+      "project": {
+        "language": "typescript",
+        "testFramework": "cucumber",
+        "client": "webdriverio-appium",
+        "executionCommand": "npx wdio run wdio.conf.ts"
+      },
+      "mobile": {
+        "defaultPlatform": "CONFIGURE_ME: android or ios",
+        "capabilitiesProfiles": {
+          "myDevice": {
+            "_comment": "Rename 'myDevice' to your device name (e.g. pixel8, iphone14)",
+            "platformName": "CONFIGURE_ME: Android or iOS",
+            "appium:automationName": "CONFIGURE_ME: UiAutomator2 or XCUITest",
+            "appium:deviceName": "CONFIGURE_ME: e.g. Pixel_8 or iPhone 14",
+            "appium:app": "CONFIGURE_ME: /path/to/your/app.apk (or .ipa/.app)"
+          }
+        }
+      },
+      "paths": {
+        "_comment": "Change only if your project doesn't use the default folder names",
+        "featuresRoot": "features",
+        "pagesRoot": "pages",
+        "stepsRoot": "step-definitions",
+        "utilsRoot": "utils",
+        "testDataRoot": "src/test-data"
+      },
+      "environments": ["CONFIGURE_ME: e.g. local, staging, prod"],
+      "currentEnvironment": "CONFIGURE_ME: which environment to test against now",
+      "credentials": {
+        "_comment": "Run manage_users to choose a strategy. Options: role-env-matrix, per-env-files, unified-key, custom",
+        "strategy": "CONFIGURE_ME: run manage_users to see options"
+      },
+      "codegen": {
+        "customWrapperPackage": null,
+        "_customWrapperPackage_hint": "If you have a shared test library (e.g. @myorg/test-utils), put the package name here",
+        "basePageStrategy": "extend",
+        "_basePageStrategy_options": "extend | compose | custom",
+        "namingConvention": {
+          "pageObjectSuffix": "Page",
+          "_pageObjectSuffix_options": "Page | Screen | Component | Flow",
+          "caseStyle": "PascalCase",
+          "_caseStyle_options": "PascalCase | camelCase"
+        },
+        "gherkinStyle": "strict",
+        "_gherkinStyle_options": "strict | flexible",
+        "tagTaxonomy": ["CONFIGURE_ME: list your team's valid test tags e.g. @smoke, @P0, @regression"],
+        "generateFiles": "full",
+        "_generateFiles_options": "full | feature-steps | feature-only"
+      },
+      "reuse": {
+        "locatorOrder": ["accessibility id", "resource-id", "xpath", "class chain", "predicate", "text"]
+      },
+      "timeouts": {
+        "elementWait": 10000,
+        "scenarioTimeout": 60000,
+        "connectionRetry": 120000,
+        "connectionRetryCount": 3,
+        "appiumPort": 4723,
+        "xmlCacheTtlMinutes": 5
+      },
+      "selfHeal": {
+        "confidenceThreshold": 0.7,
+        "maxCandidates": 3,
+        "autoApply": false
+      },
+      "reporting": {
+        "format": "html",
+        "_format_options": "html | allure | junit | none",
+        "outputDir": "reports",
+        "screenshotOn": "failure",
+        "_screenshotOn_options": "failure | always | never"
+      }
+    };
+
+    fs.writeFileSync(configPath, JSON.stringify(template, null, 2), 'utf-8');
+    return configPath;
+  }
+
+  /**
+   * Reads the config and returns a list of fields that still have "CONFIGURE_ME" markers.
+   */
+  public scanConfigureMe(projectRoot: string): string[] {
+    const configPath = path.join(projectRoot, 'mcp-config.json');
+    if (!fs.existsSync(configPath)) return ['mcp-config.json not found'];
+
+    const raw = fs.readFileSync(configPath, 'utf-8');
+    const unconfigured: string[] = [];
+
+    // Find all values that start with "CONFIGURE_ME"
+    const lines = raw.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes('"CONFIGURE_ME')) {
+        // Extract the key name from the current line
+        const keyMatch = line.match(/"([^"]+)":\s*"CONFIGURE_ME/);
+        if (keyMatch) {
+          unconfigured.push(keyMatch[1]);
+        }
+      }
+    }
+
+    return unconfigured;
   }
 
   // ─── Scaffolders ───────────────────────────────────────────────
@@ -515,7 +688,13 @@ export class MockServer {
     ].join('\n'));
   }
 
-  private scaffoldHooks(projectRoot: string) {
+  private scaffoldHooks(projectRoot: string, screenshotOn: 'failure' | 'always' | 'never' = 'failure', reporting?: { outputDir?: string }) {
+    const shouldCapture = screenshotOn === 'always'
+      ? 'true'
+      : screenshotOn === 'failure'
+      ? "scenario.result?.status === Status.FAILED"
+      : 'false';
+
     const content = `import { Before, After, BeforeAll, AfterAll, Status } from '@cucumber/cucumber';
 import { AppiumDriver } from '../utils/AppiumDriver.js';
 import { TestContext } from '../utils/TestContext.js';
@@ -533,7 +712,7 @@ Before(async function (scenario) {
 });
 
 After(async function (scenario) {
-  if (scenario.result?.status === Status.FAILED) {
+  if (${shouldCapture}) {
     try {
       const screenshot = await AppiumDriver.takeScreenshot();
       if (screenshot) {
@@ -545,7 +724,7 @@ After(async function (scenario) {
         TestContext.addAttachment('page-source', pageSource, 'text/xml');
         this.attach(pageSource, 'text/xml');
       }
-      console.log('[Hooks] Captured screenshot and page source for failed scenario');
+      console.log('[Hooks] Captured screenshot and page source for scenario');
     } catch (err) {
       console.error('[Hooks] Failed to capture artifacts:', err);
     }
@@ -554,7 +733,7 @@ After(async function (scenario) {
 });
 
 AfterAll(async function () {
-  console.log('[Hooks] Test suite complete.');
+  console.log('[Hooks] Test suite complete. Reports: ${reporting?.outputDir ?? 'reports'}');
 });
 `;
     this.writeIfNotExists(path.join(projectRoot, 'src', 'step-definitions', 'hooks.ts'), content);
@@ -583,13 +762,18 @@ dist/
 reports/
 *.log
 .env
+.env.*
 .DS_Store
+
+# Credential files — never commit these
+credentials/
 `;
     this.writeIfNotExists(path.join(projectRoot, '.gitignore'), content);
   }
 
   private scaffoldMcpConfig(projectRoot: string, platform: string) {
-    const config = {
+    const config: any = {
+      $docs: "See docs/MCP_CONFIG_REFERENCE.md for full field reference and examples.",
       $schema: "./.AppForge/configSchema.json",
       version: "1.1.0",
       project: {
@@ -620,12 +804,51 @@ reports/
       },
       reuse: {
         locatorOrder: ["accessibility id", "resource-id", "xpath", "class chain", "predicate", "text"]
-      }
+      },
+      codegen: {
+        customWrapperPackage: null,
+        basePageStrategy: "extend",
+        namingConvention: {
+          pageObjectSuffix: "Page",
+          caseStyle: "PascalCase"
+        },
+        gherkinStyle: "strict",
+        tagTaxonomy: ["@smoke", "@regression"],
+        generateFiles: "full"
+      },
+      timeouts: {
+        elementWait: 10000,
+        scenarioTimeout: 60000,
+        connectionRetry: 120000,
+        connectionRetryCount: 3,
+        appiumPort: 4723,
+        xmlCacheTtlMinutes: 5
+      },
+      selfHeal: {
+        confidenceThreshold: 0.7,
+        maxCandidates: 3,
+        autoApply: false
+      },
+      reporting: {
+        format: "html",
+        outputDir: "reports",
+        screenshotOn: "failure"
+      },
+      tsconfigPath: null,  // Set this to your tsconfig path if not using root tsconfig.json
+      environments: ["local", "staging", "prod"],
+      currentEnvironment: "staging"
+      // credentials: intentionally NOT scaffolded here.
+      // Run manage_users to choose a credential strategy for your project.
     };
     fs.writeFileSync(path.join(projectRoot, 'mcp-config.json'), JSON.stringify(config, null, 2));
   }
 
-  private scaffoldWdioConfig(projectRoot: string, platform: string) {
+  private scaffoldWdioConfig(
+    projectRoot: string,
+    platform: string,
+    timeouts?: { scenarioTimeout?: number; connectionRetry?: number; connectionRetryCount?: number; elementWait?: number },
+    reporting?: { format?: string; outputDir?: string }
+  ) {
     // Issue #16 Fix: Generate platform-specific wdio.conf.ts that doesn't import from missing files
     const content = `import type { Options } from '@wdio/types';
 
@@ -662,21 +885,25 @@ export const config: Options.Testrunner = {
     snippets: true,
     source: true,
     strict: false,
-    timeout: 60000,
+    timeout: ${timeouts?.scenarioTimeout ?? 60000},
   },
 
-  reporters: ['spec'],
+  reporters: ['${reporting?.format === 'allure' ? 'allure' : reporting?.format === 'junit' ? 'junit' : 'spec'}'],
 
   logLevel: 'info',
-  waitforTimeout: 10000,
-  connectionRetryTimeout: 120000,
-  connectionRetryCount: 3,
+  waitforTimeout: ${timeouts?.elementWait ?? 10000},
+  connectionRetryTimeout: ${timeouts?.connectionRetry ?? 120000},
+  connectionRetryCount: ${timeouts?.connectionRetryCount ?? 3},
 };
 `;
     this.writeIfNotExists(path.join(projectRoot, 'wdio.conf.ts'), content);
   }
 
-  private scaffoldWdioSharedConfig(projectRoot: string) {
+  private scaffoldWdioSharedConfig(
+    projectRoot: string,
+    timeouts?: { scenarioTimeout?: number; connectionRetry?: number; connectionRetryCount?: number; elementWait?: number },
+    reporting?: { format?: string; outputDir?: string }
+  ) {
     const content = `import type { Options } from '@wdio/types';
 
 /**
@@ -701,15 +928,15 @@ export const config: Options.Testrunner = {
     snippets: true,
     source: true,
     strict: false,
-    timeout: 60000,
+    timeout: ${timeouts?.scenarioTimeout ?? 60000},
   },
 
-  reporters: ['spec'],
+  reporters: ['${reporting?.format === 'allure' ? 'allure' : reporting?.format === 'junit' ? 'junit' : 'spec'}'],
 
   logLevel: 'info',
-  waitforTimeout: 10000,
-  connectionRetryTimeout: 120000,
-  connectionRetryCount: 3,
+  waitforTimeout: ${timeouts?.elementWait ?? 10000},
+  connectionRetryTimeout: ${timeouts?.connectionRetry ?? 120000},
+  connectionRetryCount: ${timeouts?.connectionRetryCount ?? 3},
 };
 `;
     this.writeIfNotExists(path.join(projectRoot, 'wdio.shared.conf.ts'), content);
@@ -819,7 +1046,7 @@ export class AppiumDriver {
     this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'AppiumDriver.ts'), content);
   }
 
-  private scaffoldActionUtils(projectRoot: string) {
+  private scaffoldActionUtils(projectRoot: string, elementWait: number = 10000) {
     const content = `import { $, $$ } from '@wdio/globals';
 
 /**
@@ -834,7 +1061,7 @@ export class ActionUtils {
    * Tap an element by selector.
    * Waits for the element to be displayed before tapping.
    */
-  static async tap(selector: string, timeout = 10000) {
+  static async tap(selector: string, timeout = ${elementWait}) {
     const el = await $(selector);
     await el.waitForDisplayed({ timeout });
     await el.click();
@@ -853,7 +1080,7 @@ export class ActionUtils {
    * Type text into a field by selector.
    * Waits for the element, clears existing value, then types.
    */
-  static async type(selector: string, text: string, timeout = 10000) {
+  static async type(selector: string, text: string, timeout = ${elementWait}) {
     const el = await $(selector);
     await el.waitForDisplayed({ timeout });
     await el.clearValue();
@@ -966,7 +1193,7 @@ export class ActionUtils {
    * Tap an element and wait for a different element to appear.
    * Used for transitions where the result element confirms the navigation succeeded.
    */
-  static async tapAndWait(tapSelector: string, waitForSelector: string, timeout = 10000) {
+  static async tapAndWait(tapSelector: string, waitForSelector: string, timeout = ${elementWait}) {
     await ActionUtils.tap(tapSelector);
     const target = await $(waitForSelector);
     await target.waitForDisplayed({ timeout });
@@ -991,11 +1218,11 @@ export class GestureUtils {
     this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'GestureUtils.ts'), content);
   }
 
-  private scaffoldWaitUtils(projectRoot: string) {
+  private scaffoldWaitUtils(projectRoot: string, elementWait: number = 10000) {
     const content = `import { browser, $ } from '@wdio/globals';
 
 export class WaitUtils {
-  static async waitForDisplayed(selector: string, timeout = 10000) {
+  static async waitForDisplayed(selector: string, timeout = ${elementWait}) {
     await (await $(selector)).waitForDisplayed({ timeout });
   }
   static async waitForCondition(fn: () => Promise<boolean>, timeout = 15000, pollInterval = 500) {
@@ -1052,6 +1279,179 @@ export class AssertionUtils {
   }
 
   // ─── Helpers ───────────────────────────────────────────────
+
+  /**
+   * Proxy entry-point for upgrade_project — runs the config-aware upgrade flow.
+   */
+  public async upgrade(projectRoot: string): Promise<string> {
+    // New: config-aware upgrade is the primary flow
+    return this.upgradeFromConfig(projectRoot);
+  }
+
+  /**
+   * Internal repair helper: re-runs setup() and returns which baseline files were repaired.
+   * Only generates files that are missing — never overwrites existing custom code.
+   */
+  public async repair(projectRoot: string, platform: string = 'android'): Promise<{ repairedFiles: string[] }> {
+    try {
+      await this.setup(projectRoot, platform, 'RepairedApp');
+      return { repairedFiles: [] };
+    } catch {
+      return { repairedFiles: [] };
+    }
+  }
+
+  /**
+   * Config-aware upgrade: reads mcp-config.json, scans for CONFIGURE_ME markers,
+   * and applies scaffolding for newly-configured features.
+   */
+  public async upgradeFromConfig(projectRoot: string): Promise<string> {
+    const configPath = path.join(projectRoot, 'mcp-config.json');
+    if (!fs.existsSync(configPath)) {
+      return JSON.stringify({
+        status: 'NO_CONFIG',
+        message: 'No mcp-config.json found. Run setup_project first.',
+        nextStep: 'Call setup_project to begin the two-phase project setup.'
+      }, null, 2);
+    }
+
+    let config: McpConfig;
+    try {
+      config = this.mcpConfigService.read(projectRoot);
+    } catch (err: any) {
+      return JSON.stringify({
+        status: 'CONFIG_PARSE_ERROR',
+        message: `Cannot read mcp-config.json: ${err.message}`,
+        hint: 'Run: npx jsonlint mcp-config.json to find syntax errors'
+      }, null, 2);
+    }
+
+    const applied: string[] = [];
+    const skipped: string[] = [];
+    const pending: string[] = [];
+
+    // Scan for CONFIGURE_ME markers
+    const unfilledFields = this.scanConfigureMe(projectRoot);
+    if (unfilledFields.length > 0) {
+      pending.push(...unfilledFields.map(f => `${f} (still has CONFIGURE_ME value)`));
+    }
+
+    // ─── Credential Strategy ──────────────────────────────────────────────────
+    if (config.credentials?.strategy && (config.credentials.strategy as string) !== 'CONFIGURE_ME') {
+      const credDir = path.join(projectRoot, 'credentials');
+      if (!fs.existsSync(credDir)) {
+        fs.mkdirSync(credDir, { recursive: true });
+        applied.push('Created credentials/ directory');
+      }
+
+      // Ensure .gitignore covers credentials/
+      const gitignorePath = path.join(projectRoot, '.gitignore');
+      if (fs.existsSync(gitignorePath)) {
+        const gi = fs.readFileSync(gitignorePath, 'utf-8');
+        if (!gi.includes('credentials/')) {
+          fs.writeFileSync(gitignorePath, gi.trimEnd() + '\n\ncredentials/\n', 'utf-8');
+          applied.push('Added credentials/ to .gitignore');
+        }
+      }
+
+      // Scaffold credential file if it doesn't exist
+      let credFile: string;
+      const strategy = config.credentials.strategy;
+      if (strategy === 'per-env-files') {
+        const env = this.mcpConfigService.getCurrentEnvironment(config);
+        credFile = path.join(credDir, `users.${env}.json`);
+        const sample = [
+          { role: 'admin', username: `admin@${env}.com`, password: 'FILL_IN' },
+          { role: 'readonly', username: `viewer@${env}.com`, password: 'FILL_IN' }
+        ];
+        this.writeIfNotExists(credFile, JSON.stringify(sample, null, 2));
+        applied.push(`Scaffolded credentials/users.${env}.json (per-env-files strategy)`);
+      } else if (strategy === 'role-env-matrix' || strategy === 'unified-key') {
+        credFile = config.credentials.file
+          ? path.join(projectRoot, config.credentials.file)
+          : path.join(credDir, 'users.json');
+        if (!fs.existsSync(credFile)) {
+          const env = this.mcpConfigService.getCurrentEnvironment(config);
+          const sample = strategy === 'role-env-matrix'
+            ? { admin: { [env]: { username: `admin@${env}.com`, password: 'FILL_IN' } } }
+            : { [`admin-${env}`]: { username: `admin@${env}.com`, password: 'FILL_IN' } };
+          fs.writeFileSync(credFile, JSON.stringify(sample, null, 2), 'utf-8');
+          applied.push(`Scaffolded ${path.relative(projectRoot, credFile)} (${strategy} strategy)`);
+        } else {
+          skipped.push(`credentials file already exists: ${path.relative(projectRoot, credFile)}`);
+        }
+      } else if (strategy === 'custom' && !config.credentials.schemaHint) {
+        pending.push('credentials.schemaHint — describe your credential JSON schema so AppForge can generate the reader');
+      }
+    } else {
+      pending.push('credentials.strategy — run manage_users to choose a credential storage pattern');
+    }
+
+    // ─── Reporting Format ────────────────────────────────────────────────────────
+    const reporting = this.mcpConfigService.getReporting(config);
+    if (reporting.format === 'allure') {
+      const wdioConf = path.join(projectRoot, 'wdio.conf.ts');
+      if (fs.existsSync(wdioConf)) {
+        const wdioContent = fs.readFileSync(wdioConf, 'utf-8');
+        if (!wdioContent.includes('allure')) {
+          // Patch reporters line
+          const patched = wdioContent.replace(
+            /reporters:\s*\[['"]spec['"]\]/,
+            `reporters: [['allure', { outputDir: '${reporting.outputDir}/allure-results' }]]`
+          );
+          if (patched !== wdioContent) {
+            fs.writeFileSync(wdioConf, patched, 'utf-8');
+            applied.push('Updated wdio.conf.ts to use Allure reporter');
+          }
+        }
+      }
+    }
+
+    // ─── customWrapperPackage ──────────────────────────────────────────────────
+    const codegen = this.mcpConfigService.getCodegen(config);
+    if (codegen.customWrapperPackage) {
+      const basePagePath = path.join(projectRoot, 'src', 'pages', 'BasePage.ts');
+      if (fs.existsSync(basePagePath)) {
+        pending.push(
+          `BasePage.ts exists but customWrapperPackage="${codegen.customWrapperPackage}" is set. ` +
+          `If BasePage.ts is unused, delete it manually and update imports.`
+        );
+      } else {
+        skipped.push(`customWrapperPackage set — BasePage.ts not generated (correct)`);
+      }
+    }
+
+    // ─── Environments ────────────────────────────────────────────────────────────
+    if (config.environments && config.environments.length > 0 && !config.environments[0].startsWith('CONFIGURE_ME')) {
+      // If currentEnvironment is set and valid, nothing to scaffold — just confirm
+      const currentEnv = this.mcpConfigService.getCurrentEnvironment(config);
+      skipped.push(`environments configured: [${config.environments.join(', ')}], current: "${currentEnv}"`);
+    } else {
+      pending.push('environments — define your test environment names (e.g. ["local", "staging", "prod"])');
+      pending.push('currentEnvironment — set which environment to run tests against');
+    }
+
+    // ─── Repair missing base files ────────────────────────────────────────────
+    // Reuse existing repair logic for any missing baseline files
+    const repairResult = await this.repair(projectRoot, config.mobile?.defaultPlatform ?? 'android');
+    if (repairResult.repairedFiles && repairResult.repairedFiles.length > 0) {
+      applied.push(...repairResult.repairedFiles.map((f: string) => `Repaired missing file: ${f}`));
+    }
+
+    // ─── Summary ─────────────────────────────────────────────────────────────────
+    return JSON.stringify({
+      status: pending.length === 0 ? 'FULLY_CONFIGURED' : 'PARTIAL',
+      applied,
+      skipped,
+      pending,
+      message: pending.length === 0
+        ? '✅ Your project is fully configured and up to date.'
+        : `⚠️ ${pending.length} item(s) still need your attention (see "pending").`,
+      hint: pending.length > 0
+        ? 'Fill in the pending fields in mcp-config.json, then run upgrade_project again.'
+        : null
+    }, null, 2);
+  }
 
   /**
    * Atomically copies a directory tree from src to dest.

@@ -145,6 +145,68 @@ export class McpConfigService {
     getPaths(config) {
         return resolvePaths(config);
     }
+    /** Returns codegen config with safe defaults. */
+    getCodegen(config) {
+        return {
+            customWrapperPackage: config.codegen?.customWrapperPackage ?? null,
+            basePageStrategy: config.codegen?.basePageStrategy ?? 'extend',
+            namingConvention: {
+                pageObjectSuffix: config.codegen?.namingConvention?.pageObjectSuffix ?? 'Page',
+                caseStyle: config.codegen?.namingConvention?.caseStyle ?? 'PascalCase'
+            },
+            gherkinStyle: config.codegen?.gherkinStyle ?? 'strict',
+            tagTaxonomy: config.codegen?.tagTaxonomy ?? ['@smoke', '@regression'],
+            generateFiles: config.codegen?.generateFiles ?? 'full'
+        };
+    }
+    /** Returns timeout values with safe defaults. */
+    getTimeouts(config) {
+        return {
+            elementWait: config.timeouts?.elementWait ?? 10000,
+            scenarioTimeout: config.timeouts?.scenarioTimeout ?? 60000,
+            connectionRetry: config.timeouts?.connectionRetry ?? 120000,
+            connectionRetryCount: config.timeouts?.connectionRetryCount ?? 3,
+            appiumPort: config.timeouts?.appiumPort ?? 4723,
+            xmlCacheTtlMinutes: config.timeouts?.xmlCacheTtlMinutes ?? 5
+        };
+    }
+    /** Returns self-heal config with safe defaults. */
+    getSelfHeal(config) {
+        return {
+            confidenceThreshold: config.selfHeal?.confidenceThreshold ?? 0.7,
+            maxCandidates: config.selfHeal?.maxCandidates ?? 3,
+            autoApply: config.selfHeal?.autoApply ?? false
+        };
+    }
+    /** Returns reporting config with safe defaults. */
+    getReporting(config) {
+        return {
+            format: config.reporting?.format ?? 'html',
+            outputDir: config.reporting?.outputDir ?? 'reports',
+            screenshotOn: config.reporting?.screenshotOn ?? 'failure'
+        };
+    }
+    /**
+     * Returns the active test environment.
+     * Priority: explicitEnv arg > config.currentEnvironment > first in environments > 'staging'
+     */
+    getCurrentEnvironment(config, explicitEnv) {
+        if (explicitEnv)
+            return explicitEnv;
+        if (config.currentEnvironment)
+            return config.currentEnvironment;
+        if (config.environments && config.environments.length > 0)
+            return config.environments[0];
+        return 'staging';
+    }
+    /** Returns the configured environment list, or a default single-item list. */
+    getEnvironments(config) {
+        return config.environments ?? ['staging'];
+    }
+    /** Returns the credential strategy or null if not configured. */
+    getCredentialStrategy(config) {
+        return config.credentials ?? null;
+    }
     /**
      * Set or update a named build profile (debug, staging, release, etc.).
      */

@@ -1,6 +1,6 @@
 # TASK-18 — Config Schema Expansion: codegen, timeouts, reporting, selfHeal, tsconfigPath
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~30 min)  
 **Depends on**: TASK-11 (deep merge), TASK-12 (read side-effects) — do those first  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -316,13 +316,13 @@ Also add a JSON comment property (string key naming convention for documentation
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] Four new interfaces exported from `McpConfigService.ts`
-- [ ] Four new accessor methods on `McpConfigService`
-- [ ] `tsconfigPath?: string | null` field added to `McpConfig` interface with JSDoc
-- [ ] `scaffoldMcpConfig()` includes all four new sections + `tsconfigPath: null` with correct defaults
-- [ ] No existing functionality broken
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] Four new interfaces exported from `McpConfigService.ts`
+- [x] Four new accessor methods on `McpConfigService`
+- [x] `tsconfigPath?: string | null` field added to `McpConfig` interface with JSDoc
+- [x] `scaffoldMcpConfig()` includes all four new sections + `tsconfigPath: null` with correct defaults
+- [x] No existing functionality broken
+- [x] Change `Status` above to `DONE`
 
 ---
 

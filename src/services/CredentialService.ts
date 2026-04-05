@@ -1,4 +1,4 @@
-import fs from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
 import { McpConfigService } from './McpConfigService.js';
 
@@ -22,7 +22,7 @@ export class CredentialService {
     let content = '';
 
     try {
-      content = await fs.readFile(envPath, 'utf8');
+      content = await fs.promises.readFile(envPath, 'utf8');
     } catch {
       // .env doesn't exist, start fresh
     }
@@ -37,7 +37,7 @@ export class CredentialService {
       }
     }
 
-    await fs.writeFile(envPath, lines.join('\n'), 'utf8');
+    await fs.promises.writeFile(envPath, lines.join('\n'), 'utf8');
     return `Updated .env at ${envPath}`;
   }
 
@@ -51,109 +51,156 @@ export class CredentialService {
   public async manageUsers(
     projectRoot: string,
     operation: 'read' | 'write',
-    env: string = 'staging',
-    users?: TestUser[]
+    env?: string,
+    users?: { username: string; password: string; role?: string }[]
   ): Promise<string> {
-    // Resolve the test data directory from config with fallback
-    let testDataDir = 'src/test-data'; // Default fallback
+    let config: any = {};
+    let strategy: any = null;
+    let currentEnv = env ?? 'staging';
+
     try {
-      const config = this.mcpConfigService.read(projectRoot);
-      // Check for testDataRoot in paths config
-      if (config.paths && 'testDataRoot' in config.paths) {
-        testDataDir = (config.paths as any).testDataRoot;
-      }
-    } catch (error) {
-      // Config doesn't exist or can't be read, use fallback
-      // This is not an error - projects may not have config yet
+      config = this.mcpConfigService.read(projectRoot);
+      currentEnv = this.mcpConfigService.getCurrentEnvironment(config, env);
+      strategy = this.mcpConfigService.getCredentialStrategy(config);
+    } catch {
+      // Config not readable — show setup guidance
     }
 
-    const usersDir = path.join(projectRoot, testDataDir);
-    const usersFile = path.join(usersDir, `users.${env}.json`);
+    // STEP 1: If no credential strategy chosen yet, return selection prompt
+    if (!strategy) {
+      return JSON.stringify({
+        action: 'STRATEGY_SELECTION_REQUIRED',
+        message: 'No credential strategy configured for this project. Choose one and run manage_config to save it.',
+        instruction: 'After choosing, call: manage_config with operation="write" and config={ "credentials": { "strategy": "<chosen>" } }',
+        options: {
+          'role-env-matrix': {
+            description: 'Single JSON file with credentials[role][env] structure. Best for most teams.',
+            exampleFile: 'credentials/users.json',
+            exampleContent: {
+              admin: {
+                staging: { username: 'admin@stage.com', password: 'FILL_IN' },
+                local:   { username: 'admin@local.com', password: 'FILL_IN' }
+              },
+              readonly: {
+                staging: { username: 'viewer@stage.com', password: 'FILL_IN' }
+              }
+            }
+          },
+          'per-env-files': {
+            description: 'One JSON file per environment: credentials/users.{env}.json. Best for env-isolated secrets.',
+            exampleFile: `credentials/users.${currentEnv}.json`,
+            exampleContent: [
+              { role: 'admin',    username: `admin@${currentEnv}.com`, password: 'FILL_IN' },
+              { role: 'readonly', username: `viewer@${currentEnv}.com`, password: 'FILL_IN' }
+            ]
+          },
+          'unified-key': {
+            description: 'Single JSON file with credentials["{role}-{env}"] keys. Best for simple/small projects.',
+            exampleFile: 'credentials/users.json',
+            exampleContent: {
+              [`admin-${currentEnv}`]:    { username: `admin@${currentEnv}.com`,  password: 'FILL_IN' },
+              [`readonly-${currentEnv}`]: { username: `viewer@${currentEnv}.com`, password: 'FILL_IN' }
+            }
+          },
+          'custom': {
+            description: 'You have an existing credential system. Describe its JSON shape in schemaHint.',
+            instruction: 'Set: { "credentials": { "strategy": "custom", "schemaHint": "Describe your JSON format here" } }'
+          }
+        }
+      }, null, 2);
+    }
 
+    // STEP 2: Resolve credential file path from strategy
+    const credentialsDir = path.join(projectRoot, 'credentials');
+    let credentialsFile: string;
+
+    if (strategy.strategy === 'per-env-files') {
+      credentialsFile = strategy.file
+        ? path.join(projectRoot, strategy.file.replace('{env}', currentEnv))
+        : path.join(credentialsDir, `users.${currentEnv}.json`);
+    } else {
+      credentialsFile = strategy.file
+        ? path.join(projectRoot, strategy.file)
+        : path.join(credentialsDir, 'users.json');
+    }
+
+    // STEP 3: Ensure credentials/ directory exists and is gitignored
+    if (!fs.existsSync(credentialsDir)) {
+      fs.mkdirSync(credentialsDir, { recursive: true });
+    }
+    const gitignorePath = path.join(projectRoot, '.gitignore');
+    try {
+      const gi = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : '';
+      if (!gi.includes('credentials/')) {
+        fs.writeFileSync(gitignorePath, gi.trimEnd() + '\n\n# Credential files — never commit\ncredentials/\n', 'utf8');
+      }
+    } catch { /* non-fatal */ }
+
+    // STEP 4: Read operation
     if (operation === 'read') {
-      try {
-        const content = await fs.readFile(usersFile, 'utf8');
-        return content;
-      } catch {
-        return JSON.stringify({ error: `No users file found for environment: ${env}`, path: usersFile });
+      if (!fs.existsSync(credentialsFile)) {
+        return JSON.stringify({
+          status: 'NO_FILE',
+          message: `Credential file not found: ${path.relative(projectRoot, credentialsFile)}`,
+          suggestion: `Call manage_users with operation="write" and users=[...] to create it.`,
+          strategy: strategy.strategy,
+          schemaHint: strategy.schemaHint ?? null
+        }, null, 2);
       }
+      const content = JSON.parse(fs.readFileSync(credentialsFile, 'utf8'));
+      return JSON.stringify({
+        status: 'ok',
+        strategy: strategy.strategy,
+        file: path.relative(projectRoot, credentialsFile),
+        content
+      }, null, 2);
     }
 
-    // Write operation
-    try {
-      await fs.mkdir(usersDir, { recursive: true });
-    } catch {
-      // Dir exists
+    // STEP 5: Write operation — scaffold the file using the chosen strategy format
+    if (!users || users.length === 0) {
+      return JSON.stringify({
+        error: 'USERS_REQUIRED',
+        message: 'Provide a users array to write credentials.'
+      }, null, 2);
     }
 
-    await fs.writeFile(usersFile, JSON.stringify(users ?? [], null, 2), 'utf8');
+    let fileContent: any;
 
-    // Also generate a typed helper for easy access in tests
-    await this.generateUserHelper(projectRoot, env);
-
-    return `Updated users for ${env} at ${usersFile}`;
-  }
-
-  /**
-   * Generates a typed getUser() helper for test code to import.
-   */
-  private async generateUserHelper(projectRoot: string, env: string): Promise<void> {
-    // Resolve the test data directory from config with fallback
-    let testDataDir = 'src/test-data'; // Default fallback
-    try {
-      const config = this.mcpConfigService.read(projectRoot);
-      if (config.paths && 'testDataRoot' in config.paths) {
-        testDataDir = (config.paths as any).testDataRoot;
+    if (strategy.strategy === 'role-env-matrix') {
+      // Build/merge role-env-matrix into existing file
+      fileContent = fs.existsSync(credentialsFile)
+        ? JSON.parse(fs.readFileSync(credentialsFile, 'utf8'))
+        : {};
+      for (const user of users) {
+        const role = user.role ?? 'default';
+        if (!fileContent[role]) fileContent[role] = {};
+        fileContent[role][currentEnv] = { username: user.username, password: user.password };
       }
-    } catch (error) {
-      // Use fallback
+    } else if (strategy.strategy === 'per-env-files') {
+      // Replace the env-specific file entirely
+      fileContent = users.map(u => ({ role: u.role ?? 'default', username: u.username, password: u.password }));
+    } else if (strategy.strategy === 'unified-key') {
+      fileContent = fs.existsSync(credentialsFile)
+        ? JSON.parse(fs.readFileSync(credentialsFile, 'utf8'))
+        : {};
+      for (const user of users) {
+        const role = user.role ?? 'default';
+        fileContent[`${role}-${currentEnv}`] = { username: user.username, password: user.password };
+      }
+    } else {
+      // custom: write raw users array — LLM will decide the final shape
+      fileContent = users;
     }
 
-    // Calculate the relative path from utils directory to test-data directory
-    const utilsDirPath = path.join(projectRoot, 'utils');
-    const testDataPath = path.join(projectRoot, testDataDir);
-    const relativePath = path.relative(utilsDirPath, testDataPath).replace(/\\/g, '/');
+    fs.writeFileSync(credentialsFile, JSON.stringify(fileContent, null, 2), 'utf8');
 
-    const content = `import * as fs from 'fs';
-import * as path from 'path';
-
-export interface TestUser {
-  username: string;
-  password: string;
-  role?: string;
-  [key: string]: string | undefined;
-}
-
-/**
- * Retrieves a test user from the environment-specific users file.
- * @param env - Environment name (staging, prod, etc.)
- * @param role - Optional role filter (admin, user, etc.)
- */
-export function getUser(env: string = '${env}', role?: string): TestUser {
-  const filePath = path.join(__dirname, '${relativePath}', \`users.\${env}.json\`);
-  const users: TestUser[] = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-  if (role) {
-    const filtered = users.find(u => u.role === role);
-    if (!filtered) throw new Error(\`No user found with role "\${role}" in \${env}\`);
-    return filtered;
-  }
-
-  if (users.length === 0) throw new Error(\`No users found in \${env}\`);
-  return users[0];
-}
-`;
-
-    const helperPath = path.join(projectRoot, 'utils', 'getUser.ts');
-    
-    // Ensure utils directory exists
-    const utilsDir = path.join(projectRoot, 'utils');
-    try {
-      await fs.mkdir(utilsDir, { recursive: true });
-    } catch {
-      // Dir exists
-    }
-    
-    await fs.writeFile(helperPath, content, 'utf8');
+    return JSON.stringify({
+      status: 'written',
+      strategy: strategy.strategy,
+      file: path.relative(projectRoot, credentialsFile),
+      environment: currentEnv,
+      usersWritten: users.length,
+      warning: 'Fill in real passwords — this file is gitignored and safe to edit directly.'
+    }, null, 2);
   }
 }

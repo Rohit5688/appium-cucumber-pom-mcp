@@ -91,6 +91,7 @@ Done till this
 | # | Task File | What It Fixes | Files Changed | Effort |
 |:--|:----------|:--------------|:--------------|:-------|
 | **1** | `TASK-01-snapshot-engine.md` | LLM gets 50k tokens of XML → replace with compact Accessibility Snapshot | `ExecutionService.ts` | Medium |
+Done till this
 | **2** | `TASK-02-snapshot-schema.md` | Update tool schema + `DO NOT CALL` description guards | `index.ts` | Small |
 | **3** | `TASK-03-step-hints-filter.md` | Native on-device query via stepHints (zero XML fetch) | `ExecutionService.ts`, `index.ts` | Medium |
 | **4** | `TASK-04-known-screen-map.md` | Inject Known Screen map into prompt (skip inspect for known screens) | `TestGenerationService.ts` | Medium |
@@ -116,6 +117,44 @@ These tasks come from the `Skills/reference/node_mcp_server.md` guide and retrof
 
 > 🔗 TASK-24 and TASK-25 depend on TASK-23 (need `registerTool` pattern first).
 > TASK-26 is independent — can be done anytime after Tier 1.
+
+---
+
+### 🟤 TIER 8 — Architectural Polish & QA Ecosystem Foundations
+
+| # | Task File | What It Fixes | Files Changed | Effort |
+|:--|:----------|:--------------|:--------------|:-------|
+| **27** | `TASK-27-architectural-fixes.md` | Refactors `index.ts` into `src/tools/`, adds Zod validation, automates the learning loop in `verify_selector`, and fixes YAML globbing & memory leaks. | `index.ts`, `src/tools/*`, `SessionManager.ts`, `TestGenerationService.ts` | Large |
+| **28** | `TASK-28-analysis-tool-fixes.md` | Fixes `audit_mobile_locators` for YAML projects, expands `audit_utils` checklist, and dynamic variables for CI Generation. | `AuditLocatorService.ts`, `AuditUtilsService.ts`, `ProjectSetupService.ts` | Small |
+
+> ⚠️ TASK-27 should be done iteratively due to its large scope, ensuring tests pass at each step.
+
+---
+
+### 🟣 TIER 9 — System Telemetry & Error Contracts
+
+| # | Task File | What It Fixes | Files Changed | Effort |
+|:--|:----------|:--------------|:--------------|:-------|
+| **29** | `TASK-29-error-contract-and-versioning.md` | Shifts console outputs to a formally typed semantic Error infrastructure and explicit Component Version handling | `src/types/Response.ts`, `src/utils/ErrorFactory.ts` | Medium |
+| **30** | `TASK-30-observability-metrics-logging.md` | Introduces request tracking boundaries, automated performance timers, and JSON logging schema sanitization | `src/utils/Logger.ts`, `src/utils/Metrics.ts` | Medium |
+
+---
+
+### 🟢 TIER 10 — Security Hardening & Logic Audit
+
+| # | Task File | What It Fixes | Files Changed | Effort |
+|:--|:----------|:--------------|:--------------|:-------|
+| **31** | `TASK-31-security-and-sandbox-patches.md` | Eliminates sandbox escapes, closes path traversal loopholes, and hardens shell hygiene. | `SandboxEngine.ts`, `FileWriterService.ts`, `CredentialService.ts` | Medium |
+| **32** | `TASK-32-core-logic-and-config-mutations.md` | Refactors mutating config operations, accelerates session startups by dropping redundant XML parsing, and fixes minor UI locators. | `McpConfigService.ts`, `AppiumSessionService.ts`, `SelfHealingService.ts` | Medium |
+
+---
+
+### 🟢 TIER 11 — Navigation Intelligence & Session Robustness
+
+| # | Task File | What It Fixes | Files Changed | Effort |
+|:--|:----------|:--------------|:--------------|:-------|
+| **33** | `TASK-33-sessionmanager-robustness.md` | Plugs Singleton leakages across tests, validates configuration limits, and adds diagnostics. | `SessionManager.ts` | Low |
+| **34** | `TASK-34-testgeneration-navigation-tuning.md` | Constrains context tokens, clarifies AI prompt steps, and exports Mermaid navigation diagrams. | `TestGenerationService.ts`, `NavigationGraphService.ts` | Medium |
 
 ## What Each Task Fixes (User-Facing Impact)
 
@@ -146,6 +185,14 @@ These tasks come from the `Skills/reference/node_mcp_server.md` guide and retrof
 | 24 | LLM clients cannot cache read-only tools or know which tools are destructive without annotations |
 | 25 | Large `inspect_ui_hierarchy`, `run_cucumber_test`, `analyze_codebase` responses flood and truncate LLM context |
 | 26 | No way to measure whether Claude can actually use AppForge tools accurately on real tasks |
+| 27 | Server crashes on bad tool inputs, `index.ts` is unmaintainable, LLM forgets to train after healing, and unused paths bloat the prompt |
+| 28 | Analysis tools yield false or unhelpful data for YAML projects and full test suites; CI generates unrunnable pipelines. |
+| 29 | Unexpected unhandled Promise rejections and ambiguous crash details inside the UI output; lack of historical component version mapping. |
+| 30 | Blind spots when auditing slow executions or hunting data loss inside logging platforms due to scattered/untraceable stdout dumps. |
+| 31 | Malicious or buggy script execution leaking project secrets via directory traversal; unintentional `.env` file commits. |
+| 32 | `mcp-config.json` inexplicably changing modification stamps on disk during reads; slow session initialization lagging agent loops. |
+| 33 | Irregular timeouts or performance hitches crossing test boundaries due to shared configurations silently failing to migrate. |
+| 34 | Test generation failing silently due to MAX_TOKEN boundaries, and AI hallucinating identical login loops instead of reusing them. |
 
 ---
 

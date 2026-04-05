@@ -184,9 +184,13 @@ export class SummarySuiteService {
     }
 
     // Auto-detect unit: WDIO cucumber reporter uses ms, native cucumber uses ns
-    const durationSec = totalDurationNs > 10_000_000 
-      ? Math.round(totalDurationNs / 1_000_000_000) 
-      : Math.round(totalDurationNs / 1_000);
+    // Threshold: if value > 1,000,000 it's almost certainly nanoseconds.
+    // Cucumber reporters typically use nanoseconds; ms values > 1,000,000 would be 1000 seconds (impossible).
+    const durationSec = totalDurationNs > 1_000_000_000
+      ? Math.round(totalDurationNs / 1_000_000_000)   // nanoseconds → seconds
+      : totalDurationNs > 1_000_000
+      ? Math.round(totalDurationNs / 1_000)            // microseconds → seconds (rare)
+      : Math.round(totalDurationNs / 1_000);           // milliseconds → seconds
     const durationStr = durationSec > 60
       ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`
       : `${durationSec}s`;

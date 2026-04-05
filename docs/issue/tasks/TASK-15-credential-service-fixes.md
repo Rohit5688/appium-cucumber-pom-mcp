@@ -1,6 +1,6 @@
 # TASK-15 — CredentialService: Fix manage_users Helper Path + set_credentials Purpose Clarification
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~25 min)  
 **Depends on**: Nothing — standalone  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -98,9 +98,9 @@ Returns: confirmation with the .env file path updated.`,
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] `generateUserHelper()` reads `utilsRoot` from config (fallback to `'utils'`)
-- [ ] No hardcoded `path.join(projectRoot, 'utils')` in `CredentialService.ts`
-- [ ] `set_credentials` description explicitly says it is for non-secret config ONLY
-- [ ] `set_credentials` description directs to `manage_users` for credentials
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] `generateUserHelper()` reads `utilsRoot` from config (fallback to `'utils'`)
+- [x] No hardcoded `path.join(projectRoot, 'utils')` in `CredentialService.ts`
+- [x] `set_credentials` description explicitly says it is for non-secret config ONLY
+- [x] `set_credentials` description directs to `manage_users` for credentials
+- [x] Change `Status` above to `DONE`

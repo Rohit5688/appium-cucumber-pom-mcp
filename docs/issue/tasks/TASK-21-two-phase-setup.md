@@ -1,6 +1,6 @@
 # TASK-21 — Two-Phase setup_project: Config-First Setup Flow
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~60 min)  
 **Depends on**: TASK-17, TASK-18 (both config schemas must be in place)  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`

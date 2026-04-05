@@ -1,6 +1,6 @@
 # TASK-20 — Propagate timeouts, selfHeal, reporting Config to Tools
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~30 min)  
 **Depends on**: TASK-18 (config schema) must be done first  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`

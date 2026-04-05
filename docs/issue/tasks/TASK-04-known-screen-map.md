@@ -1,6 +1,6 @@
 # TASK-04 — Known Screen Locator Block in Generation Prompt
 
-**Status**: TODO  
+**Status**: DONE
 **Effort**: Medium (~45 min)  
 **Depends on**: Nothing — pure prompt change, no dependency on Tasks 1–3  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`

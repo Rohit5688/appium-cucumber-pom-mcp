@@ -284,22 +284,56 @@ export class ExecutionService {
   public async inspectHierarchy(
     projectRoot: string,
     xmlDump?: string,
-    screenshotBase64?: string
+    screenshotBase64?: string,
+    stepHints?: string[]
   ): Promise<{
-    xml: string;
+    snapshot: string;
+    elementCount: { total: number; interactive: number };
     screenshotPath?: string;
     screenshotSize?: number;
     timestamp: string;
-    elements: ParsedElement[];
     source: 'provided' | 'live_session';
+    xml?: string;  // only populated in full mode (for healer tools)
   }> {
     let xml = xmlDump ?? '';
     let screenshot = screenshotBase64 ?? '';
     let source: 'provided' | 'live_session' = 'provided';
 
+    // FAST PATH: If stepHints provided, try native on-device query first
+    if (stepHints && stepHints.length > 0 && !xmlDump) {
+      const keywords = this.extractStepKeywords(stepHints);
+      const platform = this.sessionService?.getPlatform() ?? 'android';
+      const nativeElements = await this.findElementsByKeywords(keywords, platform as any);
+
+      if (nativeElements.length > 0) {
+        const snapshotLines = [
+          `[Screen: live | stepHints filter: "${keywords.join(', ')}" | timestamp: ${new Date().toLocaleTimeString()}]`,
+          `Found ${nativeElements.length} matching elements (native on-device query — no full XML fetched)`,
+          '',
+          ...nativeElements.map((el, i) => {
+            const role = el.tag.split('.').pop() ?? 'element';
+            return `#${i + 1}  ${role.padEnd(10)} "${el.text.substring(0, 40).padEnd(40)}"   ${el.locator}`;
+          }),
+          '',
+          'These elements were found using on-device queries — zero XML transferred.',
+          'LOCATOR PRIORITY: Use the locator shown above directly in your Page Object.'
+        ];
+
+        return {
+          snapshot: snapshotLines.join('\n'),
+          elementCount: { total: nativeElements.length, interactive: nativeElements.length },
+          timestamp: new Date().toISOString(),
+          source: 'live_session'
+        };
+      }
+      // If native query returned 0 results, fall through to full XML snapshot below
+    }
+
     // Auto-fetch from live session if no XML provided
     if (!xml && this.sessionService?.isSessionActive()) {
       xml = await this.sessionService.getPageSource();
+      // Cache the XML for self-heal recovery (chicken-and-egg fix)
+      this.sessionService.cacheXml(xml);
       screenshot = await this.sessionService.takeScreenshot();
       source = 'live_session';
     }
@@ -311,8 +345,8 @@ export class ExecutionService {
       );
     }
 
-    // Parse the XML to extract interactable elements with valid locator strategies
     const elements = this.parseXmlElements(xml);
+    const snapshot = this.buildAccessibilitySnapshot(elements, source);
 
     // Store screenshot locally instead of returning base64 in response
     let screenshotPath: string | undefined;
@@ -326,12 +360,14 @@ export class ExecutionService {
     }
 
     return {
-      xml,
+      snapshot,
+      elementCount: { total: elements.length, interactive: elements.filter(e => e.locatorStrategies.length > 0).length },
       screenshotPath,
       screenshotSize,
       timestamp: new Date().toISOString(),
-      elements,
-      source
+      source,
+      // Raw XML only for healer tools that explicitly need it
+      xml: xmlDump ? xml : undefined
     };
   }
 
@@ -444,6 +480,166 @@ export class ExecutionService {
     }
 
     return elements;
+  }
+
+  /**
+   * Builds a compact Mobile Accessibility Snapshot from parsed elements.
+   * Modeled on Playwright MCP's ARIA snapshot — returns only interactive elements
+   * in a human-readable format the LLM can process in ~150 tokens.
+   *
+   * Format per element:
+   *   #ref  role  "visible label"   best_locator   [states]
+   */
+  private buildAccessibilitySnapshot(elements: ParsedElement[], source: string): string {
+    const interactive = elements.filter(el =>
+      el.locatorStrategies.length > 0 &&
+      (el.text || el.contentDesc || el.resourceId)
+    );
+
+    if (interactive.length === 0) {
+      return `[Screen: ${source} | No interactive elements found — screen may still be loading]`;
+    }
+
+    const roleMap: Record<string, string> = {
+      'android.widget.Button': 'button',
+      'android.widget.EditText': 'input',
+      'android.widget.TextView': 'text',
+      'android.widget.ImageButton': 'button',
+      'android.widget.CheckBox': 'checkbox',
+      'android.widget.Switch': 'toggle',
+      'android.widget.RadioButton': 'radio',
+      'android.widget.ImageView': 'image',
+      'XCUIElementTypeButton': 'button',
+      'XCUIElementTypeTextField': 'input',
+      'XCUIElementTypeSecureTextField': 'input',
+      'XCUIElementTypeStaticText': 'text',
+      'XCUIElementTypeSwitch': 'toggle',
+    };
+
+    const lines: string[] = [
+      `[Screen: ${source} | timestamp: ${new Date().toLocaleTimeString()}]`,
+      `Interactive elements: ${interactive.length} of ${elements.length} total`,
+      ''
+    ];
+
+    interactive.forEach((el, i) => {
+      const ref = `#${i + 1}`;
+      const role = roleMap[el.tag] ?? el.tag.split('.').pop() ?? 'element';
+      const label = el.text || el.contentDesc || el.id || '(no label)';
+      const bestLocator = el.locatorStrategies[0] ?? 'no-locator';
+      const states: string[] = [];
+      if (el.tag.includes('EditText') || el.tag.includes('TextField')) states.push('editable');
+      if (el.tag.includes('SecureTextField') || el.contentDesc?.toLowerCase().includes('password')) states.push('secure');
+
+      const stateStr = states.length > 0 ? `[${states.join(', ')}]` : '[clickable]';
+      lines.push(`${ref.padEnd(4)} ${role.padEnd(10)} "${label.substring(0, 40).padEnd(40)}"   ${bestLocator.padEnd(35)} ${stateStr}`);
+    });
+
+    lines.push('');
+    lines.push('LOCATOR PRIORITY: Use accessibility-id (~) → resource-id (id=) → xpath as last resort.');
+    lines.push('USE #ref number to reference elements in your Page Object locators.');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Extracts actionable keywords from natural-language step descriptions.
+   * Input:  ["Tap the Login button", "Enter username in the field"]
+   * Output: ["login", "username"]
+   *
+   * Strategy: remove Gherkin keywords, common verbs, articles, prepositions.
+   * Keep nouns/adjectives — these are the element labels on screen.
+   */
+  private extractStepKeywords(steps: string[]): string[] {
+    const STOP_WORDS = new Set([
+      'given','when','then','and','but','i','the','a','an','to','on','in',
+      'at','by','for','with','from','into','tap','click','press','enter',
+      'type','input','verify','check','see','confirm','navigate','go',
+      'open','close','select','choose','scroll','swipe','should','is',
+      'am','are','be','been','have','has','had','do','does','did','will',
+      'would','could','should','may','might','must','shall','can','need',
+      'field','button','screen','page','view','bar','icon','text','label',
+      'this','that','these','those','my','your','its','their','our'
+    ]);
+
+    return [
+      ...new Set(
+        steps.flatMap(step =>
+          step
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(word => word.length > 2 && !STOP_WORDS.has(word))
+        )
+      )
+    ];
+  }
+
+  /**
+   * Runs native on-device queries to find elements by keyword.
+   * Returns raw elements directly from the device — no full page source needed.
+   *
+   * Android: Uses UiSelector textContains + descriptionContains
+   * iOS: Uses NSPredicate label CONTAINS[cd]
+   *
+   * Falls back to full XML if no native session is available (xmlDump mode).
+   */
+  private async findElementsByKeywords(
+    keywords: string[],
+    platform: 'android' | 'ios' | 'both'
+  ): Promise<{ locator: string; text: string; tag: string }[]> {
+    const session = this.sessionService;
+    if (!session?.isSessionActive()) return [];
+
+    const driver = session.getDriver();
+    if (!driver) return [];
+
+    const results: { locator: string; text: string; tag: string }[] = [];
+
+    for (const kw of keywords) {
+      try {
+        if (platform === 'ios') {
+          // iOS NSPredicate: partial match, case-insensitive
+          const predicate = `label CONTAINS[cd] "${kw}" OR name CONTAINS[cd] "${kw}" OR value CONTAINS[cd] "${kw}"`;
+          const els = await driver.$$(
+            `-ios predicate string:${predicate}`
+          );
+          let count = 0;
+          for (const el of els) {
+            if (count++ >= 5) break;
+            const label = await el.getAttribute('label') ?? '';
+            const name = await el.getAttribute('name') ?? '';
+            const tag = await el.getAttribute('type') ?? 'XCUIElementTypeOther';
+            const locator = name ? `~${name}` : `label:${label}`;
+            if (label || name) results.push({ locator, text: label || name, tag });
+          }
+        } else {
+          // Android UiSelector: textContains OR descriptionContains
+          const textSelector = `new UiSelector().textContains("${kw}")`;
+          const descSelector = `new UiSelector().descriptionContains("${kw}")`;
+          for (const sel of [textSelector, descSelector]) {
+            try {
+              const els = await driver.$$(`android=${sel}`);
+              let count = 0;
+              for (const el of els) {
+                if (count++ >= 5) break;
+                const text = await el.getText() ?? '';
+                const desc = await el.getAttribute('content-desc') ?? '';
+                const resId = await el.getAttribute('resource-id') ?? '';
+                const tag = await el.getAttribute('class') ?? 'android.view.View';
+                const locator = desc ? `~${desc}` : resId ? `id=${resId}` : text ? `text=${text}` : '';
+                if (locator) results.push({ locator, text: text || desc, tag });
+              }
+            } catch { /* element not found for this selector — continue */ }
+          }
+        }
+      } catch {
+        // Keyword not found on screen — skip silently, continue with next keyword
+      }
+    }
+
+    // Deduplicate by locator
+    return [...new Map(results.map(r => [r.locator, r])).values()];
   }
 
   /**

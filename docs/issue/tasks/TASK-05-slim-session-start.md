@@ -1,6 +1,6 @@
 # TASK-05 — Slim Session Startup + Navigation Shortcut Hints
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~25 min)  
 **Depends on**: Nothing — standalone change  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -121,9 +121,9 @@ case "start_appium_session": {
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] `getPageSource()` call during session startup is removed
-- [ ] `startSession()` returns `navigationHints` with package/activity/deeplink info
-- [ ] Tool description has navigation shortcut guidance
-- [ ] Handler response text includes the navigation shortcut hints
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] `getPageSource()` call during session startup is removed
+- [x] `startSession()` returns `navigationHints` with package/activity/deeplink info
+- [x] Tool description has navigation shortcut guidance
+- [x] Handler response text includes the navigation shortcut hints
+- [x] Change `Status` above to `DONE`

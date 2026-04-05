@@ -185,7 +185,7 @@ export class CodebaseAnalyzerService {
     stepsRoot?: string;
     pagesRoot?: string;
     utilsRoot?: string;
-  }): Promise<CodebaseAnalysisResult> {
+  }, customWrapperPackage?: string): Promise<CodebaseAnalysisResult> {
     const result: CodebaseAnalysisResult = {
       existingFeatures: [],
       existingStepDefinitions: [],

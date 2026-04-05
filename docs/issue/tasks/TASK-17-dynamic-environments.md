@@ -1,6 +1,6 @@
 # TASK-17 — Dynamic Environment System + Credential Schema Strategy
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~75 min — split across two sub-sessions if needed)  
 **Depends on**: TASK-11 (deep merge) and TASK-12 (read side-effects) must be DONE first  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`

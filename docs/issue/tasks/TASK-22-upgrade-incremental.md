@@ -1,6 +1,6 @@
 # TASK-22 — upgrade_project: Incremental Config Audit + Progressive Scaffolding
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~50 min)  
 **Depends on**: TASK-21 (two-phase setup must be done first)  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`

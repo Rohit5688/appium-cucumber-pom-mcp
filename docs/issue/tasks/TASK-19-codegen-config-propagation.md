@@ -1,6 +1,6 @@
 # TASK-19 — Propagate codegen Config into Generation Prompt
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~45 min)  
 **Depends on**: TASK-18 (config schema), TASK-12 (read side-effects)  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`

@@ -1,6 +1,6 @@
 # TASK-03 — Step Hints Filter (Native On-Device Query)
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~45 min)  
 **Depends on**: TASK-01, TASK-02 must be DONE  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -215,10 +215,10 @@ case "inspect_ui_hierarchy": {
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] `inspectHierarchy` accepts `stepHints?: string[]`
-- [ ] `extractStepKeywords` strips stop words correctly
-- [ ] `findElementsByKeywords` runs native query for Android and iOS
-- [ ] Fast path exits early (no XML fetch) when native query returns results
-- [ ] Falls through to full XML snapshot if native query returns 0 results (resilient)
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] `inspectHierarchy` accepts `stepHints?: string[]`
+- [x] `extractStepKeywords` strips stop words correctly
+- [x] `findElementsByKeywords` runs native query for Android and iOS
+- [x] Fast path exits early (no XML fetch) when native query returns results
+- [x] Falls through to full XML snapshot if native query returns 0 results (resilient)
+- [x] Change `Status` above to `DONE`

@@ -36,9 +36,13 @@ export class EnvironmentCheckService {
             checks.push(await this.checkXcode());
             checks.push(await this.checkIosSimulator());
         }
-        // 5. App file
+        // 5. App file + ABI compatibility
         if (appPath) {
             checks.push(this.checkAppFile(appPath));
+            // ABI check: only for Android APKs
+            if ((platform === 'android' || platform === 'both') && appPath.endsWith('.apk')) {
+                checks.push(await this.validateApkAbi(appPath));
+            }
         }
         // 6. Project dependencies
         checks.push(this.checkProjectDeps(projectRoot));
@@ -194,6 +198,86 @@ export class EnvironmentCheckService {
             return { name: 'MCP Config', status: 'pass', message: 'mcp-config.json found' };
         }
         return { name: 'MCP Config', status: 'warn', message: 'mcp-config.json not found', fixHint: 'Run setup_project to generate the config, or create it manually.' };
+    }
+    /**
+     * Validates that the configured APK is compatible with the connected device's CPU architecture.
+     * Returns a warn (not a fail) if aapt is unavailable or check cannot complete.
+     *
+     * SECURITY: Uses execFileAsync with args arrays — apkPath is never interpolated into a shell string.
+     */
+    async validateApkAbi(apkPath) {
+        if (!fs.existsSync(apkPath)) {
+            return {
+                name: 'APK ABI Compatibility',
+                status: 'fail',
+                message: `APK not found at: ${apkPath}`,
+                fixHint: `Place the APK at the configured path or run inject_app_build to update the path.`
+            };
+        }
+        // Step 1: Get device ABI via adb (no shell interpolation)
+        let deviceAbi;
+        try {
+            const { stdout } = await execFileAsync('adb', ['shell', 'getprop', 'ro.product.cpu.abi']);
+            deviceAbi = stdout.trim();
+            if (!deviceAbi) {
+                return {
+                    name: 'APK ABI Compatibility',
+                    status: 'warn',
+                    message: 'Connected but could not read device ABI — skipping compatibility check.',
+                    fixHint: 'Ensure adb shell is accessible and the device is fully booted.'
+                };
+            }
+        }
+        catch {
+            return {
+                name: 'APK ABI Compatibility',
+                status: 'warn',
+                message: 'No adb device connected — ABI check skipped.',
+                fixHint: 'Connect a device or start an emulator, then re-run check_environment.'
+            };
+        }
+        // Step 2: Get APK ABIs via aapt (no shell interpolation — apkPath passed as separate arg)
+        let aaptOutput;
+        try {
+            const { stdout } = await execFileAsync('aapt', ['dump', 'badging', apkPath]);
+            aaptOutput = stdout;
+        }
+        catch (err) {
+            // aapt not installed — warn, don't fail
+            return {
+                name: 'APK ABI Compatibility',
+                status: 'warn',
+                message: 'aapt not found — ABI compatibility check skipped.',
+                fixHint: 'Install Android Build Tools to enable ABI check:\n  sdkmanager "build-tools;34.0.0"\n  Then add build-tools to PATH.'
+            };
+        }
+        // Step 3: Parse native-code ABIs from aapt output
+        const abiMatch = aaptOutput.match(/native-code: '([^']+)'/);
+        if (!abiMatch) {
+            // Pure Java/Kotlin APK — no native library, compatible with all devices
+            return {
+                name: 'APK ABI Compatibility',
+                status: 'pass',
+                message: 'APK has no native code — compatible with all devices.'
+            };
+        }
+        const apkAbis = abiMatch[1].split("' '");
+        const compatible = apkAbis.some(abi => abi === deviceAbi ||
+            (deviceAbi.includes('x86_64') && abi.includes('x86')) ||
+            (deviceAbi.includes('arm64') && abi.includes('armeabi')));
+        if (!compatible) {
+            return {
+                name: 'APK ABI Compatibility',
+                status: 'fail',
+                message: `ABI mismatch: APK supports [${apkAbis.join(', ')}] but device is [${deviceAbi}]`,
+                fixHint: `Rebuild your APK with ABI splits:\n  abiFilters '${deviceAbi}'\nOr use a universal APK that includes all ABIs.`
+            };
+        }
+        return {
+            name: 'APK ABI Compatibility',
+            status: 'pass',
+            message: `APK ABI [${apkAbis.join(', ')}] is compatible with device [${deviceAbi}]`
+        };
     }
     // ─── Summary Builder ─────────────────────────────
     buildSummary(checks, ready, failCount, warnCount) {

@@ -56,7 +56,8 @@ export class SelfHealingService {
   public async analyzeMobileFailure(
     testOutput: string,
     xmlHierarchy: string,
-    screenshotPath: string
+    screenshotPath: string,
+    maxCandidates: number = 3
   ): Promise<HealingInstruction> {
     // 1. Classify the root cause
     const isLocatorIssue = /NoSuchElementError|TimeoutError|element.*not.*found|stale element/i.test(testOutput);
@@ -80,7 +81,7 @@ export class SelfHealingService {
     const failedSelector = this.extractFailedSelector(testOutput);
 
     // 3. Scan XML hierarchy for alternative selectors
-    const alternativeSelectors = this.findAlternatives(xmlHierarchy, failedSelector);
+    const alternativeSelectors = this.findAlternatives(xmlHierarchy, failedSelector, maxCandidates);
 
     // 4. If live session available, verify which alternatives actually exist on device
     if (this.sessionService?.isSessionActive() && alternativeSelectors.length > 0) {
@@ -170,7 +171,9 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
     xmlHierarchy: string,
     screenshotPath: string,
     attempt: number = 1,
-    maxAttempts: number = 3
+    maxAttempts: number = 3,
+    confidenceThreshold: number = 0.7,
+    maxCandidates: number = 3
   ): Promise<{ instruction: HealingInstruction; prompt: string; attempt: number; exhausted: boolean }> {
     // If live session is available, use fresh data instead of stale input
     let xml = xmlHierarchy;
@@ -189,7 +192,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
       }
     }
 
-    const instruction = await this.analyzeMobileFailure(testOutput, xml, screenshot);
+    const instruction = await this.analyzeMobileFailure(testOutput, xml, screenshot, maxCandidates);
     const prompt = this.buildVisionHealPrompt(instruction, xml, screenshot);
 
     return {
@@ -234,7 +237,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
     return 'unknown';
   }
 
-  private findAlternatives(xml: string, failedSelector: string): string[] {
+  private findAlternatives(xml: string, failedSelector: string, maxCandidates: number = 3): string[] {
     const alternatives: string[] = [];
     if (!failedSelector || failedSelector === 'unknown') return alternatives;
 
@@ -290,7 +293,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
       }
     }
 
-    return alternatives.slice(0, 5); // Limit to 5 suggestions
+    return alternatives.slice(0, maxCandidates);
   }
 
   /**

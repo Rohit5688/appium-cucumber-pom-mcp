@@ -21,7 +21,7 @@ export class SelfHealingService {
      *
      * SCREENSHOT FIX: Now accepts screenshotPath instead of base64 to prevent context overflow.
      */
-    async analyzeMobileFailure(testOutput, xmlHierarchy, screenshotPath) {
+    async analyzeMobileFailure(testOutput, xmlHierarchy, screenshotPath, maxCandidates = 3) {
         // 1. Classify the root cause
         const isLocatorIssue = /NoSuchElementError|TimeoutError|element.*not.*found|stale element/i.test(testOutput);
         const isSyncIssue = /timeout|ETIMEDOUT|navigation timeout|waitFor/i.test(testOutput) && !isLocatorIssue;
@@ -40,7 +40,7 @@ export class SelfHealingService {
         // 2. Extract the failed selector from the error output
         const failedSelector = this.extractFailedSelector(testOutput);
         // 3. Scan XML hierarchy for alternative selectors
-        const alternativeSelectors = this.findAlternatives(xmlHierarchy, failedSelector);
+        const alternativeSelectors = this.findAlternatives(xmlHierarchy, failedSelector, maxCandidates);
         // 4. If live session available, verify which alternatives actually exist on device
         if (this.sessionService?.isSessionActive() && alternativeSelectors.length > 0) {
             const verified = [];
@@ -115,7 +115,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
      *
      * SCREENSHOT FIX: Now uses screenshot storage instead of passing base64.
      */
-    async healWithRetry(testOutput, xmlHierarchy, screenshotPath, attempt = 1, maxAttempts = 3) {
+    async healWithRetry(testOutput, xmlHierarchy, screenshotPath, attempt = 1, maxAttempts = 3, confidenceThreshold = 0.7, maxCandidates = 3) {
         // If live session is available, use fresh data instead of stale input
         let xml = xmlHierarchy;
         let screenshot = screenshotPath;
@@ -133,7 +133,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
                 // Fall back to provided data
             }
         }
-        const instruction = await this.analyzeMobileFailure(testOutput, xml, screenshot);
+        const instruction = await this.analyzeMobileFailure(testOutput, xml, screenshot, maxCandidates);
         const prompt = this.buildVisionHealPrompt(instruction, xml, screenshot);
         return {
             instruction,
@@ -172,7 +172,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
         }
         return 'unknown';
     }
-    findAlternatives(xml, failedSelector) {
+    findAlternatives(xml, failedSelector, maxCandidates = 3) {
         const alternatives = [];
         if (!failedSelector || failedSelector === 'unknown')
             return alternatives;
@@ -224,7 +224,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
                 }
             }
         }
-        return alternatives.slice(0, 5); // Limit to 5 suggestions
+        return alternatives.slice(0, maxCandidates);
     }
     /**
      * Prunes XML by keeping only interactive/identifiable elements.

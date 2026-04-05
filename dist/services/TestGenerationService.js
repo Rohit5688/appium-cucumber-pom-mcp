@@ -1,3 +1,4 @@
+import { McpConfigService } from './McpConfigService.js';
 import { NavigationGraphService } from './NavigationGraphService.js';
 export class TestGenerationService {
     /**
@@ -6,6 +7,105 @@ export class TestGenerationService {
      * Now includes navigation context to help LLMs understand existing navigation paths.
      */
     async generateAppiumPrompt(projectRoot, testDescription, config, analysis, testName, learningPrompt, screenXml, screenshotBase64) {
+        // Read all codegen preferences (with safe defaults)
+        const configService = new McpConfigService();
+        const codegen = configService.getCodegen(config);
+        const suffixStr = codegen.namingConvention.pageObjectSuffix; // e.g. "Page", "Screen"
+        const caseStyle = codegen.namingConvention.caseStyle; // "PascalCase" | "camelCase"
+        // --- BasePage Strategy ---
+        let basePageBlock = '';
+        if (codegen.customWrapperPackage) {
+            basePageBlock = `
+## BASEPAGE / WRAPPER PACKAGE
+This project uses "${codegen.customWrapperPackage}" as its Page Object base.
+- DO NOT generate BasePage.ts — it comes from the package.
+- Import using: import { BasePage } from '${codegen.customWrapperPackage}';
+- DO NOT generate ActionUtils.ts, WaitUtils.ts, or any utility already provided by the package.
+  Check the package's public API before generating any utility class.
+`;
+        }
+        else if (codegen.basePageStrategy === 'extend') {
+            basePageBlock = `
+## BASEPAGE STRATEGY: extend (inheritance)
+Generated Page Objects must extend BasePage:
+  class Login${suffixStr} extends BasePage { ... }
+Import: import { BasePage } from '../pages/BasePage.js';
+`;
+        }
+        else if (codegen.basePageStrategy === 'compose') {
+            basePageBlock = `
+## BASEPAGE STRATEGY: compose (composition, no inheritance)
+Generated Page Objects must NOT extend any class.
+Instead, accept a driver/utilities instance in the constructor:
+  class Login${suffixStr} {
+    constructor(private utils: ActionUtils) {}
+  }
+Import: import { ActionUtils } from '../utils/ActionUtils.js';
+`;
+        }
+        else {
+            basePageBlock = `
+## BASEPAGE STRATEGY: custom
+Follow the existing Page Object file patterns already in the project —
+do not impose an inheritance or composition pattern not already present.
+`;
+        }
+        // --- Naming Convention ---
+        const namingBlock = `
+## NAMING CONVENTION
+- Page Object suffix: "${suffixStr}" (e.g. Login${suffixStr}, Home${suffixStr})
+- Case style: ${caseStyle} (e.g. ${caseStyle === 'camelCase' ? 'loginPage' : 'Login' + suffixStr})
+- File names must match: ${caseStyle === 'camelCase' ? 'login' + suffixStr : 'Login' + suffixStr}.ts
+- Step definition files: ${caseStyle === 'camelCase' ? 'login' : 'Login'}.steps.ts
+CRITICAL: Use EXACTLY this naming in all class names, file names, and imports.
+`;
+        // --- Tag Taxonomy ---
+        const tagBlock = codegen.tagTaxonomy.length > 0
+            ? `
+## TAG TAXONOMY (ONLY use tags from this list)
+Valid tags: ${codegen.tagTaxonomy.join(', ')}
+Do NOT invent new tags. If a scenario doesn't match any tag, omit tags for that scenario.
+`
+            : '';
+        // --- Gherkin Style ---
+        const gherkinBlock = codegen.gherkinStyle === 'flexible'
+            ? `
+## GHERKIN STYLE: flexible
+Use Gherkin keywords naturally (Given/When/Then/And/But as appropriate).
+`
+            : `
+## GHERKIN STYLE: strict
+EVERY scenario must follow strict Given/When/Then structure:
+  Given — setup/precondition
+  When  — the user action being tested
+  Then  — the assertion/expected outcome
+Do NOT use consecutive Given/Given or When/When steps.
+`;
+        // --- Generate Files Scope ---
+        const generateFilesBlock = codegen.generateFiles === 'feature-only'
+            ? `
+## GENERATE SCOPE: feature file only
+Output ONLY the .feature file Gherkin.
+Do NOT generate step definitions or Page Objects.
+`
+            : codegen.generateFiles === 'feature-steps'
+                ? `
+## GENERATE SCOPE: feature + steps only
+Output the .feature file AND step definitions.
+Do NOT generate a Page Object class — the team writes those manually.
+`
+                : `
+## GENERATE SCOPE: full stack (default)
+Generate: .feature file + step definitions + Page Object class.
+`;
+        // --- Combine all codegen blocks ---
+        const codegenContext = [
+            basePageBlock,
+            namingBlock,
+            tagBlock,
+            gherkinBlock,
+            generateFilesBlock
+        ].filter(s => s.trim()).join('\n');
         const platform = config.mobile.defaultPlatform;
         const locatorOrder = config.reuse?.locatorOrder ?? [
             'accessibility id', 'resource-id', 'xpath', 'class chain', 'predicate', 'text'
@@ -22,6 +122,7 @@ export class TestGenerationService {
         const existingPagesSummary = analysis.existingPageObjects
             .map(p => `  ${p.path}: [${p.publicMethods.join(', ')}]`)
             .join('\n') || '  (none found)';
+        const knownScreenMap = this.buildKnownScreenMap(analysis.existingPageObjects);
         const existingUtilsSummary = analysis.existingUtils
             ? analysis.existingUtils.map(u => `  ${u.path}: [${u.publicMethods.join(', ')}]`).join('\n')
             : '  (none found)';
@@ -32,6 +133,18 @@ export class TestGenerationService {
             : '';
         const aliasesWarning = analysis.importAliases && Object.keys(analysis.importAliases).length > 0
             ? `\n## 🧰 TYPESCRIPT IMPORT ALIASES (tsconfig.json)\nDo NOT use deep relative paths (e.g. '../../pages/Login'). You MUST map imports to these aliases:\n\`\`\`json\n${JSON.stringify(analysis.importAliases, null, 2)}\n\`\`\`\n`
+            : '';
+        const currentEnvironment = config.currentEnvironment ?? 'local';
+        const environments = config.environments?.join(', ') ?? 'local';
+        const credStrategy = config.credentials?.strategy ?? 'None configured';
+        const schemaHint = config.credentials?.schemaHint ?? '';
+        const credentialsInstruction = config.credentials
+            ? `\n## CREDENTIALS & ENVIRONMENTS
+- Environments: ${environments}
+- Current Active: ${currentEnvironment}
+- Credential Strategy: ${credStrategy}
+${schemaHint ? `- Schema Hint: ${schemaHint}` : ''}
+⚠️ If this test requires user credentials, YOU MUST generate a simple TypeScript reader function/utility that reads the JSON file based on the credential pattern: ${credStrategy}. Do NOT hardcode credentials. Store/read credentials from the \`credentials/\` directory.`
             : '';
         // Decide output file type based on architecture
         const locatorFileEntry = (analysis.architecturePattern === 'yaml-locators' || analysis.architecturePattern === 'facade')
@@ -59,15 +172,20 @@ ${analysis.yamlLocatorFiles.length > 0 ? `- YAML Locator Files: ${analysis.yamlL
 ${screenXml ? `## [XML] LIVE UI HIERARCHY\nUse this to extract EXACT locators instead of guessing.\n\\\`\\\`\\\`xml\n${screenXml}\n\\\`\\\`\\\`\n` : ''}
 ${screenshotBase64 ? `## [IMAGE] SCREENSHOT\nA Base64 screenshot is attached. Use it to visually confirm elements before creating locators.\n` : ''}
 
+${credentialsInstruction}
+
 ## REQUIRED SCENARIO COVERAGE
 1. **Happy Path**: Implement the primary user flow.
 2. **Negative Scenarios**: Suggest/implement at least one failure path (e.g. invalid login, empty fields).
 3. **Accessibility**: Include steps to verify significant elements have TalkBack/VoiceOver labels.
 4. **[PHASE 4: STATE-MACHINE MICRO-PROMPTING]**: If this request requires generating a very large Page Object AND complex step definitions simultaneously across multiple files, you MUST serialize your work. Generate and invoke \`validate_and_write\` for ONLY the \`jsonPageObjects\` first. Wait for the compilation success response before generating the \`.feature\` and \`.steps.ts\` files in a subsequent attempt. Do NOT overwhelm your context window.
 
+${codegenContext}
+
 ## EXISTING CODE (REUSE THESE -- DO NOT DUPLICATE)
 ${conflictsWarning}
 ${aliasesWarning}
+${knownScreenMap}
 ### Existing Step Definitions:
 ${existingStepsSummary}
 
@@ -363,11 +481,8 @@ This project uses BOTH Page Object classes AND YAML locator files. Follow the EX
         }
         // Default: POM architecture (ISSUE #11 FIX: Removed Playwright references)
         const envStrategyRule = analysis.envConfig?.present
-            ? "Assume the project uses a `.env` file (e.g., `process.env.APP_URL`). Use WebdriverIO's config loading or `dotenv` rather than hardcoding."
-            : "Assume the project manages configuration dynamically (e.g., via a `config/` directory or custom module). Infer the config import from context and use IT rather than hardcoding.";
-        const dotenvImportRule = analysis.envConfig?.present
-            ? "15. **Environment Setup**: Every Page Object MUST import `dotenv/config` so `.env` values are accessible."
-            : "15. **Environment Setup**: Do NOT inject `import 'dotenv/config';`. Use the project's native configuration strategy as inferred from existing Page Objects or Utility helpers.";
+            ? "15. **Environment Setup**: Assume the project uses a `.env` file (e.g., `process.env.APP_URL`). Use WebdriverIO's config loading or `dotenv` rather than hardcoding. Every Page Object MUST import `dotenv/config` so `.env` values are accessible."
+            : "15. **Environment Setup**: Assume the project manages configuration dynamically. Do NOT inject `import 'dotenv/config';`. Use the project's native configuration strategy as inferred from existing Page Objects or Utility helpers.";
         return `
 ## STRICT RULES - PAGE OBJECT MODEL (Detected: ${arch})
 
@@ -384,6 +499,7 @@ This project uses BOTH Page Object classes AND YAML locator files. Follow the EX
 11. **WebView Screens**: Use \`this.switchToWebView()\` before interacting with web elements and \`this.switchToNativeContext()\` to return to native.
 12. **App Lifecycle**: Use \`this.openDeepLink(url)\` for direct navigation. Use \`this.handlePermissionDialog(accept)\` for system popups.
 13. **TSConfig Autowiring**: If your implementation creates a NEW top-level architectural directory (e.g., \`models/\`, \`types/\`, \`helpers/\`), you MUST also actively update \`tsconfig.json\` in the target project via standard file editing tools. You must append the corresponding path alias (e.g., \`"@models/*": ["./models/*"]\`) to \`compilerOptions.paths\`, and ENSURE your newly generated TypeScript files strictly use that alias in their imports.
+${envStrategyRule}
 ${platform === 'both' ? `
 ## CROSS-PLATFORM RULES (platform: both)
 
@@ -392,6 +508,52 @@ When platform is "both", generate SEPARATE Page Objects per platform:
 - \`pages/LoginPage.ios.ts\` -- Uses iOS locators
 - \`pages/LoginPage.ts\` -- Platform router
 ` : ''}
+`;
+    }
+    /**
+     * Builds a "Known Screen Locator Block" from existing page objects.
+     * Injected into the generation prompt to prevent the LLM from calling
+     * inspect_ui_hierarchy for screens that already have Page Objects.
+     *
+     * The LLM reads this block and knows:
+     *   ✅ These screens = use existing Page Object methods. NO inspect call.
+     *   ❌ Screens NOT listed = new screens. Call inspect_ui_hierarchy.
+     */
+    buildKnownScreenMap(existingPageObjects) {
+        if (!existingPageObjects || existingPageObjects.length === 0) {
+            return ''; // No existing pages — all screens are new, inspect everything
+        }
+        const screenLines = existingPageObjects.map(po => {
+            const className = po.path.split('/').pop()?.replace('.ts', '') ?? po.path;
+            const methods = po.publicMethods.length > 0
+                ? po.publicMethods.slice(0, 6).map(m => `   ${m}()`).join('\n')
+                : '   (no public methods detected)';
+            return `✅ ${className} (${po.path})\n${methods}`;
+        });
+        return `
+## 🧠 KNOWN SCREEN LOCATORS — DO NOT RE-INSPECT THESE SCREENS
+
+The following screens have existing Page Objects with known locators and methods.
+For any navigation step that passes through these screens, use their existing methods.
+🚫 DO NOT call inspect_ui_hierarchy for any screen listed below.
+
+${screenLines.join('\n\n')}
+
+❌ Any screen NOT listed above has no Page Object yet.
+   → Call inspect_ui_hierarchy ONLY for that new screen.
+   → Use stepHints=[...steps for that screen] when calling inspect_ui_hierarchy.
+
+NAVIGATION RULE:
+If the user says "login to app" → use the login Page Object's login method in Background:
+If the user says "reach [Screen]" → use that Screen's navigation method if it exists above.
+If the user says "reach [Screen]" and it's NOT listed → it's new, call inspect_ui_hierarchy.
+
+BACKGROUND PATTERN (use when user describes a pre-condition like "login first"):
+\`\`\`gherkin
+Background:
+  Given I am logged in as a standard user
+\`\`\`
+Map this to the login Page Object's method. Do NOT generate new login locators.
 `;
     }
 }

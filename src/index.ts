@@ -86,7 +86,23 @@ class AppForgeServer {
       tools: [
         {
           name: "setup_project",
-          description: "FIRST-TIME SETUP. Use when starting a brand-new mobile automation project. Call ONCE for a new empty directory. Scaffolds the complete structure: mcp-config.json, BasePage, Cucumber feature, step definitions, wdio config, and hooks. Returns: log of all files created. Next: use manage_config to configure your Appium capabilities.",
+          description: `FIRST-TIME SETUP & INCREMENTAL SCAFFOLD. Sets up a new or partially-configured project.
+
+PHASE 1 (first call — no mcp-config.json exists):
+  → Creates a self-documenting mcp-config.json template with ALL fields and explanations
+  → Returns instructions to fill in what you know (not everything is required immediately)
+  → Call setup_project again when ready to scaffold files
+
+PHASE 2 (second call — mcp-config.json exists):
+  → Reads your config and scaffolds project files based on YOUR choices
+  → Skips optional sections where config still has CONFIGURE_ME (warns you)
+  → Returns list of remaining unconfigured fields
+
+You do NOT need all answers upfront. Add config fields over time and run upgrade_project to apply new scaffolding.
+
+📖 Full config guide: docs/MCP_CONFIG_REFERENCE.md (created in Phase 1)
+
+Returns: { phase, status, filesCreated?, unfilledOptionalFields?, nextSteps[] }`,
           inputSchema: {
             type: "object",
             properties: {
@@ -99,7 +115,26 @@ class AppForgeServer {
         },
         {
           name: "upgrade_project",
-          description: "UPGRADE EXISTING PROJECT. Use when the user says 'update dependencies / upgrade the project / it is outdated'. Upgrades npm packages, migrates mcp-config.json, repairs missing files, and reports utility coverage gaps. Safe to re-run — never overwrites custom code. Returns: upgrade log with warnings.",
+          description: `UPGRADE & SYNC PROJECT. Run this any time after updating mcp-config.json to apply new settings.
+
+What it does:
+  1. Reads your current mcp-config.json
+  2. Reports any fields still set to CONFIGURE_ME (pending setup)
+  3. Applies scaffolding for newly configured features:
+     • credentials.strategy set → creates credentials/ scaffold + gitignore entry
+     • reporting.format = "allure" → patches wdio.conf.ts reporters
+     • customWrapperPackage set → warns if AppForge-generated BasePage.ts conflicts
+     • New optional config fields added → scaffolds what's missing
+  4. Repairs any missing baseline files (safe, never overwrites custom code)
+
+Run upgrade_project after:
+  → Adding environments / currentEnvironment to config
+  → Setting credentials.strategy for the first time
+  → Changing reporting.format
+  → Adding customWrapperPackage
+  → Any manage_config write that should affect generated files
+
+Returns: { status, applied[], skipped[], pending[], message }`,
           inputSchema: {
             type: "object",
             properties: {
@@ -110,7 +145,12 @@ class AppForgeServer {
         },
         {
           name: "repair_project",
-          description: "REPAIR MISSING FILES. Use when setup was interrupted or files were accidentally deleted. Regenerates ONLY missing baseline files — never overwrites existing custom code. Safe to run at any time. Returns: list of files regenerated.",
+          description: `REPAIR MISSING FILES. Regenerates ONLY missing baseline files — never overwrites custom code. Safe to run at any time.
+
+For config-aware upgrades (applying new mcp-config.json settings to generated files), use upgrade_project instead.
+repair_project focuses on file completeness; upgrade_project focuses on config-driven changes.
+
+Returns: list of files regenerated.`,
           inputSchema: {
             type: "object",
             properties: {
@@ -172,7 +212,7 @@ class AppForgeServer {
         },
         {
           name: "generate_cucumber_pom",
-          description: "WRITE A NEW TEST. Use when the user asks to 'write a test / create a scenario / add automation for X'. Returns a generation PROMPT pre-loaded with your project's existing steps, page objects, and architecture pattern — YOU act on this prompt to produce the actual .feature, step .ts, and Page Object .ts files. Does NOT write files itself. After generating, call validate_and_write to save. Provide screenXml and screenshotBase64 from a live session for highest locator accuracy. Returns: generation prompt text.",
+          description: "WRITE A NEW TEST. Use when the user asks to 'write a test / create a scenario / add automation for X'. Returns a generation PROMPT pre-loaded with your project's existing steps, page objects, and architecture pattern — YOU act on this prompt to produce the actual .feature, step .ts, and Page Object .ts files. Does NOT write files itself. After generating, call validate_and_write to save. Provide screenXml and screenshotBase64 from a live session for highest locator accuracy. Returns: generation prompt text. Code generation behavior (BasePage strategy, naming convention, tag taxonomy, file scope, custom wrapper package) is fully controlled by the \"codegen\" section of mcp-config.json. Run manage_config to set preferences before generating.",
           inputSchema: {
             type: "object",
             properties: {
@@ -236,20 +276,43 @@ class AppForgeServer {
         },
         {
           name: "inspect_ui_hierarchy",
-          description: "SEE WHAT'S ON SCREEN. Two modes: (1) NO ARGS — fetches live XML and screenshot from the active Appium session. ⚡ REQUIRES ACTIVE SESSION — call start_appium_session first. (2) Pass xmlDump — parses offline with no session needed. Returns: { source ('live'|'provided'), elements[]: [{ id, text, className, bounds, locatorStrategies[] }], screenshotPath, screenshotSize }. Screenshot is saved locally to prevent context overflow. Use locatorStrategies to build accurate Page Object selectors.",
+          description: `SEE WHAT'S ON SCREEN. Returns a compact Mobile Accessibility Snapshot of interactive elements.
+⚡ REQUIRES ACTIVE SESSION — call start_appium_session first. Exception: pass xmlDump for offline parsing.
+
+🚫 DO NOT CALL if the screen's Page Object already exists in the project.
+   → Check existingPageObjects from execute_sandbox_code first.
+   → If the screen exists → use its locators directly. Skip this call entirely.
+✅ ONLY CALL for screens with NO existing Page Object (new screens you are building).
+✅ CALL with stepHints=[...your step strings] to get snapshot filtered to relevant elements only.
+
+Returns: { snapshot: compact plain-text element list with #ref IDs and best locators, elementCount: { total, interactive }, source, timestamp }
+Use #ref numbers and locators from snapshot to build Page Object selectors.
+The snapshot shows: role, visible label, best locator strategy, interaction states.`,
           inputSchema: {
             type: "object",
             properties: {
               projectRoot: { type: "string", description: "Optional: Project root path. Auto-detected from active session if omitted." },
               xmlDump: { type: "string", description: "Optional: Appium XML page source. When omitted, live XML is fetched automatically from the active session." },
-              screenshotBase64: { type: "string" }
+              screenshotBase64: { type: "string" },
+              stepHints: {
+                type: "array",
+                items: { type: "string" },
+                description: "Array of step strings the user described (e.g. ['Tap Login button', 'Enter username']). The tool extracts keywords and returns only matched elements. Reduces tokens by 80–95% vs full snapshot. Use when you know which steps need locators."
+              }
             },
             required: []
           }
         },
         {
           name: "self_heal_test",
-          description: "FIX BROKEN TESTS. Use when a test failure says 'element not found / no such element / selector not found'. Parses the error and current XML to find the correct replacement selector. Returns: { candidates[]: [{ selector, strategy, confidence, rationale }], promptForLLM: guidance text }. Screenshots are automatically stored locally to prevent context overflow. After getting candidates, use verify_selector to confirm the best one works. Then update your Page Object and call train_on_example to remember the fix.",
+          description: `FIX BROKEN TESTS. Use when a test failure says 'element not found / no such element'.
+Parses the error and current screen to find the correct replacement selector.
+
+xmlHierarchy is now OPTIONAL — if omitted, uses the cached XML from the last inspect_ui_hierarchy call.
+This solves the chicken-and-egg problem where the session dies when the test fails.
+
+Returns: { candidates[]: [{ selector, strategy, confidence, rationale }] }
+After getting candidates, update your Page Object with the best selector.`,
           inputSchema: {
             type: "object",
             properties: {
@@ -259,12 +322,25 @@ class AppForgeServer {
               screenshotBase64: { type: "string" },
               attempt: { type: "number" }
             },
-            required: ["testOutput", "xmlHierarchy"]
+            required: ["testOutput"]
           }
         },
         {
           name: "set_credentials",
-          description: "SAVE CREDENTIALS SECURELY. Stores cloud provider credentials, API keys, or service env vars in the project .env file. Use for BrowserStack, Sauce Labs, or any external service. Values are stored in .env and excluded from git. Returns: confirmation of keys saved.",
+          description: `SAVE NON-SECRET ENV CONFIG. Writes non-sensitive configuration values (Base URLs, feature flags, timeouts, endpoint paths) to the project .env file. 
+
+⚠️ THIS TOOL IS NOT FOR PASSWORDS OR API SECRETS.
+Do NOT use this tool for: usernames, passwords, tokens, API keys, client secrets.
+
+For credentials (login users, API tokens), use manage_users which stores them in a gitignored credentials/ JSON file.
+
+Non-secret examples that belong here:
+  BASE_URL=https://staging.example.com
+  API_TIMEOUT=30000
+  FEATURE_FLAGS_ENABLED=true
+  MOCK_SERVER_PORT=3001
+
+Returns: confirmation with the .env file path updated.`,
           inputSchema: {
             type: "object",
             properties: {
@@ -276,13 +352,29 @@ class AppForgeServer {
         },
         {
           name: "manage_users",
-          description: "MANAGE TEST USERS. Use when the user wants to add or view test account credentials for different environments (staging, prod). Stores users with roles (admin, readonly, etc.) in users.{env}.json following the testDataRoot path from mcp-config.json (defaults to 'src/test-data' if not configured). Generates a typed getUser() helper. Returns: list of users on read, confirmation on write.",
+          description: `MANAGE TEST CREDENTIALS. Use when the user wants to store or retrieve test user credentials (usernames/passwords) for different environments.
+
+Credentials are stored in a gitignored credentials/ JSON file — NEVER in .env.
+The file schema is user-defined (not hardcoded). On first call, returns schema options for the user to choose.
+
+On first use: returns 4 schema options → user picks one → call manage_config to save strategy → call manage_users again to create the file.
+
+After strategy is set:
+  operation="write" + users=[...] → creates/updates the credential file for currentEnvironment
+  operation="read" → returns current credential file contents
+
+The getCredentials() TypeScript reader is generated by generate_cucumber_pom — not by this tool.
+
+Returns: strategy selection options (first call) OR file content (read) OR write confirmation.`,
           inputSchema: {
             type: "object",
             properties: {
               projectRoot: { type: "string" },
               operation: { type: "string", enum: ["read", "write"] },
-              env: { type: "string", description: "Environment name: staging, prod, etc." },
+              env: {
+                type: "string",
+                description: "Target environment (e.g. 'staging', 'local', 'prod'). If omitted, uses currentEnvironment from mcp-config.json. Valid values are in the 'environments' array of mcp-config.json."
+              },
               users: {
                 type: "array",
                 items: {
@@ -454,7 +546,19 @@ class AppForgeServer {
         },
         {
           name: "start_appium_session",
-          description: "CONNECT TO DEVICE. Use when the user says 'connect to the device / start a session / inspect the app / I want to see what's on screen'. Connects to Appium and starts a session on the device in mcp-config.json. The app must already be installed. Auto-forces noReset:true to skip reinstall. Returns: { sessionId, platform, device, elementsFound, message }. After success, call inspect_ui_hierarchy with no args to see the current screen.",
+          description: `CONNECT TO DEVICE. Starts a live Appium session on the device configured in mcp-config.json.
+The app must already be installed on the device. Use noReset:true (auto-applied).
+
+Returns: { sessionId, platform, device, appPackage, navigationHints }
+
+navigationHints tells you how to navigate WITHOUT calling inspect_ui_hierarchy on every screen:
+  • openDeepLink(url) — jump directly to any deep-linked screen (fastest)
+  • startActivity(package, activity) — Android: jump to any Activity directly
+  • Use these instead of tapping through intermediate screens
+
+After connecting:
+✅ Call inspect_ui_hierarchy with stepHints=[...your new steps] for NEW screens only.
+🚫 DO NOT call inspect_ui_hierarchy for screens that already have Page Objects.`,
           inputSchema: {
             type: "object",
             properties: {
@@ -528,7 +632,7 @@ class AppForgeServer {
             const appName = args.appName ?? 'MyApp';
             const result = await this.projectSetupService.setup(args.projectRoot, platform, appName);
             this.configService.migrateIfNeeded(args.projectRoot);
-            return this.textResult(`${result}\n\n✅ Project scaffolded. Next: use manage_config (operation: 'read') to review your capabilities, then start_appium_session to connect to your device.`);
+            return this.textResult(result);
           }
 
           case "upgrade_project": {
@@ -544,6 +648,31 @@ class AppForgeServer {
             if (args.operation === "read") {
               return this.textResult(JSON.stringify(this.configService.read(args.projectRoot), null, 2));
             } else {
+              // Validate currentEnvironment is in environments list
+              if (args.operation === 'write' && args.config) {
+                const incoming = args.config as any;
+                if (incoming.currentEnvironment && incoming.environments) {
+                  if (!incoming.environments.includes(incoming.currentEnvironment)) {
+                    return this.textResult(JSON.stringify({
+                      error: 'INVALID_ENVIRONMENT',
+                      message: `currentEnvironment "${incoming.currentEnvironment}" is not in environments: [${incoming.environments.join(', ')}]`,
+                      fix: `Either add "${incoming.currentEnvironment}" to the environments array, or choose an existing one.`
+                    }));
+                  }
+                } else if (incoming.currentEnvironment) {
+                  try {
+                    const existing = this.configService.read(args.projectRoot);
+                    const validEnvs = this.configService.getEnvironments(existing);
+                    if (validEnvs.length > 1 && !validEnvs.includes(incoming.currentEnvironment)) {
+                      return this.textResult(JSON.stringify({
+                        error: 'INVALID_ENVIRONMENT',
+                        message: `currentEnvironment "${incoming.currentEnvironment}" is not in: [${validEnvs.join(', ')}]`,
+                        fix: `Add "${incoming.currentEnvironment}" to environments first, then set it as currentEnvironment.`
+                      }));
+                    }
+                  } catch { /* allow write if config unreadable */ }
+                }
+              }
               this.configService.write(args.projectRoot, args.config);
               return this.textResult("Configuration updated successfully.");
             }
@@ -555,7 +684,15 @@ class AppForgeServer {
           case "analyze_codebase": {
             const config = this.configService.read(args.projectRoot);
             const paths = this.configService.getPaths(config);
-            const result = await this.analyzerService.analyze(args.projectRoot, paths);
+            // Read customWrapperPackage from config and pass to analyzer
+            let customWrapperPackage: string | undefined;
+            try {
+              const codegen = this.configService.getCodegen(config);
+              if (codegen.customWrapperPackage) {
+                customWrapperPackage = codegen.customWrapperPackage;
+              }
+            } catch { /* config unreadable — proceed without package */ }
+            const result = await this.analyzerService.analyze(args.projectRoot, paths, customWrapperPackage);
             return this.textResult(JSON.stringify(result, null, 2));
           }
 
@@ -633,8 +770,19 @@ class AppForgeServer {
               };
             }
             
-            const result = await this.executionService.inspectHierarchy(projectRoot, args.xmlDump, args.screenshotBase64);
-            return this.textResult(JSON.stringify(result, null, 2));
+            const result = await this.executionService.inspectHierarchy(
+              projectRoot,
+              args.xmlDump as string | undefined,
+              args.screenshotBase64 as string | undefined,
+              args.stepHints as string[] | undefined
+            );
+            const output = [
+              result.snapshot,
+              '',
+              `Elements: ${result.elementCount.interactive} interactive of ${result.elementCount.total} total`,
+              `Source: ${result.source} | ${result.timestamp}`,
+            ].join('\n');
+            return this.textResult(output);
           }
 
           case "self_heal_test": {
@@ -650,7 +798,39 @@ class AppForgeServer {
               projectRoot = process.cwd();
               console.warn('[AppForge] ⚠️ No projectRoot provided and no active session. Using process.cwd() as fallback.');
             }
-            
+
+            let xmlHierarchy = args.xmlHierarchy as string | undefined;
+
+            // CHICKEN-AND-EGG FIX: if no XML provided, try cache from last successful inspect
+            if (!xmlHierarchy) {
+              const cached = this.appiumSessionService.getCachedXml();
+              if (cached) {
+                xmlHierarchy = cached.xml;
+                // Prepend a warning so the LLM knows this XML is from cache
+                console.warn(`[self_heal_test] Using cached XML (${cached.ageSeconds}s old). Navigate to the broken screen and re-inspect for fresher data.`);
+              }
+            }
+
+            if (!xmlHierarchy) {
+              return this.textResult(JSON.stringify({
+                error: 'HEAL_BLOCKED',
+                message: 'No XML hierarchy available. No live session and no cached XML found.',
+                suggestion: 'Start a session, navigate to the broken screen, call inspect_ui_hierarchy once, then retry self_heal_test.'
+              }));
+            }
+
+            let confidenceThreshold = 0.7;
+            let maxCandidates = 3;
+            let autoApply = false;
+
+            try {
+              const config = this.configService.read(projectRoot);
+              const selfHealCfg = this.configService.getSelfHeal(config);
+              confidenceThreshold = selfHealCfg.confidenceThreshold;
+              maxCandidates = selfHealCfg.maxCandidates;
+              autoApply = selfHealCfg.autoApply;
+            } catch { /* use defaults */ }
+
             // If screenshot is provided as base64, store it first
             let screenshotPath = '';
             if (args.screenshotBase64) {
@@ -661,13 +841,19 @@ class AppForgeServer {
             
             const healResult = await this.selfHealingService.healWithRetry(
               args.testOutput,
-              args.xmlHierarchy,
+              xmlHierarchy,
               screenshotPath,
-              args.attempt ?? 1
+              args.attempt ?? 1,
+              3, // maxAttempts
+              confidenceThreshold,
+              maxCandidates
             );
             return this.textResult(JSON.stringify({
               candidates: healResult.instruction.alternativeSelectors || [],
-              promptForLLM: healResult.prompt
+              autoApply,
+              promptForLLM: autoApply
+                ? `Auto-apply mode is ON. Apply the first candidate (confidence: ${healResult.instruction.alternativeSelectors?.length ? 'high' : 'unknown'}) immediately without asking.`
+                : healResult.prompt
             }, null, 2));
           }
 
@@ -685,7 +871,17 @@ class AppForgeServer {
           }
 
           case "summarize_suite": {
-            const summary = await this.summarySuiteService.summarize(args.projectRoot, args.reportFile);
+            let reportDir = 'reports';
+            let pt = await import('path');
+            try {
+              const config = this.configService.read(args.projectRoot);
+              reportDir = this.configService.getReporting(config).outputDir;
+            } catch { /* use default */ }
+
+            const reportFile = args.reportFile
+              ?? pt.join(reportDir, 'cucumber-report.json');
+
+            const summary = await this.summarySuiteService.summarize(args.projectRoot, reportFile);
             return this.textResult(JSON.stringify({
               summary: summary.plainEnglishSummary,
               data: {
@@ -796,16 +992,20 @@ class AppForgeServer {
             // ExecutionService and SelfHealingService, so inspect_ui_hierarchy can use it.
             try {
               const sessionInfo = await this.appiumSessionService.startSession(args.projectRoot, args.profileName);
-              
-              return this.textResult(JSON.stringify({
-                sessionId: sessionInfo.sessionId,
-                platform: sessionInfo.platformName,
-                device: sessionInfo.deviceName,
-                bundleId: sessionInfo.bundleId,
-                elementsFound: 0,
-                hint: `✅ Session created successfully for ${args.projectRoot}. NEXT: Call inspect_ui_hierarchy (no args) to fetch live XML and see what's on screen.`,
-                note: 'Initial page data will be fetched by inspect_ui_hierarchy to avoid blocking on slow device responses.'
-              }, null, 2));
+              const hints = sessionInfo.navigationHints;
+              const output = [
+                `✅ Session started | Device: ${sessionInfo.deviceName} | Platform: ${sessionInfo.platformName}`,
+                `App: ${sessionInfo.appPackage || sessionInfo.bundleId || 'unknown'}`,
+                '',
+                '📍 Navigation Shortcuts Available:',
+                hints.androidPackage ? `  Android startActivity: package=${hints.androidPackage}, activity=${hints.androidDefaultActivity}` : '',
+                hints.iosBundle ? `  iOS bundle: ${hints.iosBundle}` : '',
+                `  Deep links: openDeepLink(url) — use for any screen with a deep link`,
+                '',
+                'Next: Call inspect_ui_hierarchy with stepHints=[...your steps] for the NEW screen you are building.',
+                '🚫 Do NOT call inspect_ui_hierarchy for screens that already have Page Objects.'
+              ].filter(Boolean).join('\n');
+              return this.textResult(output);
             } catch (error: any) {
               return {
                 content: [{
@@ -849,7 +1049,14 @@ class AppForgeServer {
               analyzeCodebase: async (projectRoot: string) => {
                 const config = this.configService.read(projectRoot);
                 const paths = this.configService.getPaths(config);
-                return this.analyzerService.analyze(projectRoot, paths);
+                let customWrapperPackage: string | undefined;
+                try {
+                  const codegen = this.configService.getCodegen(config);
+                  if (codegen.customWrapperPackage) {
+                    customWrapperPackage = codegen.customWrapperPackage;
+                  }
+                } catch { /* config unreadable — proceed without package */ }
+                return this.analyzerService.analyze(projectRoot, paths, customWrapperPackage);
               },
               runTests: async (projectRoot: string) => {
                 return this.executionService.runTest(projectRoot, {});
@@ -900,7 +1107,7 @@ class AppForgeServer {
           }
 
           case "workflow_guide": {
-            const ALL_WORKFLOWS: Record<string, { description: string; steps: string[] }> = {
+            const ALL_WORKFLOWS: Record<string, { description: string; steps: any[] }> = {
               new_project: {
                 description: "Set up a brand-new Appium Cucumber mobile automation project from scratch.",
                 steps: [
@@ -914,14 +1121,45 @@ class AppForgeServer {
                 ]
               },
               write_test: {
-                description: "Write a new Cucumber BDD test for a screen or feature in your app.",
+                description: "Generate a new Cucumber BDD test scenario from plain English.",
                 steps: [
-                  "1. start_appium_session — Connect to the device.",
-                  "2. inspect_ui_hierarchy (no args) — Inspect the target screen to get real locators.",
-                  "3. generate_cucumber_pom — Generate the BDD test code using the screen XML.",
-                  "4. validate_and_write — Validate syntax and write the .feature, steps, and page files.",
-                  "5. run_cucumber_test — Run the new test to verify it passes.",
-                  "6. end_appium_session — Clean up."
+                  {
+                    step: 1,
+                    tool: "execute_sandbox_code",
+                    purpose: "Scan codebase: get existing steps, page objects, and architecture pattern.",
+                    onSuccess: "Pass result to generate_cucumber_pom as context.",
+                    onFailure: "If projectRoot is wrong, check mcp-config.json. If scan returns empty, project may be new — proceed to step 2 with empty context."
+                  },
+                  {
+                    step: 2,
+                    tool: "inspect_ui_hierarchy",
+                    purpose: "Get snapshot of the NEW screen being built. Use stepHints=[...your steps].",
+                    prerequisite: "Active session required. Call start_appium_session first if not connected.",
+                    condition: "SKIP THIS STEP if ALL screens in the test already have Page Objects (check step 1 output).",
+                    onSuccess: "Pass snapshot to generate_cucumber_pom as screenContext.",
+                    onFailure: "If session is dead: skip this step and use known Page Object locators from step 1. If screen not found: ensure app is on correct screen before calling."
+                  },
+                  {
+                    step: 3,
+                    tool: "generate_cucumber_pom",
+                    purpose: "Generate feature file, step definitions, and Page Object.",
+                    onSuccess: "Pass generated JSON to validate_and_write.",
+                    onFailure: "If generation is incomplete or JSON is malformed: retry with a shorter, more focused testDescription. Break complex flows into smaller scenarios."
+                  },
+                  {
+                    step: 4,
+                    tool: "validate_and_write",
+                    purpose: "Validate TypeScript and Gherkin syntax, then write files to disk.",
+                    onSuccess: "Proceed to run_cucumber_test.",
+                    onFailure: "If TypeScript error: read the error message, fix the specific import or type issue in the generated code, retry validate_and_write. If Gherkin error: check step definition patterns match feature file exactly."
+                  },
+                  {
+                    step: 5,
+                    tool: "run_cucumber_test",
+                    purpose: "Execute the generated test to verify it passes.",
+                    onSuccess: "Test complete. Review HTML report at configured reportPath.",
+                    onFailure: "If 'element not found': call self_heal_test with the error output — it will suggest replacement selectors automatically using cached XML. If 'session expired': restart session and re-run. If 'step not defined': a step in the feature has no matching step definition — add it."
+                  }
                 ]
               },
               run_and_heal: {
@@ -937,12 +1175,23 @@ class AppForgeServer {
                 ]
               },
               inspect_device: {
-                description: "Inspect the current app screen on a real device or emulator.",
+                description: "Connect to device and inspect current screen.",
                 steps: [
-                  "1. start_appium_session — Connect to the device.",
-                  "2. inspect_ui_hierarchy (no args) — Fetch live XML and screenshot.",
-                  "3. verify_selector — Test specific selectors on the live screen.",
-                  "4. end_appium_session — Release the device."
+                  {
+                    step: 1,
+                    tool: "start_appium_session",
+                    purpose: "Connect to the device.",
+                    prerequisite: "App must be installed. Appium server must be running.",
+                    onSuccess: "Note the navigationHints in the response — use them instead of navigating through UI.",
+                    onFailure: "If 'session not created': verify app is installed (adb install <apk> for Android). Check mcp-config.json has correct appium:app path and appium:deviceName. Run check_environment to diagnose."
+                  },
+                  {
+                    step: 2,
+                    tool: "inspect_ui_hierarchy",
+                    purpose: "Get snapshot of current screen.",
+                    onSuccess: "Use #ref numbers and locators from snapshot in your Page Object.",
+                    onFailure: "If session expired between steps: call start_appium_session again. If app crashed: relaunch app manually then retry."
+                  }
                 ]
               }
             };

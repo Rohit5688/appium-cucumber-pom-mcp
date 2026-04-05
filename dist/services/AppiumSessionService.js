@@ -12,6 +12,15 @@ export class AppiumSessionService {
     driver = null;
     configService = new McpConfigService();
     projectRoot = '';
+    _lastXmlCache = null;
+    _lastXmlCacheTimestamp = 0;
+    XML_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+    getDriver() {
+        return this.driver;
+    }
+    getPlatform() {
+        return (this.driver?.capabilities?.platformName || 'android').toLowerCase();
+    }
     /**
      * Starts a new Appium session using capabilities from mcp-config.json.
      * Now uses SessionManager for proper lifecycle management and crash prevention.
@@ -66,24 +75,6 @@ export class AppiumSessionService {
             this.driver = driver;
             // Get session info
             const caps = driver.capabilities;
-            // Try to get initial data with timeout, but don't fail the session if slow
-            let pageSource = '';
-            let screenshot = '';
-            try {
-                // iOS sessions need more time for WebDriverAgent initialization and complex views
-                const timeout = caps.platformName?.toLowerCase() === 'ios' ? 30000 : 15000;
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error(`Initial fetch timeout after ${timeout / 1000}s`)), timeout);
-                });
-                [pageSource, screenshot] = await Promise.race([
-                    Promise.all([driver.getPageSource(), driver.takeScreenshot()]),
-                    timeoutPromise
-                ]);
-            }
-            catch (fetchError) {
-                console.error(`[AppForge] ⚠️ Initial page fetch slow (${fetchError.message}), but session is valid. User can call inspect_ui_hierarchy to fetch XML separately.`);
-                // Session is still usable - user can retry with inspect_ui_hierarchy
-            }
             return {
                 sessionId: driver.sessionId,
                 platformName: caps.platformName ?? 'unknown',
@@ -91,8 +82,13 @@ export class AppiumSessionService {
                 appPackage: caps['appium:appPackage'] ?? caps.appPackage,
                 appActivity: caps['appium:appActivity'] ?? caps.appActivity,
                 bundleId: caps['appium:bundleId'] ?? caps.bundleId,
-                initialPageSource: pageSource,
-                screenshot
+                navigationHints: {
+                    deepLinkAvailable: !!(caps['appium:appPackage'] || caps.appPackage || caps['appium:bundleId'] || caps.bundleId),
+                    androidPackage: caps['appium:appPackage'] ?? caps.appPackage ?? null,
+                    androidDefaultActivity: caps['appium:appActivity'] ?? caps.appActivity ?? null,
+                    iosBundle: caps['appium:bundleId'] ?? caps.bundleId ?? null,
+                    shortcutNote: 'Use openDeepLink(url) from BasePage to jump directly to any deep-linked screen. For Android, use startActivity(package, activity) to open any Activity directly without UI navigation.'
+                }
             };
         }
         catch (error) {
@@ -220,6 +216,7 @@ export class AppiumSessionService {
      * Cleanly terminates the Appium session.
      */
     async endSession() {
+        this.clearXmlCache();
         if (this.driver) {
             try {
                 await this.driver.deleteSession();
@@ -230,6 +227,33 @@ export class AppiumSessionService {
             this.driver = null;
         }
         this.projectRoot = '';
+    }
+    /**
+     * Stores the most recently fetched XML page source.
+     * Called by ExecutionService after every successful getPageSource() call.
+     */
+    cacheXml(xml) {
+        this._lastXmlCache = xml;
+        this._lastXmlCacheTimestamp = Date.now();
+    }
+    /**
+     * Returns the cached XML if available and not expired.
+     * Returns null if cache is empty or older than 5 minutes.
+     */
+    getCachedXml() {
+        if (!this._lastXmlCache)
+            return null;
+        const ageMs = Date.now() - this._lastXmlCacheTimestamp;
+        if (ageMs > this.XML_CACHE_TTL_MS)
+            return null;
+        return { xml: this._lastXmlCache, ageSeconds: Math.round(ageMs / 1000) };
+    }
+    /**
+     * Clears the XML cache. Call when session ends or app navigates to a new screen.
+     */
+    clearXmlCache() {
+        this._lastXmlCache = null;
+        this._lastXmlCacheTimestamp = 0;
     }
     // ─── Private Helpers ───────────────────────────────────
     ensureSession() {
@@ -315,6 +339,8 @@ export class AppiumSessionService {
         if (config.mobile.cloud?.provider === 'saucelabs') {
             return `https://${config.mobile.cloud.username}:${config.mobile.cloud.accessKey}@ondemand.us-west-1.saucelabs.com/wd/hub`;
         }
-        return 'http://localhost:4723';
+        const timeouts = this.configService.getTimeouts(config);
+        const port = timeouts.appiumPort ?? 4723;
+        return `http://localhost:${port}`;
     }
 }

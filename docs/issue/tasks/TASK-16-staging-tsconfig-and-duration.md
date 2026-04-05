@@ -1,6 +1,6 @@
 # TASK-16 — FileWriterService: Fix Staging tsconfig Absolute Paths + summarize_suite Duration
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~20 min)  
 **Depends on**: Nothing — standalone  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -115,8 +115,8 @@ const durationSec = totalDurationNs > 1_000_000_000
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] Staging tsconfig uses `path.relative()` for `extends`, `baseUrl`, `rootDir`
-- [ ] Staging tsconfig `include`/`exclude` use relative path strings (no absolute system paths)
-- [ ] `SummarySuiteService` duration threshold changed from `10_000_000` to `1_000_000_000`
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] Staging tsconfig uses `path.relative()` for `extends`, `baseUrl`, `rootDir`
+- [x] Staging tsconfig `include`/`exclude` use relative path strings (no absolute system paths)
+- [x] `SummarySuiteService` duration threshold changed from `10_000_000` to `1_000_000_000`
+- [x] Change `Status` above to `DONE`

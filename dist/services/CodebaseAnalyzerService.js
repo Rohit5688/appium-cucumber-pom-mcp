@@ -86,7 +86,7 @@ export class CodebaseAnalyzerService {
      * Scans the project for existing BDD assets using ts-morph AST parsing.
      * Scans features/, step-definitions/, pages/, and utils/.
      */
-    async analyze(projectRoot, customPaths) {
+    async analyze(projectRoot, customPaths, customWrapperPackage) {
         const result = {
             existingFeatures: [],
             existingStepDefinitions: [],

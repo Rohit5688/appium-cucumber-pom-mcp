@@ -261,22 +261,23 @@ export class FileWriterService {
       // Write a patched tsconfig into the staging dir
       const stagingTsconfigPath = path.join(stagingDir, 'tsconfig.json');
       if (hasTsConfig) {
+        // Use relative paths in the staging tsconfig so it is portable across machines and CI agents
+        const relativeExtends = path.relative(stagingDir, tsconfigPath).replace(/\\/g, '/');
+        const relativeRoot = path.relative(stagingDir, projectRoot).replace(/\\/g, '/') || '.';
         const stagingTsconfig = {
-          extends: tsconfigPath,
+          extends: relativeExtends,
           compilerOptions: {
-            // Resolve imports relative to projectRoot so `../pages/BasePage` works
-            baseUrl: projectRoot,
-            rootDir: projectRoot,
+            baseUrl: relativeRoot,
+            rootDir: relativeRoot,
             noEmit: true
           },
-          // Include staging files + project source for cross-reference
           include: [
-            path.join(stagingDir, '**/*.ts'),
-            path.join(projectRoot, '**/*.ts')
+            '**/*.ts',                          // staging dir files (relative)
+            `${relativeRoot}/**/*.ts`           // project source files (relative)
           ],
           exclude: [
-            path.join(projectRoot, 'node_modules'),
-            path.join(projectRoot, '.mcp-staging')
+            `${relativeRoot}/node_modules`,
+            `${relativeRoot}/.mcp-staging`
           ]
         };
         fs.writeFileSync(stagingTsconfigPath, JSON.stringify(stagingTsconfig, null, 2), 'utf8');

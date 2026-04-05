@@ -1,6 +1,6 @@
 # TASK-02 — Update inspect_ui_hierarchy Tool Schema & Description
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~20 min)  
 **Depends on**: TASK-01 must be DONE (snapshot field must exist before schema update)  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -97,8 +97,8 @@ case "inspect_ui_hierarchy": {
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] Tool description has the 🚫 DO NOT CALL guard
-- [ ] `stepHints` array param is registered in inputSchema
-- [ ] Handler returns snapshot as readable plain text, not nested JSON
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] Tool description has the 🚫 DO NOT CALL guard
+- [x] `stepHints` array param is registered in inputSchema
+- [x] Handler returns snapshot as readable plain text, not nested JSON
+- [x] Change `Status` above to `DONE`

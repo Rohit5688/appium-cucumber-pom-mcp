@@ -1,6 +1,6 @@
 # TASK-01 — Mobile Accessibility Snapshot Engine
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~60 min)  
 **Depends on**: Nothing — first task, standalone  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -152,7 +152,7 @@ private buildAccessibilitySnapshot(elements: ParsedElement[], source: string): s
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] `inspectHierarchy` returns `snapshot` string instead of `xml` + `elements[]`
-- [ ] Raw `xml` is only returned when `xmlDump` was explicitly passed by caller
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] `inspectHierarchy` returns `snapshot` string instead of `xml` + `elements[]`
+- [x] Raw `xml` is only returned when `xmlDump` was explicitly passed by caller
+- [x] Change `Status` above to `DONE`

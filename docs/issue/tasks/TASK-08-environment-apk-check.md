@@ -1,6 +1,6 @@
 # TASK-08 — check_environment APK Installability Validation
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~25 min)  
 **Depends on**: TASK-10 must be DONE (EnvironmentCheckService will use execFileAsync after TASK-10)  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -173,10 +173,10 @@ if (appPath) {
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] `validateApkAbi()` uses `execFileAsync` with args arrays — never `execSync(string)`
-- [ ] `aapt` not installed → `warn` status (not crash, not fail)
-- [ ] ABI mismatch → `fail` status with clear fix hint
-- [ ] ABI match → `pass` status
-- [ ] APK without native code → `pass` (compatible with all devices)
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] `validateApkAbi()` uses `execFileAsync` with args arrays — never `execSync(string)`
+- [x] `aapt` not installed → `warn` status (not crash, not fail)
+- [x] ABI mismatch → `fail` status with clear fix hint
+- [x] ABI match → `pass` status
+- [x] APK without native code → `pass` (compatible with all devices)
+- [x] Change `Status` above to `DONE`

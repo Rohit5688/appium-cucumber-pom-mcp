@@ -1,6 +1,6 @@
 # TASK-07 — Workflow Guide Error Recovery Paths
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~20 min)  
 **Depends on**: Nothing — standalone description-only change  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -119,9 +119,9 @@ inspect_device: {
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] `write_test` workflow has `onFailure` for all 5 steps
-- [ ] `inspect_device` workflow has `onFailure` for session start failure
-- [ ] `onFailure` for step 5 mentions `self_heal_test` explicitly
-- [ ] `onFailure` for step 2 says to SKIP and use known Page Objects if session is unavailable
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] `write_test` workflow has `onFailure` for all 5 steps
+- [x] `inspect_device` workflow has `onFailure` for session start failure
+- [x] `onFailure` for step 5 mentions `self_heal_test` explicitly
+- [x] `onFailure` for step 2 says to SKIP and use known Page Objects if session is unavailable
+- [x] Change `Status` above to `DONE`

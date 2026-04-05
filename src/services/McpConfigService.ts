@@ -2,6 +2,86 @@ import fs from 'fs';
 import path from 'path';
 import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
 import { Questioner } from '../utils/Questioner.js';
+
+export interface CodegenConfig {
+  /**
+   * If your team has a shared base Page Object package (e.g., '@myorg/test-utils'),
+   * set this. AppForge will import from it instead of generating BasePage.ts.
+   */
+  customWrapperPackage?: string | null;
+
+  /**
+   * How generated Page Objects inherit from BasePage.
+   * "extend" = class LoginPage extends BasePage (default)
+   * "compose" = BasePage methods injected, no class inheritance
+   * "custom" = LLM uses your existing pattern
+   */
+  basePageStrategy?: 'extend' | 'compose' | 'custom';
+
+  namingConvention?: {
+    /**
+     * Suffix for generated Page Object files/classes.
+     * "Page" → LoginPage.ts | "Screen" → LoginScreen.ts
+     */
+    pageObjectSuffix?: 'Page' | 'Screen' | 'Component' | 'Flow';
+    /** "PascalCase" → LoginPage | "camelCase" → loginPage */
+    caseStyle?: 'PascalCase' | 'camelCase';
+  };
+
+  /**
+   * "strict" = enforce Given/When/Then in feature files
+   * "flexible" = LLM uses best judgment on step keywords
+   */
+  gherkinStyle?: 'strict' | 'flexible';
+
+  /**
+   * Valid tags for this project. LLM will only use tags from this list.
+   * Match your test management system (Jira Xray, TestRail, etc.) tag names.
+   */
+  tagTaxonomy?: string[];
+
+  /**
+   * Which files to generate in generate_cucumber_pom.
+   * "full" = feature + steps + page object (default)
+   * "feature-steps" = feature + steps only (you write page objects)
+   * "feature-only" = only the Gherkin feature file
+   */
+  generateFiles?: 'full' | 'feature-steps' | 'feature-only';
+}
+
+export interface TimeoutsConfig {
+  /** Default wait for elements in ActionUtils/WaitUtils (ms). Default: 10000 */
+  elementWait?: number;
+  /** Cucumber scenario timeout (ms). Default: 60000 */
+  scenarioTimeout?: number;
+  /** WebdriverIO connection retry timeout (ms). Default: 120000 */
+  connectionRetry?: number;
+  /** WebdriverIO connection retry count. Default: 3 */
+  connectionRetryCount?: number;
+  /** Appium server port. Default: 4723 */
+  appiumPort?: number;
+  /** How long to cache page XML from inspect_ui (minutes). Default: 5 */
+  xmlCacheTtlMinutes?: number;
+}
+
+export interface SelfHealConfig {
+  /** Minimum confidence (0.0–1.0) to include a selector candidate. Default: 0.7 */
+  confidenceThreshold?: number;
+  /** How many replacement candidates to show. Default: 3 */
+  maxCandidates?: number;
+  /** If true, auto-apply the highest-confidence candidate. Default: false */
+  autoApply?: boolean;
+}
+
+export interface ReportingConfig {
+  /** Report format. Default: "html" */
+  format?: 'html' | 'allure' | 'junit' | 'none';
+  /** Output directory for reports. Default: "reports" */
+  outputDir?: string;
+  /** When to capture screenshots. Default: "failure" */
+  screenshotOn?: 'failure' | 'always' | 'never';
+}
+
 export interface McpConfig {
   $schema?: string;
   version?: string;
@@ -37,6 +117,83 @@ export interface McpConfig {
   };
   builds?: Record<string, BuildProfile>;
   activeBuild?: string;
+
+  /** Code generation style preferences. See docs/MCP_CONFIG_REFERENCE.md for details. */
+  codegen?: CodegenConfig;
+
+  /** Timeout values used in generated test files and tools. */
+  timeouts?: TimeoutsConfig;
+
+  /** Self-healing selector behavior. */
+  selfHeal?: SelfHealConfig;
+
+  /** Test reporting format and behavior. */
+  reporting?: ReportingConfig;
+
+  /**
+   * Relative path to the TypeScript config file for this project.
+   * When set, this path is ALWAYS passed as `--tsconfig <path>` to TypeScript
+   * compilation steps (SandboxEngine, validate_and_write).
+   * User-supplied — no auto-detection. Leave null to use runner defaults.
+   * Example: "tsconfig.json" | "config/tsconfig.test.json"
+   */
+  tsconfigPath?: string | null;
+
+  /**
+   * Project-specific config files that AppForge tools should read and inject
+   * into their LLM context during planning, generation, and healing.
+   *
+   * Each entry: the tool reads the file, parses it, prepends it to the prompt.
+   * Tools ONLY read files whose operation name is in `injectInto`.
+   *
+   * Use for: device capability overrides YAML, feature flags, remote config files.
+   * Use `repoContext` for: static team conventions, architecture decisions.
+   *
+   * See TestForge docs/issues/project-extensions-design.md for full design.
+   */
+  projectExtensions?: Array<{
+    name: string;
+    description: string;           // MANDATORY — LLM instruction on how to use this file
+    path: string;                  // relative to projectRoot
+    format?: 'yaml' | 'json' | 'text' | 'env';
+    injectInto: Array<'generate' | 'analyze' | 'heal' | 'run' | 'check'>;
+    maxLines?: number;             // for text/log files, default 100
+    required?: boolean;            // check_environment FAILs if missing, default false
+  }>;
+  /**
+   * The list of test environment names for this project.
+   * User-defined (e.g. ["local", "integration", "staging", "prod"]).
+   * Validated against currentEnvironment on manage_config write.
+   */
+  environments?: string[];
+
+  /**
+   * The environment currently under test.
+   * Tools that read/write env-specific files (users.{env}.json, credentials lookups)
+   * use this as the default when no explicit env is provided.
+   */
+  currentEnvironment?: string;
+
+  /**
+   * Credential storage strategy for this project.
+   * Controls how manage_users creates and reads credential files.
+   * Strategy is user-selected; the reader is LLM-generated at generate_cucumber_pom time.
+   */
+  credentials?: {
+    /**
+     * 'role-env-matrix' — credentials[role][env] in single file
+     * 'per-env-files'   — credentials/users.{env}.json per environment  
+     * 'unified-key'     — credentials['{role}-{env}'] in single file
+     * 'custom'          — user-defined; schemaHint describes the format
+     */
+    strategy: 'role-env-matrix' | 'per-env-files' | 'unified-key' | 'custom';
+
+    /** Path to the credential file (relative to projectRoot). Default: 'credentials/users.json' */
+    file?: string;
+
+    /** For strategy='custom': plain-English description of the JSON structure, used in LLM prompts */
+    schemaHint?: string;
+  };
 }
 
 export interface BuildProfile {
@@ -196,6 +353,72 @@ export class McpConfigService {
   /** Resolves the configured paths (with defaults). */
   public getPaths(config: McpConfig) {
     return resolvePaths(config);
+  }
+
+  /** Returns codegen config with safe defaults. */
+  public getCodegen(config: McpConfig): Required<CodegenConfig> {
+    return {
+      customWrapperPackage: config.codegen?.customWrapperPackage ?? null,
+      basePageStrategy: config.codegen?.basePageStrategy ?? 'extend',
+      namingConvention: {
+        pageObjectSuffix: config.codegen?.namingConvention?.pageObjectSuffix ?? 'Page',
+        caseStyle: config.codegen?.namingConvention?.caseStyle ?? 'PascalCase'
+      },
+      gherkinStyle: config.codegen?.gherkinStyle ?? 'strict',
+      tagTaxonomy: config.codegen?.tagTaxonomy ?? ['@smoke', '@regression'],
+      generateFiles: config.codegen?.generateFiles ?? 'full'
+    };
+  }
+
+  /** Returns timeout values with safe defaults. */
+  public getTimeouts(config: McpConfig): Required<TimeoutsConfig> {
+    return {
+      elementWait: config.timeouts?.elementWait ?? 10000,
+      scenarioTimeout: config.timeouts?.scenarioTimeout ?? 60000,
+      connectionRetry: config.timeouts?.connectionRetry ?? 120000,
+      connectionRetryCount: config.timeouts?.connectionRetryCount ?? 3,
+      appiumPort: config.timeouts?.appiumPort ?? 4723,
+      xmlCacheTtlMinutes: config.timeouts?.xmlCacheTtlMinutes ?? 5
+    };
+  }
+
+  /** Returns self-heal config with safe defaults. */
+  public getSelfHeal(config: McpConfig): Required<SelfHealConfig> {
+    return {
+      confidenceThreshold: config.selfHeal?.confidenceThreshold ?? 0.7,
+      maxCandidates: config.selfHeal?.maxCandidates ?? 3,
+      autoApply: config.selfHeal?.autoApply ?? false
+    };
+  }
+
+  /** Returns reporting config with safe defaults. */
+  public getReporting(config: McpConfig): Required<ReportingConfig> {
+    return {
+      format: config.reporting?.format ?? 'html',
+      outputDir: config.reporting?.outputDir ?? 'reports',
+      screenshotOn: config.reporting?.screenshotOn ?? 'failure'
+    };
+  }
+
+  /**
+   * Returns the active test environment.
+   * Priority: explicitEnv arg > config.currentEnvironment > first in environments > 'staging'
+   */
+  public getCurrentEnvironment(config: McpConfig, explicitEnv?: string): string {
+    if (explicitEnv) return explicitEnv;
+    if (config.currentEnvironment) return config.currentEnvironment;
+    if (config.environments && config.environments.length > 0) return config.environments[0];
+    return 'staging';
+  }
+
+  /** Returns the configured environment list, or a default single-item list. */
+  public getEnvironments(config: McpConfig): string[] {
+    return config.environments ?? ['staging'];
+  }
+
+  /** Returns the credential strategy or null if not configured. */
+  public getCredentialStrategy(config: McpConfig): McpConfig['credentials'] | null {
+    return config.credentials ?? null;
   }
 
   /**

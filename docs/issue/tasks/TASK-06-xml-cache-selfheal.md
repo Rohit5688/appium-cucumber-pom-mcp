@@ -1,6 +1,6 @@
 # TASK-06 — XML Cache for Self-Heal (Chicken-and-Egg Fix)
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~40 min)  
 **Depends on**: Nothing — standalone change in AppiumSessionService  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -170,10 +170,10 @@ After getting candidates, update your Page Object with the best selector.`,
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors
-- [ ] `AppiumSessionService` has `cacheXml()`, `getCachedXml()`, `clearXmlCache()`
-- [ ] `ExecutionService` calls `cacheXml()` after every live `getPageSource()`
-- [ ] `self_heal_test` handler auto-uses cache when `xmlHierarchy` arg is absent
-- [ ] `self_heal_test` returns clear actionable error when neither arg nor cache is available
-- [ ] Cache is cleared on `endSession()`
-- [ ] Change `Status` above to `DONE`
+- [x] `npm run build` passes with zero errors
+- [x] `AppiumSessionService` has `cacheXml()`, `getCachedXml()`, `clearXmlCache()`
+- [x] `ExecutionService` calls `cacheXml()` after every live `getPageSource()`
+- [x] `self_heal_test` handler auto-uses cache when `xmlHierarchy` arg is absent
+- [x] `self_heal_test` returns clear actionable error when neither arg nor cache is available
+- [x] Cache is cleared on `endSession()`
+- [x] Change `Status` above to `DONE`
