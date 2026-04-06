@@ -4,31 +4,49 @@ The `mcp-config.json` file dictates project-level rules for test generation, exe
 
 ---
 
-## 🏗️ Configuration Fields
+## 🏗️ Core Project Configuration
 
-| Field | Type | Description |
+| Field | Expected Values | Description |
 | :--- | :--- | :--- |
 | `$schema` | `string` | Link to the local `.AppForge/configSchema.json` for IDE autocompletion. |
-| `version` | `string` | Configuration schema version (e.g., `"1.1.0"`). Used for auto-migrations. |
-| `project.language` | `enum` | Always `"typescript"`. |
-| `project.client` | `enum` | Always `"webdriverio-appium"`. |
-| `mobile.defaultPlatform` | `enum` | `"Android"`, `"iOS"`, or `"both"`. |
-| `mobile.capabilitiesProfiles` | `Record` | Named sets of Appium capabilities (e.g., `"pixel8"`, `"iphone14"`). |
-| `paths.featuresRoot` | `string` | Location of `.feature` files (default: `"features"`). |
-| `paths.pagesRoot` | `string` | Location of Page Objects (default: `"pages"`). |
-| `paths.stepsRoot` | `string` | Location of Step Definitions (default: `"step-definitions"`). |
-| `paths.utilsRoot` | `string` | Location of helper utilities (default: `"utils"`). |
-| `paths.testDataRoot` | `string` | Location of test data files (default: `"src/test-data"`). |
-| `reuse.locatorOrder` | `string[]` | Priority list for selector generation (e.g., `["accessibility id", "resource-id", "xpath"]`). |
-| `execution.timeoutMs` | `number` | Default timeout for test execution in milliseconds (default: `1800000` = 30 min). |
-| `project.executionCommand` | `string` | Command to execute tests (e.g., `"npx wdio run wdio.conf.ts"`). |
+| `version` | `"1.1.0"` | Configuration schema version for auto-migrations. |
+| `project.language` | `"typescript"` | The programming language used. |
+| `project.testFramework`| `"cucumber"` | The test orchestration framework. |
+| `project.client` | `"webdriverio-appium"` | The underlying automation driver. |
+| `project.executionCommand` | `string` | The command to run tests (e.g. `npx wdio run wdio.conf.ts`). |
+| `environments` | `["staging", "prod", "local"]` | Array of test environment names for dynamic swapping. |
+| `currentEnvironment` | `"staging"`, `"prod"`, etc. | The active string environment currently under test. Defaults to the first array item. |
+
+**Example:**
+```json
+{
+  "version": "1.1.0",
+  "project": {
+    "language": "typescript",
+    "testFramework": "cucumber",
+    "client": "webdriverio-appium",
+    "executionCommand": "npm run test:android"
+  },
+  "environments": ["local", "staging", "prod"],
+  "currentEnvironment": "staging"
+}
+```
 
 ---
 
-## 📱 Mobile Profiles: The `capabilitiesProfiles` Object
+## 📱 Mobile Profiles: `mobile` and `builds`
 
-This is where you define your target devices. Use `manage_config` or edit manually:
+Define your physical devices, emulators, cloud grids, and active app builds.
 
+| Field | Expected Values | Description |
+| :--- | :--- | :--- |
+| `mobile.defaultPlatform` | `"Android"`, `"iOS"`, `"both"` | The primary OS tested. "both" scaffolds a multi-config workspace. |
+| `mobile.capabilitiesProfiles` | `Record<string, object>` | Named mapping of Appium W3C capabilities (e.g., `"pixel8"`, `"iphone15"`). |
+| `mobile.cloud` | `object` | Specifies cloud provider (`"browserstack"`, `"saucelabs"`, `"none"`) and credentials. |
+| `builds` | `Record<string, BuildProfile>` | Named objects containing `appPath`, `bundleId`, `serverUrl`, and `env`. |
+| `activeBuild` | key from `builds` | Injects the active build's `appPath` instantly across all capability profiles. |
+
+**Example:**
 ```json
 "mobile": {
   "defaultPlatform": "Android",
@@ -36,109 +54,148 @@ This is where you define your target devices. Use `manage_config` or edit manual
     "pixel_8_local": {
       "platformName": "Android",
       "appium:automationName": "UiAutomator2",
-      "appium:deviceName": "emulator-5554",
-      "appium:app": "./apps/demo.apk"
-    },
-    "bs_iphone_15": {
-      "platformName": "iOS",
-      "appium:automationName": "XCUITest",
-      "appium:deviceName": "iPhone 15",
-      "browserstack.user": "${BS_USER}",
-      "appium:app": "bs://app-id-here"
+      "appium:deviceName": "emulator-5554"
     }
+  },
+  "cloud": {
+    "provider": "browserstack",
+    "username": "${BS_USER}",
+    "accessKey": "${BS_KEY}"
   }
-}
+},
+"builds": {
+  "release_v2": {
+    "appPath": "./apps/release-v2.0.apk",
+    "env": "prod"
+  }
+},
+"activeBuild": "release_v2"
 ```
 
 > [!TIP]
-> **Environment Variables**: You can use `${VAR_NAME}` syntax inside your profiles. The MCP server will automatically resolve these from your `.env` file!
+> **Environment Variables**: You can use `${VAR_NAME}` syntax inside your profiles. The MCP server automatically resolves these from your `.env` file!
 
 ---
 
-## 🧱 Multi-Config Architecture (WebdriverIO)
+## 📂 Path Conventions
 
-For dual-platform projects (testing both `Android` and `iOS`), the Appium MCP supports a **Multi-Config** setup. When initializing a project with `platform: "both"`, it scaffolds three separate WebdriverIO configurations:
+Directory mapping for the AppForge structural generators and AST analyzers.
 
-1. `wdio.shared.conf.ts` (Core Cucumber settings, reporting, and Appium connection limits)
-2. `wdio.android.conf.ts` (Imports shared config + Android UiAutomator2 capabilities)
-3. `wdio.ios.conf.ts` (Imports shared config + iOS XCUITest capabilities)
+| Field | Expected Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `paths.featuresRoot` | `string` | `"features"` | Location of `.feature` Gherkin files. |
+| `paths.pagesRoot` | `string` | `"pages"` | Location of Page Object classes. |
+| `paths.stepsRoot` | `string` | `"step-definitions"` | Location of Step Definitions. |
+| `paths.utilsRoot` | `string` | `"utils"` | Location of helper utilities. |
+| `paths.testDataRoot` | `string` | `"src/test-data"` | Location of generated user profiles / mocks. |
+| `paths.reportsRoot` | `string` | `"reports"` | Dump directory for test outputs. |
+| `tsconfigPath` | `"tsconfig.json"`, `null` | `null` | Absolute or relative path to override TypeScript compilation limits during generation checks. |
 
-When executing tests via `run_cucumber_test` (e.g., asking the AI to "Run Android tests"), the MCP Server will automatically route execution to `npx wdio run wdio.android.conf.ts`. If you are using a legacy monolithic `wdio.conf.ts`, the agent will still execute it but inject `platformName` capability overrides at runtime.
+**Example:**
+```json
+"paths": {
+  "featuresRoot": "src/features",
+  "pagesRoot": "src/screens",
+  "stepsRoot": "src/steps"
+},
+"tsconfigPath": "tsconfig.mobile.json"
+```
 
 ---
 
-## 🛠️ Customizing Locators
+## ✍️ Code Generation: `codegen`
 
-Use the `reuse.locatorOrder` array to tell the AI what you prefer. If your app has excellent Accessibility support, prioritize `accessibility id`. If you are testing a legacy Android app with only IDs, put `resource-id` first.
+Rules controlling how the `generate_cucumber_pom` tool writes code.
 
+| Field | Expected Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `codegen.basePageStrategy` | `"extend"`, `"compose"`, `"custom"` | `"extend"` | "extend" forces class inheritance (extends BasePage). |
+| `codegen.gherkinStyle` | `"strict"`, `"flexible"` | `"strict"` | "strict" enforces exact Given/When/Then patterns. |
+| `codegen.namingConvention.pageObjectSuffix`| `"Page"`, `"Screen"`, `"Flow"`, `"Component"` | `"Page"` | How classes are generated/named (e.g., LoginScreen vs LoginPage). |
+| `codegen.namingConvention.caseStyle`| `"PascalCase"`, `"camelCase"` | `"PascalCase"` | Case format of the file names. |
+| `codegen.tagTaxonomy` | `["@smoke", "@regression"]` | `[]` | Strict tag dictionary the LLM is restricted to using on feature scenarios. |
+| `codegen.generateFiles` | `"full"`, `"feature-steps"`, `"feature-only"` | `"full"` | Determines which components the generator bootstraps. |
+| `codegen.customWrapperPackage` | `string`, `null` | `null` | External NPM package to import Page Object roots from, bypassing local BasePage. |
+
+**Example:**
+```json
+"codegen": {
+  "basePageStrategy": "extend",
+  "gherkinStyle": "strict",
+  "tagTaxonomy": ["@smoke", "@p0", "@ios-only"],
+  "generateFiles": "full",
+  "namingConvention": {
+    "pageObjectSuffix": "Screen",
+    "caseStyle": "PascalCase"
+  }
+}
+```
+
+---
+
+## ⏱️ Execution Timeouts & Reporting
+
+| Field | Expected Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `execution.timeoutMs` | `number` | `1800000` | Hard cap (ms) for the entire test subprocess. Max 2 hours (7200000ms). |
+| `execution.reportPath` | `string` | `undefined` | Optional explicit path string pointing to test report JSON outputs. |
+| `timeouts.elementWait` | `number` | `10000` | Global implicit wait (ms) for element locators inside WaitUtils. |
+| `timeouts.scenarioTimeout` | `number` | `60000` | Cucumber limit per single scenario block. |
+| `timeouts.appiumPort` | `number` | `4723` | Active port used for local driver connections. |
+| `timeouts.xmlCacheTtlMinutes`| `number` | `5` | Lifespan for stored XML UI hierarchies allowing rapid self-healing without requesting XML twice. |
+| `reporting.format` | `"html"`, `"allure"`, `"junit"`, `"none"` | `"html"` | Active reporting formatter pipeline. |
+| `reporting.screenshotOn` | `"failure"`, `"always"`, `"never"` | `"failure"` | Triggers automated capture payloads back into reports. |
+
+---
+
+## 🩹 Self Healing & Diagnostics
+
+| Field | Expected Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `reuse.locatorOrder` | `string[]` | `["accessibility id"]`| Priority cascade used by CodeGen to pick selectors. |
+| `selfHeal.confidenceThreshold` | `0.0` - `1.0` | `0.7` | Minimum fuzzy match score required to accept healed locator. |
+| `selfHeal.maxCandidates` | `number` | `3` | Maximum amount of proposed locators presented during heal. |
+| `selfHeal.autoApply` | `true`, `false` | `false` | If true, intelligently applies highest-ranked heal automatically based on threshold. |
+
+**Example:**
 ```json
 "reuse": {
-  "locatorOrder": ["accessibility id", "resource-id", "text", "xpath"]
+  "locatorOrder": ["accessibility id", "resource-id", "xpath"]
+},
+"selfHeal": {
+  "confidenceThreshold": 0.85,
+  "maxCandidates": 3,
+  "autoApply": false
 }
 ```
-
-This ensures the `generate_cucumber_pom` and `self_heal_test` tools always try to give you the most stable selector first!
 
 ---
 
-## ⏱️ Test Execution Timeout
+## 🔌 Advanced Workflows: `projectExtensions` & `credentials`
 
-The `execution.timeoutMs` field controls how long tests are allowed to run before being terminated. This is especially important for long-running test suites or CI environments.
+These objects allow you to dynamically feed global contexts or external schema validators into the AI without typing long interactive prompts.
 
+| Field | Expected Values | Description |
+| :--- | :--- | :--- |
+| `projectExtensions` | `Array<object>` | Instructs tools to auto-inject specific files (like remote config definitions) into AI prompts. Requires `name`, `description`, `path`, and `injectInto` (`generate`, `analyze`, `heal`, `run`, `check`) targets. |
+| `credentials.strategy` | `"per-env-files"`, `"role-env-matrix"`, `"unified-key"`, `"custom"` | Dictates how the `manage_users` tool scaffolds typed user models securely. |
+| `credentials.file` | `string` | Path override for credentials. Default: `credentials/users.json`. |
+| `credentials.schemaHint` | `string` | If `"custom"` strategy is active, provide an instruction hint explaining the schema structure so the AI respects it. |
+
+**Example:**
 ```json
-"execution": {
-  "timeoutMs": 3600000
-}
-```
-
-### Timeout Resolution Priority
-
-When `run_cucumber_test` executes, it resolves the timeout in this order:
-
-1. **Explicit parameter** - `timeoutMs` passed directly to the tool call (highest priority)
-2. **mcp-config.json** - The `execution.timeoutMs` value
-3. **Auto-detected** - Parsed from `playwright.config.ts` or `playwright.config.js` (if present)
-4. **Default** - 30 minutes (1800000ms) if nothing else is configured
-
-### Example Configurations
-
-**Short smoke tests (5 minutes):**
-```json
-"execution": {
-  "timeoutMs": 300000
-}
-```
-
-**Full regression suite (2 hours):**
-```json
-"execution": {
-  "timeoutMs": 7200000
-}
-```
-
-> [!WARNING]
-> **Maximum Timeout**: The system enforces a 2-hour (7200000ms) cap for safety. Requests exceeding this will be automatically capped with a warning.
-
-### Direct Tool Usage
-
-You can also override the timeout when calling `run_cucumber_test` directly:
-
-```javascript
-// AI Host call example:
-use_mcp_tool({
-  server_name: "appForge",
-  tool_name: "run_cucumber_test",
-  arguments: {
-    projectRoot: "/path/to/project",
-    timeoutMs: 600000,  // 10 minutes for this specific run
-    tags: "@smoke"
+"projectExtensions": [
+  {
+    "name": "A11y Dict",
+    "description": "Company-wide accessibility label mappings",
+    "path": "shared/a11y-dictionary.yaml",
+    "format": "yaml",
+    "injectInto": ["generate", "heal"],
+    "required": false
   }
-})
-```
-
-The tool output will always show which timeout was used:
-```
-[Timeout: 600000ms (source: explicit)]
-
-Test execution output...
+],
+"credentials": {
+  "strategy": "per-env-files",
+  "file": "credentials/users.json"
+}
 ```

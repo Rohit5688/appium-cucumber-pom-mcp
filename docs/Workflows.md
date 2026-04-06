@@ -50,3 +50,37 @@ This document outlines the standard operational workflows when conversing with a
 2.  **Migrate**: Calls `migrate_test(sourceCode: '...', sourceFramework: 'espresso')`.
 3.  **Refactor**: The AI Maps `withId(R.id.cart_icon)` into `$('id=com.app:id/cart_icon')` and generates a clean Cucumber suite.
 4.  **Confirm**: Calls `validate_and_write(dryRun: true)` so you can review the translation before it hits your disk.
+
+---
+
+### 5. CI/CD Pipeline Automation (Zero-Config)
+**User Prompt:**
+> "Generate a GitHub Actions workflow to run my Android suite on every PR."
+
+**AI Engine Workflow:**
+1.  **Config Read**: Directly reads `mcp-config.json` to pull your active device profiles, execution commands, and target SDKs.
+2.  **Generate**: Calls `generate_ci_workflow` passing the exact environments pulled automatically (No manual input needed!).
+3.  **Validate**: Checks the resulting `.yml` for accurate Appium server boot steps and saves it to `.github/workflows/`.
+
+---
+
+### 6. Health Checks & Memory Optimization
+**User Prompt:**
+> "My tests keep timing out or failing to connect to Appium. Can you check if the ports are locked up?"
+
+**AI Engine Workflow:**
+1.  **Diagnose**: Calls `get_session_metrics` to survey the active project-scoped connection pool.
+2.  **Analyze**: Identifies abandoned/idle `SessionManager` locks that have breached their timeouts but haven't been successfully purged.
+3.  **Resolve**: The AI explains which zombie processes or locked endpoints need to be cleared, referencing the `[AppForge]` observability logs for root cause data.
+
+---
+
+### 7. Big Data Analytics (The Token Optimizer Mode)
+**User Prompt:**
+> "Tell me how many Step Definitions we have that use legacy xpath selectors."
+
+**AI Engine Workflow:**
+1.  **Scripting**: Instead of calling `analyze_codebase` conventionally (which returns thousands of lines of JSON and overloads context limits), the AI writes a lightweight extraction script.
+2.  **Execution**: Calls `execute_sandbox_code` passing the custom script.
+3.  **Synthesis**: The secure V8 sandbox spins up locally, processes all AST nodes across the project, and returns *only* the aggregated metric (e.g., `{"xpathSteps": 42}`).
+4.  **Report**: The AI presents the math to the user cheaply and safely!

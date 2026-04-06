@@ -14,8 +14,11 @@ When you connect this MCP to your AI assistant (e.g., Claude Desktop, Cursor, An
 ### Step 2: Environment Readiness Check
 > "Check my environment using `check_environment`. Ensure the Appium server is reachable and tell me if I need to install any missing Android SDKs or iOS drivers. If my emulator isn't booted, please provide the exact command to start it."
 
-### Step 3: Adaptive Upgrading
-> "Based on your analysis, run `upgrade_project` to ensure my directory structure supports the latest AppForge standards (like the `utils/MobileGestures.ts` and `.AppForge/` brain). Make sure you don't overwrite my existing capabilities if they work."
+### Step 3: Adaptive Upgrading & Environments
+> "Run `upgrade_project` to incrementally align my directory structure with the newest AppForge capabilities. Ensure my `mcp-config.json` is synced, set up `MobileGestures.ts`, and confirm my test environments (like `staging` or `prod`) are properly mapped via the new `currentEnvironment` architecture."
+
+### Step 4: Token Optimization & Sandbox Setup
+> "Check if the token-optimized code mode is functioning correctly. Use `execute_sandbox_code` to locally read my `mcp-config.json`, extract the `version` and the active testing `environments`, and return only those details instead of printing the whole file into the chat."
 
 ---
 
@@ -27,10 +30,11 @@ Before finalizing your setup, review this questionnaire. These values control ho
 | :--- | :--- | :--- |
 | **`defaultPlatform`** | Which OS do we test by default? | `"Android"`, `"iOS"`, or `"both"` (for dual-platform POMs). |
 | **`capabilitiesProfiles`** | What devices are in your lab? | `{ "pixel8": { ... }, "iphone15": { ... } }` |
-| **`locatorOrder`** | Which locators do we trust? | `["accessibility id", "resource-id", "text", "xpath"]` |
+| **`locatorOrder`** | Which locators do we trust? | `["accessibility id", "resource-id", "xpath"]` |
 | **`paths`** | Where should files be saved? | `{ "featuresRoot": "features", "pagesRoot": "pages", ... }` |
-| **`authStrategy`** | How do we handle login? | `"users-json"` (Recommended) or `"none"` for public apps. |
-| **`projectRoot`** | Where is your actual code? | Absolute path to the mobile automation repo. |
+| **`credentials.strategy`** | How do we securely handle logins? | `"per-env-files"`, `"role-env-matrix"`, or `"custom"`. |
+| **`environments`** | What are your target network pipelines? | `["local", "staging", "prod"]` |
+| **`codegen.tagTaxonomy`**| What test tags are permitted in Gherkin?| `["@smoke", "@regression", "@p0"]` |
 
 ---
 

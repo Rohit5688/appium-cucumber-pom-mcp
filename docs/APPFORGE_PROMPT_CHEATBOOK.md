@@ -17,6 +17,7 @@
 9. [Advanced Scenarios](#9-advanced-scenarios)
 10. [Training the AI Assistant](#10-training-the-ai-assistant)
 11. [Troubleshooting](#11-troubleshooting)
+12. [Token-Optimized Code Mode (Sandbox)](#12-token-optimized-code-mode-sandbox)
 
 ---
 
@@ -257,6 +258,8 @@ If it doesn't work:
 - Provide the corrected selector
 ```
 
+*Note: A successful verification intrinsically auto-learns the fix into the project brain! No extra prompt needed.*
+
 **Example:**
 ```
 Verify if the following selector works on the current screen:
@@ -390,9 +393,9 @@ Provide:
 
 ### 5.2 Auditing Locator Quality
 ```
-Audit all locators in my project for quality and maintainability:
+Audit all locators in my project for quality and maintainability against the core Appium methods:
 
-Scan directories: [pages/src/pages/locators]
+Scan directories: [pages/src/pages/locators] (Auto-detects YAML configs too)
 Evaluate:
 - Locator strategy distribution (accessibility-id vs XPath vs resource-id)
 - Brittle selectors (complex XPaths, index-based)
@@ -603,6 +606,8 @@ Requirements:
 ## 8. 🔄 CI/CD & DevOps
 
 ### 8.1 Generating CI Pipeline
+
+**Standard Generation:**
 ```
 Generate a CI/CD workflow for running my Appium tests:
 
@@ -640,6 +645,11 @@ Configuration:
 Additional:
 - Include linting and type checking
 - Notification: Slack channel #qa-automation
+```
+
+**Zero-Config Generation:**
+```
+Generate a CI/CD workflow for GitHub Actions. Read my device profiles, execution commands, and report paths dynamically from mcp-config.json.
 ```
 
 ---
@@ -1086,6 +1096,34 @@ Provide:
 - Stabilization strategy
 - Code fixes
 - Monitoring recommendations
+```
+
+---
+
+### 11.4 Session Health & Port Contention
+```
+I'm getting timeout errors or "port in use" issues. Can you check my session health:
+
+Tools to use:
+1. Call `get_session_metrics` to view current active Appium lockfiles and project allocations.
+2. Tell me if there are abandoned sessions holding lockfiles.
+3. Check the Logger traces for any abrupt test crashes without teardowns.
+```
+
+---
+
+## 12. ⚡ Token-Optimized Code Mode (Sandbox)
+
+If your project is huge and returning full ASTs or files crashes the conversation, tell the AI to use the **Token Optimizer** sandbox mode.
+
+### 12.1 Extracting Data Quietly
+```
+Using the sandbox (`execute_sandbox_code`), read my `wdio.conf.ts` or `mcp-config.json` and return ONLY the current platform and emulator capabilities. Do NOT send me the entire file.
+```
+
+### 12.2 Analyzing Project Statistics
+```
+Using the sandbox, analyze my codebase and tell me exactly how many step definitions exist and how many Page Objects use the `~` accessibility id selector.
 ```
 
 ---

@@ -94,3 +94,11 @@ See [Security Architecture](Security.md) for the full security model.
 | Read and filter a file | ~3,000 | ~150 | **95%** |
 | Multi-step orchestration | ~18,000 | ~300 | **98.3%** |
 | Schema overhead (per msg) | ~5,000 | ~200 | **96%** |
+
+---
+
+## 🛡️ Global Tool Output Truncation
+
+Even when not using the sandbox, AppForge now enforces a strict `CHARACTER_LIMIT` truncation across all high-volume tools (such as `inspect_ui_hierarchy`, `run_cucumber_test`, and `analyze_codebase`). This guarantees that:
+1. LLM context windows are never flooded with raw dumps that cause conversation crashes.
+2. The AI receives a clean warning appended to the output if the content was truncated, prompting it to refine its query securely.

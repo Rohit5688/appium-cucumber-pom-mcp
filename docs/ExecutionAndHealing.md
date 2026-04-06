@@ -36,10 +36,10 @@ Use these tools to connect to a real emulator/simulator and dump a simplified, i
 ---
 
 ## ✅ `verify_selector`
-A "sanity check" tool. After the AI proposes a healed selector, use `verify_selector` to instantly check if that element is truly visible on the device before updating your code.
+A "sanity check" tool. After the AI proposes a healed selector, use `verify_selector` to instantly check if that element is truly visible on the device before updating your code. *Bonus:* If the verification succeeds, the tool intrinsically and automatically triggers the learning loop to auto-learn the fix into the project brain!
 
 **Example Prompt to AI:**
-> *"I've found a new selector `~login_v2`. Verify this selector on the live device and, if it works, auto-learn the fix into the project brain."*
+> *"I've found a new selector `~login_v2`. Verify this selector on the live device."*
 
 ---
 

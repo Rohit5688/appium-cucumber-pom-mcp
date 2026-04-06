@@ -9,6 +9,7 @@ Instantly writes a complete, highly-optimized YAML file for the CI/CD provider o
 
 *   **Supported Providers**: GitHub Actions, GitLab CI.
 *   **Key Feature**: Automated Appium server start and Emulator/Simulator boot configuration.
+*   **Zero-Config Readiness**: Dynamically reads device names, execution commands, and report paths straight from your `mcp-config.json`.
 
 **Example Prompt to AI:**
 > *"Generate a CI workflow for GitHub Actions. It should run my Android tests on every Push to `main` using BrowserStack."*

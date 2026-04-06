@@ -5,7 +5,7 @@ The core of the AppForge server is generating syntactically perfect, mobile-firs
 ---
 
 ## 🔦 `analyze_codebase`
-**(Automatically executed by the AI)**. Before the AI writes any code, it uses this tool to read your existing Step Definitions, Page Objects, and mobile utilities. It uses **AST Parsing** (`ts-morph`) to deeply understand your project's patterns, ensuring it doesn't duplicate existing steps or methods.
+**(Automatically executed by the AI)**. Before the AI writes any code, it uses this tool to read your existing Step Definitions, Page Objects, and mobile utilities. It uses **AST Parsing** (`ts-morph`) to deeply understand your project's patterns. It intrinsically auto-detects paths like `pagesDir` and ignores unwanted directories like `node_modules` or `.venv` through improved YAML glob exclusions, ensuring it doesn't duplicate existing steps or methods while generating clean context.
 
 ---
 
