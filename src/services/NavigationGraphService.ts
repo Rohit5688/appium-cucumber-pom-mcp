@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
+import { AppForgeError } from '../utils/ErrorFactory.js';
 
 export interface ElementInfo {
   id?: string;
@@ -12,6 +12,10 @@ export interface ElementInfo {
   xpath?: string;
 }
 
+/**
+ * Represents a navigation action from one screen to another.
+ * confidence increases each time the same navigation is successfully repeated.
+ */
 export interface NavigationEdge {
   action: 'tap' | 'swipe' | 'type' | 'back' | 'navigate';
   targetScreen: string;
@@ -21,6 +25,10 @@ export interface NavigationEdge {
   stepCode?: string; // Actual step definition code that performs this navigation
 }
 
+/**
+ * Represents a single screen in the app's navigation graph.
+ * Built automatically as inspect_ui_hierarchy is called during live sessions.
+ */
 export interface NavigationNode {
   screen: string;
   elements: ElementInfo[];
@@ -282,6 +290,47 @@ export class NavigationGraphService {
     }
 
     return contextParts.join('\n');
+  }
+
+  /**
+   * Exports the navigation graph as a Mermaid diagram string.
+   * Output can be pasted directly into any Markdown file or Mermaid renderer.
+   */
+  public exportMermaidDiagram(projectRoot: string): string {
+    const nodes = Array.from(this.graph.nodes.values());
+
+    if (nodes.length === 0) {
+      return '```mermaid\ngraph TD\n  A[No navigation data recorded yet]\n```';
+    }
+
+    const lines: string[] = ['```mermaid', 'graph TD'];
+
+    // Sanitize screen names for Mermaid node IDs (no spaces or special chars)
+    const sanitize = (name: string) =>
+      name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '');
+
+    for (const node of nodes) {
+      const fromId = sanitize(node.screen);
+      const fromLabel = node.screen;
+      lines.push(`  ${fromId}["${fromLabel}"]`);
+
+      for (const edge of node.connections) {
+        const toId = sanitize(edge.targetScreen);
+        const toLabel = edge.targetScreen;
+        const triggerId = edge.triggerElement?.id || edge.triggerElement?.accessibilityId || edge.triggerElement?.text || 'element';
+        const actionLabel = `${edge.action}: ${triggerId.substring(0, 20)}`;
+        const confidence = Math.round(edge.confidence * 100);
+        lines.push(`  ${toId}["${toLabel}"]`);
+        lines.push(`  ${fromId} -->|"${actionLabel} (${confidence}%)"| ${toId}`);
+      }
+    }
+
+    lines.push('```');
+    return lines.join('\n');
+  }
+
+  public getKnownScreens(projectRoot: string): string[] {
+    return Array.from(this.graph.nodes.keys());
   }
 
   // ─── Private Implementation ──────────────────────────

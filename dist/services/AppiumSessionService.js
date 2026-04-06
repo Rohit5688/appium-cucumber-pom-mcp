@@ -2,7 +2,8 @@ import { remote } from 'webdriverio';
 import { McpConfigService } from './McpConfigService.js';
 import http from 'http';
 import { Questioner } from '../utils/Questioner.js';
-import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
+import { AppForgeError } from '../utils/ErrorFactory.js';
+import { Logger } from '../utils/Logger.js';
 /**
  * AppiumSessionService — Manages a live WebdriverIO + Appium session.
  * Enables the MCP server to connect to a real device/emulator, fetch live
@@ -50,7 +51,7 @@ export class AppiumSessionService {
         const port = parseInt(parsedUrl.port || '4723', 10);
         // Auto-detect Appium version: probe /status (Appium 2/3 → path '/') then /wd/hub/status (Appium 1 → path '/wd/hub/')
         const serverPath = await this.detectAppiumPath(hostname, port);
-        console.error(`[AppForge] Detected Appium server path: ${serverPath} at ${hostname}:${port}`);
+        Logger.info(`Detected Appium server path: ${serverPath} at ${hostname}:${port}`);
         // Enhanced error handling with proper cleanup
         let driver = null;
         try {
@@ -98,17 +99,17 @@ export class AppiumSessionService {
                     await driver.deleteSession();
                 }
                 catch (cleanupError) {
-                    console.error(`[AppForge] ⚠️ Error cleaning up failed session: ${cleanupError}`);
+                    Logger.warn("Error cleaning up failed session", { error: String(cleanupError) });
                 }
             }
             const msg = error.message || String(error);
             if (msg.includes('ECONNREFUSED')) {
-                throw new AppForgeError(ErrorCode.E002_DEVICE_OFFLINE, `Cannot connect to Appium at ${serverUrl}. ` +
+                throw new AppForgeError("E002_DEVICE_OFFLINE", `Cannot connect to Appium at ${serverUrl}. ` +
                     `Make sure Appium is running:\n  npx appium\n` +
                     `Or start it with a specific port:\n  npx appium --port 4723`, ["Start Appium on localhost:4723"]);
             }
             if (msg.includes('session not created') || msg.includes('Could not start')) {
-                throw new AppForgeError(ErrorCode.E001_NO_SESSION, `Appium session creation failed.\n` +
+                throw new AppForgeError("E001_NO_SESSION", `Appium session creation failed.\n` +
                     `Raw error: ${msg}`, [
                     "Is an emulator/simulator running? (adb devices / xcrun simctl list)",
                     `Is the app installed? (app path: ${capabilities['appium:app'] ?? 'not set'})`,
@@ -116,7 +117,7 @@ export class AppiumSessionService {
                 ]);
             }
             if (msg.includes('timeout')) {
-                throw new AppForgeError(ErrorCode.E002_DEVICE_OFFLINE, `Session creation timed out. Device or app may be unresponsive.\n` +
+                throw new AppForgeError("E002_DEVICE_OFFLINE", `Session creation timed out. Device or app may be unresponsive.\n` +
                     `Raw error: ${msg}`, [
                     "Restart the device/emulator",
                     "Force-stop and restart the app",
@@ -124,7 +125,7 @@ export class AppiumSessionService {
                 ]);
             }
             // Re-throw with enhanced context
-            throw new AppForgeError(ErrorCode.E001_NO_SESSION, `Unexpected session creation error: ${msg}`, [
+            throw new AppForgeError("E001_NO_SESSION", `Unexpected session creation error: ${msg}`, [
                 "Check Appium server logs for details",
                 "Verify device capabilities are correct",
                 "Try restarting Appium server"
@@ -277,7 +278,7 @@ export class AppiumSessionService {
         if (appium1Works)
             return '/wd/hub/';
         // Default to Appium 2 root with a warning — startSession error handling will give actionable guidance
-        console.error(`[AppForge] ⚠️ Could not probe Appium at ${hostname}:${port}. ` +
+        Logger.warn(`Could not probe Appium at ${hostname}:${port}. ` +
             `Defaulting to Appium 2 path '/'. Ensure Appium is running: npx appium`);
         return '/';
     }
@@ -320,7 +321,7 @@ export class AppiumSessionService {
         // without needing bundleId. If the session fails, Appium will produce a native error
         // with a clear message — no need to halt with CLARIFICATION_REQUIRED.
         if (caps.platformName?.toLowerCase() === 'ios' && caps['appium:noReset'] && !caps['appium:bundleId'] && !caps['appium:app']) {
-            console.warn('[AppForge] iOS bundleId not set — relying on Appium noReset:true to attach to running app.');
+            Logger.warn('iOS bundleId not set — relying on Appium noReset:true to attach to running app.');
         }
         return caps;
     }

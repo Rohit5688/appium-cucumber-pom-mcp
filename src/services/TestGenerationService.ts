@@ -1,6 +1,9 @@
+import fs from 'fs';
+import path from 'path';
 import { McpConfigService, type McpConfig } from './McpConfigService.js';
 import type { CodebaseAnalysisResult } from './CodebaseAnalyzerService.js';
 import { NavigationGraphService } from './NavigationGraphService.js';
+import { Logger } from '../utils/Logger.js';
 
 export interface GenerationOutput {
   reusePlan: string;
@@ -137,6 +140,7 @@ Generate: .feature file + step definitions + Page Object class.
       stepsRoot: 'step-definitions',
       utilsRoot: 'utils'
     };
+    paths.pagesRoot = path.relative(projectRoot, this.resolvePagesDir(projectRoot, paths.pagesRoot));
 
     const existingStepsSummary = analysis.existingStepDefinitions
       .map(s => `  File: ${s.file}\n    Steps: ${s.steps.map(st => `${st.type}('${st.pattern}')`).join(', ')}`)
@@ -310,7 +314,7 @@ DO NOT include any text outside the JSON block. DO NOT use markdown code fences 
             const sectionTokens = this.estimateTokens(section);
             
             if (estimatedTokens + sectionTokens > maxTokens) {
-              contextParts.push('*(Additional navigation paths truncated to preserve token budget)*');
+              contextParts.push('*(Additional navigation paths truncated — use inspect_ui_hierarchy on the specific screen you need)*');
               break;
             }
             
@@ -318,55 +322,23 @@ DO NOT include any text outside the JSON block. DO NOT use markdown code fences 
             estimatedTokens += sectionTokens;
           }
           
-          const truncatedNavContext = contextParts.join('\n\n');
+          let truncatedNavContext = contextParts.join('\n\n');
           
-          // P1: Enhanced LLM instructions with concrete examples
           return `
-## 🧭 NAVIGATION REUSE STRATEGY - FOLLOW THESE EXACT STEPS
+## Navigation & Step Reuse Instructions
 
-**STEP 1: Identify Your Target Screen**
-Target: "${targetScreen}"
+STEP 1 — IDENTIFY TARGET SCREEN: Determine which screen the test ends on. (Target: "${targetScreen}")
+STEP 2 — CHECK KNOWN NAVIGATION: If the navigation map above contains a path to
+  that screen, use the exact Given/When steps listed for that path. Do not invent
+  new navigation steps.
 
-**STEP 2: Review Existing Navigation Paths**
 ${truncatedNavContext}
 
-**STEP 3: Choose Shortest Existing Path**
-Look at the navigation paths above and identify the shortest path to reach "${targetScreen}" from a known entry point (login, splash, main, etc.).
-
-**STEP 4: Construct Your Test Using ONLY Existing Steps**
-⚠️ **CRITICAL**: The Given/Background steps shown above ALREADY EXIST in the codebase. Do NOT recreate them.
-
-**Example Test Structure**:
-\`\`\`gherkin
-Feature: Test ${targetScreen}
-  
-  Background:
-    Given I am on the login screen     # ← REUSED from existing steps
-    When I tap the "Dashboard" button  # ← REUSED from existing steps
-  
-  Scenario: User performs specific action on ${targetScreen}
-    When I tap the unique button       # ← NEW step you create for this test
-    Then I should see success message  # ← NEW step you create for this test
-\`\`\`
-
-**STEP 5: Generate ONLY New Test Logic**
-You should ONLY create new steps for:
-- Specific actions on "${targetScreen}" that don't exist yet
-- Assertions unique to this test scenario
-- Edge cases or validations not covered by existing steps
-
-**❌ DO NOT**:
-- Recreate navigation steps that are shown in the paths above
-- Duplicate Given/When steps that navigate to the target screen
-- Create new step definitions for common navigation actions
-
-**✅ DO**:
-- Reference existing step patterns in your Background/Given clauses
-- Create new steps ONLY for test-specific actions on the target screen
-- Reuse existing Page Object methods where possible
-- Add new methods to existing Page Objects rather than creating duplicates
-
-This significantly reduces test maintenance and improves reliability by reusing proven navigation paths.
+STEP 3 — CHECK EXISTING STEP DEFINITIONS: Before writing any new When/Then step,
+  search the existingSteps list above. If a step matches (even partially), reuse
+  it with the exact same wording — do not paraphrase.
+STEP 4 — ONLY THEN ADD NEW STEPS: If no existing step covers the needed action,
+  define a new step following the project's naming convention.
 `;
         }
       }
@@ -623,12 +595,27 @@ If the user says "login to app" → use the login Page Object's login method in 
 If the user says "reach [Screen]" → use that Screen's navigation method if it exists above.
 If the user says "reach [Screen]" and it's NOT listed → it's new, call inspect_ui_hierarchy.
 
-BACKGROUND PATTERN (use when user describes a pre-condition like "login first"):
-\`\`\`gherkin
-Background:
-  Given I am logged in as a standard user
-\`\`\`
-Map this to the login Page Object's method. Do NOT generate new login locators.
-`;
+    BACKGROUND PATTERN (use when user describes a pre-condition like "login first"):
+    \`\`\`gherkin
+    Background:
+      Given I am logged in as a standard user
+    \`\`\`
+    Map this to the login Page Object's method. Do NOT generate new login locators.
+    `;
+  }
+
+  private resolvePagesDir(projectRoot: string, configuredPath: string): string {
+    const configured = path.join(projectRoot, configuredPath);
+    if (fs.existsSync(configured)) return configured;
+
+    // Auto-detect
+    for (const candidate of ['src/pages', 'pages', 'src/pageObjects', 'test/pages']) {
+      const full = path.join(projectRoot, candidate);
+      if (fs.existsSync(full) && fs.readdirSync(full).some(f => f.endsWith('.ts'))) {
+        Logger.warn(`pagesRoot "${configuredPath}" not found. Using detected: ${candidate}`);
+        return full;
+      }
+    }
+    return configured;
   }
 }

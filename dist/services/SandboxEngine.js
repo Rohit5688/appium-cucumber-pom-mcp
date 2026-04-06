@@ -38,6 +38,8 @@ const BLOCKED_PATTERNS = [
     /this\s*\.\s*constructor\s*\.\s*constructor/i,
     /Object\s*\.\s*getPrototypeOf/, // blocks prototype chain escape via AsyncFunction (AUDIT-07)
     /Object\s*\.\s*getOwnPropertyDescriptor/, // blocks property descriptor access on host objects (AUDIT-07)
+    /\bReflect\b/, // blocks using Reflect (AUDIT-07)
+    /\bFunction\b/, // blocks using Function (AUDIT-07)
 ];
 /**
  * Validates a script for dangerous patterns before execution.

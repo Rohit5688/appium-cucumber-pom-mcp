@@ -12,6 +12,25 @@ export class CredentialService {
     async setEnv(projectRoot, data) {
         const envPath = path.join(projectRoot, '.env');
         let content = '';
+        // Validate inputs to avoid newline breaks
+        for (const [key, value] of Object.entries(data)) {
+            if (/[\r\n]/.test(key)) {
+                throw new Error(`Invalid key containing newline: ${key}`);
+            }
+            if (/[\r\n]/.test(value)) {
+                throw new Error(`Invalid value containing newline for key: ${key}`);
+            }
+        }
+        // Dynamically append .env to .gitignore before writing
+        const gitignorePath = path.join(projectRoot, '.gitignore');
+        try {
+            const gi = fs.existsSync(gitignorePath) ? await fs.promises.readFile(gitignorePath, 'utf8') : '';
+            const lines = gi.split(/\r?\n/).map(l => l.trim());
+            if (!lines.includes('.env')) {
+                await fs.promises.writeFile(gitignorePath, gi.trimEnd() + '\n\n# Local environment configuration\n.env\n', 'utf8');
+            }
+        }
+        catch { /* non-fatal, proceed silently */ }
         try {
             content = await fs.promises.readFile(envPath, 'utf8');
         }

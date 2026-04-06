@@ -194,6 +194,38 @@ export class NavigationGraphService {
         }
         return contextParts.join('\n');
     }
+    /**
+     * Exports the navigation graph as a Mermaid diagram string.
+     * Output can be pasted directly into any Markdown file or Mermaid renderer.
+     */
+    exportMermaidDiagram(projectRoot) {
+        const nodes = Array.from(this.graph.nodes.values());
+        if (nodes.length === 0) {
+            return '```mermaid\ngraph TD\n  A[No navigation data recorded yet]\n```';
+        }
+        const lines = ['```mermaid', 'graph TD'];
+        // Sanitize screen names for Mermaid node IDs (no spaces or special chars)
+        const sanitize = (name) => name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '');
+        for (const node of nodes) {
+            const fromId = sanitize(node.screen);
+            const fromLabel = node.screen;
+            lines.push(`  ${fromId}["${fromLabel}"]`);
+            for (const edge of node.connections) {
+                const toId = sanitize(edge.targetScreen);
+                const toLabel = edge.targetScreen;
+                const triggerId = edge.triggerElement?.id || edge.triggerElement?.accessibilityId || edge.triggerElement?.text || 'element';
+                const actionLabel = `${edge.action}: ${triggerId.substring(0, 20)}`;
+                const confidence = Math.round(edge.confidence * 100);
+                lines.push(`  ${toId}["${toLabel}"]`);
+                lines.push(`  ${fromId} -->|"${actionLabel} (${confidence}%)"| ${toId}`);
+            }
+        }
+        lines.push('```');
+        return lines.join('\n');
+    }
+    getKnownScreens(projectRoot) {
+        return Array.from(this.graph.nodes.keys());
+    }
     // ─── Private Implementation ──────────────────────────
     async analyzeStepDefinitions(projectRoot) {
         const stepFiles = this.findStepDefinitionFiles(projectRoot);

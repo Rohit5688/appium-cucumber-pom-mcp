@@ -1,5 +1,6 @@
 import { AppiumSessionService } from './AppiumSessionService.js';
-import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
+import { AppForgeError } from '../utils/ErrorFactory.js';
+import { Logger } from '../utils/Logger.js';
 /**
  * SessionManager - Singleton service to manage Appium sessions safely.
  *
@@ -35,6 +36,12 @@ export class SessionManager {
             maxRetryAttempts: 3,
             ...config
         };
+        if (this.config.maxIdleTimeMs < 1000) {
+            throw new Error("maxIdleTimeMs must be >= 1000");
+        }
+        if (this.config.maxMemoryMB < 10) {
+            throw new Error("maxMemoryMB must be >= 10");
+        }
         this.startCleanupTimer();
         this.registerExitHandlers();
     }
@@ -46,10 +53,32 @@ export class SessionManager {
             SessionManager.instance = new SessionManager(config);
         }
         else if (config) {
-            // Warn if trying to reconfigure existing instance
-            console.warn('[SessionManager] Cannot reconfigure existing instance. Use destroyInstance() first.');
+            Logger.warn('Reconfiguring existing instance with new configuration.');
+            SessionManager.instance.reconfigure(config);
         }
         return SessionManager.instance;
+    }
+    reconfigure(config) {
+        if (config.maxIdleTimeMs !== undefined) {
+            if (config.maxIdleTimeMs < 1000)
+                throw new Error("maxIdleTimeMs must be >= 1000");
+            this.config.maxIdleTimeMs = config.maxIdleTimeMs;
+        }
+        if (config.maxMemoryMB !== undefined) {
+            if (config.maxMemoryMB < 10)
+                throw new Error("maxMemoryMB must be >= 10");
+            this.config.maxMemoryMB = config.maxMemoryMB;
+        }
+        if (config.cleanupIntervalMs !== undefined) {
+            this.config.cleanupIntervalMs = config.cleanupIntervalMs;
+            if (this.cleanupTimer) {
+                clearInterval(this.cleanupTimer);
+                this.startCleanupTimer();
+            }
+        }
+        if (config.maxRetryAttempts !== undefined) {
+            this.config.maxRetryAttempts = config.maxRetryAttempts;
+        }
     }
     /**
      * Get or create a session for the given project root.
@@ -60,13 +89,13 @@ export class SessionManager {
      */
     async getSession(projectRoot, profileName, forceNew = false) {
         if (this.isShuttingDown) {
-            throw new AppForgeError(ErrorCode.E002_DEVICE_OFFLINE, 'SessionManager is shutting down. Cannot create new sessions.', ['Wait for current operations to complete', 'Restart the process if needed']);
+            throw new AppForgeError("E002_DEVICE_OFFLINE", 'SessionManager is shutting down. Cannot create new sessions.', ['Wait for current operations to complete', 'Restart the process if needed']);
         }
         const normalizedPath = this.normalizePath(projectRoot);
         // Check if session creation is already in progress (RACE CONDITION FIX)
         const existingLock = this.sessionLocks.get(normalizedPath);
         if (existingLock) {
-            console.error(`[SessionManager] Waiting for in-progress session creation: ${normalizedPath}`);
+            Logger.info(`Waiting for in-progress session creation: ${normalizedPath}`);
             return existingLock;
         }
         const existing = this.sessions.get(normalizedPath);
@@ -74,7 +103,7 @@ export class SessionManager {
         if (existing && !forceNew) {
             if (await this.isSessionHealthy(existing)) {
                 existing.lastUsedAt = Date.now();
-                console.error(`[SessionManager] Reusing existing session for ${normalizedPath}`);
+                Logger.info(`Reusing existing session for ${normalizedPath}`);
                 return existing.service;
             }
             else {
@@ -126,11 +155,41 @@ export class SessionManager {
         }
         const cleanupPromises = Array.from(this.sessions.keys()).map(projectRoot => this.cleanupSession(projectRoot));
         await Promise.allSettled(cleanupPromises);
-        console.error('[SessionManager] All sessions cleaned up during shutdown');
+        Logger.info('All sessions cleaned up during shutdown');
     }
     /**
      * Get memory usage statistics
      */
+    getSessionHealthMetrics() {
+        const now = Date.now();
+        let totalSessions = 0;
+        let activeSessions = 0;
+        let failedSessions = 0;
+        let totalAge = 0;
+        let oldestSession = 0;
+        for (const record of this.sessions.values()) {
+            totalSessions++;
+            if (record.isActive) {
+                activeSessions++;
+            }
+            else {
+                failedSessions++;
+            }
+            const age = now - record.createdAt;
+            totalAge += age;
+            if (age > oldestSession) {
+                oldestSession = age;
+            }
+        }
+        const averageSessionAge = totalSessions > 0 ? totalAge / totalSessions : 0;
+        return {
+            totalSessions,
+            activeSessions,
+            failedSessions,
+            averageSessionAge,
+            oldestSession
+        };
+    }
     getMemoryStats() {
         const activeSessions = Array.from(this.sessions.values()).filter(s => s.isActive).length;
         // TODO: Integrate with ScreenshotStorage to get actual memory usage
@@ -145,7 +204,7 @@ export class SessionManager {
         let lastError = null;
         for (let attempt = 1; attempt <= this.config.maxRetryAttempts; attempt++) {
             try {
-                console.error(`[SessionManager] Creating session for ${projectRoot} (attempt ${attempt}/${this.config.maxRetryAttempts})`);
+                Logger.info(`Creating session for ${projectRoot} (attempt ${attempt}/${this.config.maxRetryAttempts})`);
                 const service = new AppiumSessionService();
                 const sessionInfo = await service.startSession(projectRoot, profileName);
                 const record = {
@@ -157,21 +216,21 @@ export class SessionManager {
                     isActive: true
                 };
                 this.sessions.set(projectRoot, record);
-                console.error(`[SessionManager] ✅ Session created successfully: ${sessionInfo.sessionId}`);
+                Logger.info(`Session created successfully: ${sessionInfo.sessionId}`);
                 return service;
             }
             catch (error) {
                 lastError = error;
-                console.error(`[SessionManager] ❌ Session creation failed (attempt ${attempt}): ${error.message}`);
+                Logger.error(`Session creation failed (attempt ${attempt})`, { error: error.message });
                 if (attempt < this.config.maxRetryAttempts) {
                     const delayMs = Math.pow(2, attempt - 1) * 1000; // Exponential backoff: 1s, 2s, 4s
-                    console.error(`[SessionManager] Retrying in ${delayMs}ms...`);
+                    Logger.info(`Retrying in ${delayMs}ms...`);
                     await this.delay(delayMs);
                 }
             }
         }
         // All retries failed
-        throw new AppForgeError(ErrorCode.E001_NO_SESSION, `Failed to create session after ${this.config.maxRetryAttempts} attempts. Last error: ${lastError?.message}`, [
+        throw new AppForgeError("E001_NO_SESSION", `Failed to create session after ${this.config.maxRetryAttempts} attempts. Last error: ${lastError?.message}`, [
             'Check if Appium server is running (npx appium)',
             'Verify device/emulator is connected (adb devices / xcrun simctl list)',
             'Ensure app is installed and capabilities are correct',
@@ -191,11 +250,11 @@ export class SessionManager {
         if (!record)
             return;
         try {
-            console.error(`[SessionManager] Cleaning up session for ${projectRoot}`);
+            Logger.info(`Cleaning up session for ${projectRoot}`);
             await record.service.endSession();
         }
         catch (error) {
-            console.error(`[SessionManager] ⚠️ Error during session cleanup: ${error.message}`);
+            Logger.warn("Error during session cleanup", { error: error.message });
         }
         finally {
             this.sessions.delete(projectRoot);
@@ -214,7 +273,7 @@ export class SessionManager {
         for (const [projectRoot, record] of this.sessions.entries()) {
             const idleTime = now - record.lastUsedAt;
             if (idleTime > this.config.maxIdleTimeMs) {
-                console.error(`[SessionManager] Session ${projectRoot} idle for ${Math.round(idleTime / 1000)}s, cleaning up...`);
+                Logger.info(`Session ${projectRoot} idle for ${Math.round(idleTime / 1000)}s, cleaning up...`);
                 idleProjectRoots.push(projectRoot);
             }
         }
@@ -229,7 +288,7 @@ export class SessionManager {
             return;
         SessionManager.hasRegisteredHandlers = true;
         const cleanup = async () => {
-            console.error('[SessionManager] Process exit detected, cleaning up sessions...');
+            Logger.info('Process exit detected, cleaning up sessions...');
             await this.endAllSessions();
         };
         // Handle various exit scenarios
@@ -246,12 +305,12 @@ export class SessionManager {
             process.exit(0);
         });
         process.on('uncaughtException', async (error) => {
-            console.error('[SessionManager] Uncaught exception, cleaning up sessions...', error);
+            Logger.error('Uncaught exception, cleaning up sessions...', { error: String(error) });
             await cleanup();
             process.exit(1);
         });
         process.on('unhandledRejection', async (reason) => {
-            console.error('[SessionManager] Unhandled rejection, cleaning up sessions...', reason);
+            Logger.error('Unhandled rejection, cleaning up sessions...', { reason: String(reason) });
             await cleanup();
             process.exit(1);
         });

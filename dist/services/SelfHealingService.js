@@ -1,10 +1,11 @@
 import { ScreenshotStorage } from '../utils/ScreenshotStorage.js';
+import { AppForgeError } from '../utils/ErrorFactory.js';
 export class SelfHealingService {
-    sessionService = null;
+    sessionManager = null;
     learningService = null;
-    /** Inject a live session for selector verification. */
-    setSessionService(service) {
-        this.sessionService = service;
+    /** Inject a live session manager for selector verification. */
+    setSessionManager(manager) {
+        this.sessionManager = manager;
     }
     setLearningService(service) {
         this.learningService = service;
@@ -21,7 +22,7 @@ export class SelfHealingService {
      *
      * SCREENSHOT FIX: Now accepts screenshotPath instead of base64 to prevent context overflow.
      */
-    async analyzeMobileFailure(testOutput, xmlHierarchy, screenshotPath, maxCandidates = 3) {
+    async analyzeMobileFailure(projectRoot, testOutput, xmlHierarchy, screenshotPath, maxCandidates = 3) {
         // 1. Classify the root cause
         const isLocatorIssue = /NoSuchElementError|TimeoutError|element.*not.*found|stale element/i.test(testOutput);
         const isSyncIssue = /timeout|ETIMEDOUT|navigation timeout|waitFor/i.test(testOutput) && !isLocatorIssue;
@@ -42,10 +43,11 @@ export class SelfHealingService {
         // 3. Scan XML hierarchy for alternative selectors
         const alternativeSelectors = this.findAlternatives(xmlHierarchy, failedSelector, maxCandidates);
         // 4. If live session available, verify which alternatives actually exist on device
-        if (this.sessionService?.isSessionActive() && alternativeSelectors.length > 0) {
+        if (this.sessionManager?.hasActiveSession(projectRoot) && alternativeSelectors.length > 0) {
+            const sessionService = await this.sessionManager.getSession(projectRoot);
             const verified = [];
             for (const sel of alternativeSelectors) {
-                const result = await this.sessionService.verifySelector(sel);
+                const result = await sessionService.verifySelector(sel);
                 verified.push({ selector: sel, ...result });
             }
             const validSelectors = verified.filter(v => v.exists).map(v => v.selector);
@@ -115,16 +117,16 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
      *
      * SCREENSHOT FIX: Now uses screenshot storage instead of passing base64.
      */
-    async healWithRetry(testOutput, xmlHierarchy, screenshotPath, attempt = 1, maxAttempts = 3, confidenceThreshold = 0.7, maxCandidates = 3) {
+    async healWithRetry(projectRoot, testOutput, xmlHierarchy, screenshotPath, attempt = 1, maxAttempts = 3, confidenceThreshold = 0.7, maxCandidates = 3) {
         // If live session is available, use fresh data instead of stale input
         let xml = xmlHierarchy;
         let screenshot = screenshotPath;
-        if (this.sessionService?.isSessionActive()) {
+        if (this.sessionManager?.hasActiveSession(projectRoot)) {
             try {
-                xml = await this.sessionService.getPageSource();
-                const screenshotBase64 = await this.sessionService.takeScreenshot();
+                const sessionService = await this.sessionManager.getSession(projectRoot);
+                xml = await sessionService.getPageSource();
+                const screenshotBase64 = await sessionService.takeScreenshot();
                 // Store screenshot instead of passing base64
-                const projectRoot = process.cwd();
                 const storage = new ScreenshotStorage(projectRoot);
                 const stored = storage.store(screenshotBase64, 'heal');
                 screenshot = stored.relativePath;
@@ -133,7 +135,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
                 // Fall back to provided data
             }
         }
-        const instruction = await this.analyzeMobileFailure(testOutput, xml, screenshot, maxCandidates);
+        const instruction = await this.analyzeMobileFailure(projectRoot, testOutput, xml, screenshot, maxCandidates);
         const prompt = this.buildVisionHealPrompt(instruction, xml, screenshot);
         return {
             instruction,
@@ -146,11 +148,12 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
      * Verifies a healed selector against the live device.
      * Call after the LLM proposes a fix to confirm it works.
      */
-    async verifyHealedSelector(selector) {
-        if (!this.sessionService?.isSessionActive()) {
-            return { selector, exists: false, displayed: false, enabled: false };
+    async verifyHealedSelector(projectRoot, selector) {
+        if (!this.sessionManager?.hasActiveSession(projectRoot)) {
+            throw new AppForgeError('SESSION_REQUIRED', 'No active Appium session available to verify selector.', ['Call start_appium_session first before invoking verify_selector.']);
         }
-        const result = await this.sessionService.verifySelector(selector);
+        const sessionService = await this.sessionManager.getSession(projectRoot);
+        const result = await sessionService.verifySelector(selector);
         return { selector, ...result };
     }
     // ─── Private Helpers ───────────────────────────────────

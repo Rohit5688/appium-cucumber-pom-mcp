@@ -104,18 +104,44 @@ export class EnvironmentCheckService {
     async checkAppiumDrivers(platform) {
         try {
             const { stdout } = await execFileAsync('appium', ['driver', 'list', '--installed', '--json']);
-            let drivers;
+            let drivers = {};
             try {
                 drivers = JSON.parse(stdout);
             }
-            catch {
+            catch (parseError) {
                 // Appium printed non-JSON output (warnings, deprecation notices)
-                // Fall back: check if the output contains the driver name as plain text
-                const fallbackText = stdout.toLowerCase();
-                const needed = platform === 'ios' ? 'xcuitest' : 'uiautomator2';
-                return fallbackText.includes(needed)
-                    ? { name: 'Appium Driver', status: 'pass', message: `${needed} driver appears installed (fallback parse)` }
-                    : { name: 'Appium Driver', status: 'warn', message: 'Could not parse driver list JSON', fixHint: `Verify with: appium driver list --installed` };
+                // Extract JSON by finding the first '[' or '{'
+                const jsonStartIndexSquare = stdout.indexOf('[');
+                const jsonStartIndexCurly = stdout.indexOf('{');
+                let jsonStart = -1;
+                if (jsonStartIndexSquare !== -1 && jsonStartIndexCurly !== -1) {
+                    jsonStart = Math.min(jsonStartIndexSquare, jsonStartIndexCurly);
+                }
+                else if (jsonStartIndexSquare !== -1) {
+                    jsonStart = jsonStartIndexSquare;
+                }
+                else if (jsonStartIndexCurly !== -1) {
+                    jsonStart = jsonStartIndexCurly;
+                }
+                if (jsonStart !== -1) {
+                    try {
+                        drivers = JSON.parse(stdout.slice(jsonStart));
+                    }
+                    catch {
+                        const fallbackText = stdout.toLowerCase();
+                        const needed = platform === 'ios' ? 'xcuitest' : 'uiautomator2';
+                        return fallbackText.includes(needed)
+                            ? { name: 'Appium Driver', status: 'pass', message: `${needed} driver appears installed (fallback parse)` }
+                            : { name: 'Appium Driver', status: 'warn', message: 'Could not parse driver list output.', fixHint: `Verify with: appium driver list --installed` };
+                    }
+                }
+                else {
+                    const fallbackText = stdout.toLowerCase();
+                    const needed = platform === 'ios' ? 'xcuitest' : 'uiautomator2';
+                    return fallbackText.includes(needed)
+                        ? { name: 'Appium Driver', status: 'pass', message: `${needed} driver appears installed (fallback parse)` }
+                        : { name: 'Appium Driver', status: 'warn', message: 'Could not parse driver list output.', fixHint: `Verify with: appium driver list --installed` };
+                }
             }
             const needed = platform === 'ios' ? 'xcuitest' : 'uiautomator2';
             const driverKeys = Object.keys(drivers);

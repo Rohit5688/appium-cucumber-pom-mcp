@@ -1,7 +1,7 @@
 import { describe, it, beforeEach } from 'node:test';
 import * as assert from 'node:assert';
 import { SessionManager } from '../services/SessionManager.js';
-import { AppForgeError } from '../utils/ErrorCodes.js';
+import { AppForgeError } from '../utils/ErrorFactory.js';
 import * as fs from 'fs';
 import * as path from 'path';
 describe('SessionManager - Critical Session Stability Tests', () => {

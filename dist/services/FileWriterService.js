@@ -4,7 +4,7 @@ import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { auditGeneratedCode, auditFeatureFile, validateProjectRoot, validateFilePath } from '../utils/SecurityUtils.js';
-import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
+import { AppForgeError } from '../utils/ErrorFactory.js';
 const execFileAsync = promisify(execFile);
 export class FileWriterService {
     /**
@@ -62,7 +62,7 @@ export class FileWriterService {
             if (!validation.valid) {
                 // Clean up staging
                 await this.cleanStaging(stagingDir);
-                throw new AppForgeError(ErrorCode.E006_TS_COMPILE_FAIL, "TypeScript compilation failed during validation.", [
+                throw new AppForgeError("E006_TS_COMPILE_FAIL", "TypeScript compilation failed during validation.", [
                     "Review the tsc output below and fix the generated TypeScript files.",
                     ...validation.errors
                 ]);

@@ -1,6 +1,6 @@
 # TASK-29 — Standardized API Error Contract, `safeExecute`, and Semantic Versioning
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~2 hours)  
 **Depends on**: TASK-27 (which decoupled `index.ts` handler architecture)  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -40,8 +40,8 @@ From `AI_DELIVERABLE_CHUNKS.md` Phase 5, the AppForge server needs a unified err
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors.
-- [ ] Version constant exposed through tool manifests. 
-- [ ] `CHANGELOG.md` and `DEPRECATION_POLICY.md` exist at root.
-- [ ] Custom validation, execution, and appium errors are funneled through `safeExecute`.
-- [ ] Change `Status` above to `DONE`.
+- [x] `npm run build` passes with zero errors.
+- [x] Version constant exposed through tool manifests. 
+- [x] `CHANGELOG.md` and `DEPRECATION_POLICY.md` exist at root.
+- [x] Custom validation, execution, and appium errors are funneled through `safeExecute`.
+- [x] Change `Status` above to `DONE`.

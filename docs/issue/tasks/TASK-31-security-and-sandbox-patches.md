@@ -1,6 +1,6 @@
 # TASK-31 — Security Hardening, Path Traversal, and Sandbox Escapes
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~2 hours)  
 **Depends on**: None  
 **Build check**: `npm run build` in `c:\Users\Rohit\mcp\AppForge`
@@ -34,7 +34,7 @@ From `APPFORGE_FRESH_AUDIT.md`, multiple severe security vulnerabilities, protot
 ---
 
 ## Done Criteria
-- [ ] `npm run build` passes with zero errors.
-- [ ] Sandbox throws explicit security exceptions when `Object.getPrototypeOf` or arbitrary traversals are invoked.
-- [ ] `.env` is safely git-ignored upon running `set_credentials`. 
-- [ ] Change `Status` above to `DONE`.
+- [x] `npm run build` passes with zero errors.
+- [x] Sandbox throws explicit security exceptions when `Object.getPrototypeOf` or arbitrary traversals are invoked.
+- [x] `.env` is safely git-ignored upon running `set_credentials`. 
+- [x] Change `Status` above to `DONE`.

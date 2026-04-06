@@ -17,6 +17,21 @@ import { McpConfigService } from './McpConfigService.js';
 export class UtilAuditService {
     analyzerService = new CodebaseAnalyzerService();
     configService = new McpConfigService();
+    /** Core Appium utility methods that every mobile test project should cover. */
+    ESSENTIAL_APPIUM_METHODS = [
+        // Gestures
+        'tap', 'doubleTap', 'longPress', 'swipe', 'dragAndDrop', 'scroll', 'scrollIntoView',
+        // Waits
+        'waitForElement', 'waitForElementVisible', 'waitForElementClickable', 'waitForElementGone',
+        // Assertions
+        'assertText', 'assertVisible', 'assertScreenshot', 'assertElementExists',
+        // Input
+        'typeText', 'clearText', 'hideKeyboard',
+        // Context
+        'switchToWebView', 'switchToNativeApp',
+        // Misc
+        'handleOTP', 'takeScreenshot'
+    ];
     async audit(projectRoot, customWrapperPackage) {
         // ISSUE #20 FIX: Read mcp-config.json to respect configured directories
         let config;
@@ -130,11 +145,18 @@ export class UtilAuditService {
                 actionableSuggestions.push(`Add ${entry.suggestedUtilClass}.${entry.method}() to ${entry.suggestedUtilClass}.ts`);
             }
         }
-        // Convert Sets to Arrays for the result
         const present = Array.from(presentSet);
         const coveredByWrapper = Array.from(coveredByWrapperSet);
         const total = present.length + missing.length;
         const coveragePercent = Math.round((present.length / (total || 1)) * 100);
+        // Checklist-based coverage: measure against ESSENTIAL_APPIUM_METHODS
+        const allProjectMethods = new Set([
+            ...present.map(m => m.toLowerCase()),
+            ...coveredByWrapper.map(m => m.toLowerCase())
+        ]);
+        const presentMethods = this.ESSENTIAL_APPIUM_METHODS.filter(m => allProjectMethods.has(m.toLowerCase()));
+        const missingMethods = this.ESSENTIAL_APPIUM_METHODS.filter(m => !allProjectMethods.has(m.toLowerCase()));
+        const checklistCoveragePercent = Math.round((presentMethods.length / (this.ESSENTIAL_APPIUM_METHODS.length || 1)) * 100);
         const customWrapperNote = wrapperResolved
             ? wrapperInstalled
                 ? `✅ Custom wrapper "${resolvedWrapper}" detected — ${coveredByWrapper.length} method(s) provided by wrapper, counted as present.`
@@ -142,6 +164,11 @@ export class UtilAuditService {
             : undefined;
         return {
             coveragePercent,
+            checklistCoveragePercent,
+            checkedMethods: this.ESSENTIAL_APPIUM_METHODS,
+            presentMethods,
+            missingMethods,
+            note: "Coverage is measured against a recommended checklist of core Appium utility patterns, not total method count.",
             present,
             coveredByWrapper,
             missing,

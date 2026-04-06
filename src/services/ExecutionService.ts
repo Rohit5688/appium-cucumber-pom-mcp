@@ -1,10 +1,12 @@
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
-import type { AppiumSessionService } from './AppiumSessionService.js';
+import { SessionManager } from './SessionManager.js';
 import { McpConfigService } from './McpConfigService.js';
 import { Questioner } from '../utils/Questioner.js';
+import { Logger } from '../utils/Logger.js';
 import { ScreenshotStorage } from '../utils/ScreenshotStorage.js';
+import { AppForgeError } from '../utils/ErrorFactory.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -46,11 +48,11 @@ export interface ParsedElement {
 }
 
 export class ExecutionService {
-  private sessionService: AppiumSessionService | null = null;
+  private sessionManager: SessionManager | null = null;
 
-  /** Inject a live session service for auto-fetch capabilities. */
-  public setSessionService(service: AppiumSessionService): void {
-    this.sessionService = service;
+  /** Inject a live session manager for auto-fetch capabilities. */
+  public setSessionManager(manager: SessionManager): void {
+    this.sessionManager = manager;
   }
 
   /**
@@ -149,9 +151,21 @@ export class ExecutionService {
         command = config.project.executionCommand;
       } else {
         const defaultConf = fs.existsSync(path.join(projectRoot, 'wdio.conf.ts'))
-          ? 'wdio.conf.ts' : 'wdio.conf.js';
-        command = `npx wdio run ${defaultConf}`;
-        console.warn(`[AppForge] ⚠️ No executionCommand in mcp-config.json — using default: ${command}`);
+          ? 'wdio.conf.ts'
+          : fs.existsSync(path.join(projectRoot, 'wdio.conf.js'))
+            ? 'wdio.conf.js'
+            : null;
+        if (defaultConf) {
+          command = `npx wdio run ${defaultConf}`;
+          Logger.info(`No executionCommand configured — using detected: ${command}`);
+        } else {
+          throw new AppForgeError(
+            "E008_PRECONDITION_FAIL",
+            'No test execution command found.',
+            ['Add "project": { "executionCommand": "npx wdio run wdio.conf.ts" } to mcp-config.json',
+             'Or pass overrideCommand to run_cucumber_test']
+          );
+        }
       }
       
       // We only append specific arguments if we're dealing with a wdio execution command natively
@@ -246,16 +260,17 @@ export class ExecutionService {
 
       // Auto-capture failure context from live session if available
       let failureContext: ExecutionResult['failureContext'];
-      if (this.sessionService?.isSessionActive()) {
+      if (this.sessionManager?.hasActiveSession(projectRoot)) {
         try {
-          const screenshot = await this.sessionService.takeScreenshot();
+          const sessionService = await this.sessionManager.getSession(projectRoot);
+          const screenshot = await sessionService.takeScreenshot();
           const storage = new ScreenshotStorage(projectRoot);
           const stored = storage.store(screenshot, 'failure');
           
           failureContext = {
             screenshotPath: stored.relativePath,
             screenshotSize: stored.size,
-            pageSource: await this.sessionService.getPageSource(),
+            pageSource: await sessionService.getPageSource(),
             timestamp: new Date().toISOString()
           };
         } catch {
@@ -302,8 +317,12 @@ export class ExecutionService {
     // FAST PATH: If stepHints provided, try native on-device query first
     if (stepHints && stepHints.length > 0 && !xmlDump) {
       const keywords = this.extractStepKeywords(stepHints);
-      const platform = this.sessionService?.getPlatform() ?? 'android';
-      const nativeElements = await this.findElementsByKeywords(keywords, platform as any);
+      let platform = 'android';
+      if (this.sessionManager?.hasActiveSession(projectRoot)) {
+        const sessionService = await this.sessionManager.getSession(projectRoot);
+        platform = sessionService.getPlatform() ?? 'android';
+      }
+      const nativeElements = await this.findElementsByKeywords(keywords, platform as any, projectRoot);
 
       if (nativeElements.length > 0) {
         const snapshotLines = [
@@ -330,18 +349,20 @@ export class ExecutionService {
     }
 
     // Auto-fetch from live session if no XML provided
-    if (!xml && this.sessionService?.isSessionActive()) {
-      xml = await this.sessionService.getPageSource();
+    if (!xml && this.sessionManager?.hasActiveSession(projectRoot)) {
+      const sessionService = await this.sessionManager.getSession(projectRoot);
+      xml = await sessionService.getPageSource();
       // Cache the XML for self-heal recovery (chicken-and-egg fix)
-      this.sessionService.cacheXml(xml);
-      screenshot = await this.sessionService.takeScreenshot();
+      sessionService.cacheXml(xml);
+      screenshot = await sessionService.takeScreenshot();
       source = 'live_session';
     }
 
     if (!xml) {
-      throw new Error(
-        'No XML hierarchy provided and no active Appium session. ' +
-        'Either provide xmlDump or call start_appium_session first.'
+      throw new AppForgeError(
+        'SESSION_REQUIRED',
+        'No active Appium session and no XML dump provided.',
+        ['Call start_appium_session first before inspecting UI, or provide xmlDump.']
       );
     }
 
@@ -586,12 +607,13 @@ export class ExecutionService {
    */
   private async findElementsByKeywords(
     keywords: string[],
-    platform: 'android' | 'ios' | 'both'
+    platform: 'android' | 'ios' | 'both',
+    projectRoot: string
   ): Promise<{ locator: string; text: string; tag: string }[]> {
-    const session = this.sessionService;
-    if (!session?.isSessionActive()) return [];
+    if (!this.sessionManager?.hasActiveSession(projectRoot)) return [];
 
-    const driver = session.getDriver();
+    const sessionService = await this.sessionManager.getSession(projectRoot);
+    const driver = sessionService.getDriver();
     if (!driver) return [];
 
     const results: { locator: string; text: string; tag: string }[] = [];
@@ -659,7 +681,7 @@ export class ExecutionService {
       // Cap at 2 hours for safety
       const cappedTimeout = Math.min(explicitTimeoutMs, 7200000);
       if (cappedTimeout !== explicitTimeoutMs) {
-        console.warn(`[AppForge] ⚠️ Timeout capped at 2 hours (7200000ms). Requested: ${explicitTimeoutMs}ms`);
+        Logger.warn(`Timeout capped at 2 hours (7200000ms). Requested: ${explicitTimeoutMs}ms`);
       }
       return { value: cappedTimeout, source: 'explicit' };
     }
@@ -707,7 +729,7 @@ export class ExecutionService {
         if (cucumberTimeoutMatch) {
           const timeout = parseInt(cucumberTimeoutMatch[1], 10);
           if (timeout > 0) {
-            console.log(`[AppForge] ℹ️ Detected cucumberOpts.timeout from ${configFile}: ${timeout}ms`);
+            Logger.info(`Detected cucumberOpts.timeout from ${configFile}: ${timeout}ms`);
             return timeout;
           }
         }
@@ -717,7 +739,7 @@ export class ExecutionService {
         if (waitforTimeoutMatch) {
           const timeout = parseInt(waitforTimeoutMatch[1], 10);
           if (timeout > 0) {
-            console.log(`[AppForge] ℹ️ Detected waitforTimeout from ${configFile}: ${timeout}ms`);
+            Logger.info(`Detected waitforTimeout from ${configFile}: ${timeout}ms`);
             return timeout;
           }
         }

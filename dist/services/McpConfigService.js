@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { AppForgeError, ErrorCode } from '../utils/ErrorCodes.js';
+import { Logger } from '../utils/Logger.js';
+import { AppForgeError } from '../utils/ErrorFactory.js';
 /** Returns safe default paths merged with config paths. */
 function resolvePaths(config) {
     return {
@@ -18,14 +19,14 @@ export class McpConfigService {
     read(projectRoot) {
         const configPath = path.join(projectRoot, this.configFileName);
         if (!fs.existsSync(configPath)) {
-            throw new AppForgeError(ErrorCode.E008_PRECONDITION_FAIL, `Configuration file not found at ${configPath}. Please run setup_project first.`, ["Run setup_project"]);
+            throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}. Please run setup_project first.`, ["Run setup_project"]);
         }
         try {
             const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
             return raw;
         }
         catch (error) {
-            throw new AppForgeError(ErrorCode.E005_CONFIG_CORRUPT, `Failed to parse mcp-config.json: ${error.message}. Fix the JSON syntax error (trailing comma, missing brace, etc.) and retry.`, ["Fix the JSON syntax error in mcp-config.json", "Run: npx jsonlint mcp-config.json"]);
+            throw new AppForgeError("E005_CONFIG_CORRUPT", `Failed to parse mcp-config.json: ${error.message}. Fix the JSON syntax error (trailing comma, missing brace, etc.) and retry.`, ["Fix the JSON syntax error in mcp-config.json", "Run: npx jsonlint mcp-config.json"]);
         }
     }
     /**
@@ -125,7 +126,7 @@ export class McpConfigService {
     }
     updateAppPath(projectRoot, platform, appPath, forceWrite = false) {
         if (!fs.existsSync(appPath) && !appPath.startsWith('http') && !forceWrite) {
-            console.warn(`[AppForge] ⚠️ appPath does not exist on disk: ${appPath}. Saving anyway (forceWrite was not set but proceeding defensively).`);
+            Logger.warn(`appPath does not exist on disk: ${appPath}. Saving anyway (forceWrite was not set but proceeding defensively).`);
         }
         const config = this.read(projectRoot);
         for (const profileName in config.mobile.capabilitiesProfiles) {

@@ -1,6 +1,7 @@
 import path from 'path';
 import { Project, SyntaxKind } from 'ts-morph';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 
 export interface LocatorAuditEntry {
   file: string;
@@ -25,109 +26,20 @@ export class AuditLocatorService {
   /**
    * Scans all Page Objects in the project and audits their locator strategies.
    * Flags brittle XPaths and generates a Markdown report with recommendations.
+   * Supports TypeScript, YAML, and mixed locator architectures.
    */
   public async audit(projectRoot: string, dirsToScan: string[] = ['pages', 'src/pages', 'locators', 'src/locators']): Promise<LocatorAuditReport> {
-    const pageFiles: string[] = [];
-    for (const dirName of dirsToScan) {
-      const dirPath = path.join(projectRoot, dirName);
-      pageFiles.push(...(await this.listFiles(dirPath, ['.ts', '.yaml', '.yml'])));
+    const arch = this.detectArchitecture(projectRoot, dirsToScan);
+    let allEntries: LocatorAuditEntry[] = [];
+
+    if (arch === 'typescript' || arch === 'mixed') {
+      allEntries.push(...await this.parseTypeScriptLocators(projectRoot, dirsToScan));
+    }
+    if (arch === 'yaml' || arch === 'mixed') {
+      allEntries.push(...this.parseYamlLocators(projectRoot));
     }
 
-    const entries: LocatorAuditEntry[] = [];
-
-    if (pageFiles.length > 0) {
-      const tsFiles = pageFiles.filter(f => f.endsWith('.ts'));
-      const yamlFiles = pageFiles.filter(f => f.endsWith('.yaml') || f.endsWith('.yml'));
-
-      // Process YAML files
-      for (const f of yamlFiles) {
-        try {
-          const content = await fs.readFile(f, 'utf-8');
-          const relPath = path.relative(projectRoot, f);
-          const className = path.basename(f, path.extname(f));
-          const yamlPattern = /^[\s]*([\w-]+):\s*(['"]?)(.+?)\2\s*$/gm;
-          let match;
-          while ((match = yamlPattern.exec(content)) !== null) {
-            const key = match[1];
-            const val = match[3];
-            // ISSUE #18 FIX: Expanded selector detection to include all 5 types:
-            // 1. ~ (accessibility-id)
-            // 2. // or / (xpath)
-            // 3. :id/ (resource-id Android format)
-            // 4. id= (WebdriverIO id selector prefix)
-            // 5. . or # (CSS class/ID selectors)
-            // Previously only detected types 1-3, missing id= and CSS selectors
-            if (val.startsWith('~') || 
-                val.startsWith('//') || 
-                val.startsWith('/') || 
-                val.includes(':id/') ||
-                val.startsWith('id=') ||
-                val.startsWith('.') ||
-                val.startsWith('#')) {
-              entries.push(this.classifyEntry(relPath, className, key, val));
-            }
-          }
-        } catch {
-          // Ignore read errors
-        }
-      }
-
-      // Process TS files AST
-      if (tsFiles.length > 0) {
-        const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
-        for (const f of tsFiles) {
-          project.addSourceFileAtPath(f);
-        }
-
-      for (const sourceFile of project.getSourceFiles()) {
-        for (const cls of sourceFile.getClasses()) {
-          const className = cls.getName() ?? 'AnonymousClass';
-          const relPath = path.relative(projectRoot, sourceFile.getFilePath());
-
-          // BUG-08 FIX: Match all common WDIO selector call styles:
-          //   $('sel')              — WDIO shorthand (original, still supported)
-          //   driver.$('sel')       — WDIO v8 explicit driver reference
-          //   browser.$('sel')      — WDIO browser global
-          //   driver.findElement()  — W3C WebDriver API
-          // Previously only $(...) was scanned — any modern project using driver.$ or
-          // browser.$ returned 0 locators making the audit completely useless.
-          const SELECTOR_PATTERN = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/;
-          const SELECTOR_PATTERN_ALL = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/g;
-          const FIND_ELEMENT_PATTERN = /(?:driver|browser)\.findElement\s*\(\s*['"`]?([^)]+?)['"`]?\s*\)/g;
-
-          // Scan getters
-          for (const getter of cls.getGetAccessors()) {
-            const body = getter.getBody()?.getText() ?? '';
-            const match = body.match(SELECTOR_PATTERN);
-            if (match) {
-              entries.push(this.classifyEntry(relPath, className, getter.getName(), match[1]));
-            }
-          }
-
-          // Scan properties  
-          for (const prop of cls.getProperties()) {
-            const initializer = prop.getInitializer()?.getText() ?? '';
-            const match = initializer.match(SELECTOR_PATTERN);
-            if (match) {
-              entries.push(this.classifyEntry(relPath, className, prop.getName(), match[1]));
-            }
-          }
-
-          // Scan method bodies for inline selectors (all WDIO patterns + findElement)
-          for (const method of cls.getMethods()) {
-            const body = method.getBody()?.getText() ?? '';
-            for (const m of body.matchAll(SELECTOR_PATTERN_ALL)) {
-              entries.push(this.classifyEntry(relPath, className, `${method.getName()}() inline`, m[1]));
-            }
-            for (const m of body.matchAll(FIND_ELEMENT_PATTERN)) {
-              entries.push(this.classifyEntry(relPath, className, `${method.getName()}() findElement`, m[1]));
-            }
-          }
-        }
-      }
-    }
-    }
-
+    const entries = allEntries;
     const accessibilityIdCount = entries.filter(e => e.strategy === 'accessibility-id').length;
     const xpathCount = entries.filter(e => e.strategy === 'xpath').length;
     const otherCount = entries.length - accessibilityIdCount - xpathCount;
@@ -142,6 +54,176 @@ export class AuditLocatorService {
     };
 
     return report;
+  }
+
+  /**
+   * Detects whether the project uses TypeScript page objects, YAML locator files, or both.
+   */
+  private detectArchitecture(projectRoot: string, tsDirs: string[]): 'typescript' | 'yaml' | 'mixed' {
+    const yamlSearchDirs = ['locators', 'src/locators', 'test/locators', 'resources'];
+    const hasYaml = yamlSearchDirs.some(d => {
+      const full = path.join(projectRoot, d);
+      return fsSync.existsSync(full) &&
+        fsSync.readdirSync(full).some(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+    });
+    const hasTs = tsDirs.some(d => {
+      const full = path.join(projectRoot, d);
+      return fsSync.existsSync(full) && fsSync.readdirSync(full).some(f => f.endsWith('.ts'));
+    });
+    if (hasYaml && hasTs) return 'mixed';
+    if (hasYaml) return 'yaml';
+    return 'typescript';
+  }
+
+  /**
+   * Parses YAML locator files and returns audit entries.
+   * Excludes node_modules, .venv, crew_ai, and dist directories.
+   */
+  private parseYamlLocators(projectRoot: string): LocatorAuditEntry[] {
+    const entries: LocatorAuditEntry[] = [];
+    const searchDirs = ['locators', 'src/locators', 'test/locators'];
+
+    for (const dir of searchDirs) {
+      const fullDir = path.join(projectRoot, dir);
+      if (!fsSync.existsSync(fullDir)) continue;
+
+      const files = this.findFilesRecursive(fullDir, ['.yaml', '.yml'])
+        .filter(f =>
+          !f.includes('node_modules') &&
+          !f.includes('.venv') &&
+          !f.includes('crew_ai') &&
+          !f.includes('dist')
+        );
+
+      for (const file of files) {
+        const lines = fsSync.readFileSync(file, 'utf8').split('\n');
+        for (const line of lines) {
+          const match = line.match(/^\s*([\w_]+)\s*:\s*["']?([^#\n'"]+?)["']?\s*(?:#.*)?$/);
+          if (!match) continue;
+          const [, name, selector] = match;
+          const trimmed = selector.trim();
+          if (!trimmed) continue;
+
+          let strategy = 'unknown';
+          let severity: 'ok' | 'warning' | 'critical' = 'ok';
+          let recommendation = '';
+
+          if (trimmed.startsWith('~')) {
+            strategy = 'accessibility-id'; severity = 'ok';
+            recommendation = '✅ Stable — accessibility-id is recommended';
+          } else if (trimmed.startsWith('//') || trimmed.startsWith('(//')) {
+            strategy = 'xpath'; severity = 'critical';
+            recommendation = '❌ Replace XPath with accessibility-id (~) for stability';
+          } else if (trimmed.includes(':id/')) {
+            strategy = 'resource-id'; severity = 'warning';
+            recommendation = '⚠️ Resource-id can break on app updates. Use accessibility-id where possible';
+          } else if (trimmed.startsWith('-ios') || trimmed.startsWith('-android')) {
+            strategy = 'mobile-selector'; severity = 'ok';
+            recommendation = '✅ Mobile-selector strategies are acceptable';
+          }
+
+          if (strategy === 'unknown') continue;
+
+          entries.push({
+            file: path.relative(projectRoot, file),
+            className: path.basename(file, path.extname(file)),
+            locatorName: name,
+            strategy,
+            selector: trimmed,
+            severity,
+            recommendation
+          });
+        }
+      }
+    }
+    return entries;
+  }
+
+  /**
+   * Parses TypeScript page object files and returns audit entries (original logic).
+   */
+  private async parseTypeScriptLocators(projectRoot: string, dirsToScan: string[]): Promise<LocatorAuditEntry[]> {
+    const pageFiles: string[] = [];
+    for (const dirName of dirsToScan) {
+      const dirPath = path.join(projectRoot, dirName);
+      pageFiles.push(...(await this.listFiles(dirPath, ['.ts'])));
+    }
+
+    const entries: LocatorAuditEntry[] = [];
+    if (pageFiles.length === 0) return entries;
+
+    const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
+    for (const f of pageFiles) {
+      project.addSourceFileAtPath(f);
+    }
+
+    for (const sourceFile of project.getSourceFiles()) {
+      for (const cls of sourceFile.getClasses()) {
+        const className = cls.getName() ?? 'AnonymousClass';
+        const relPath = path.relative(projectRoot, sourceFile.getFilePath());
+
+        // BUG-08 FIX: Match all common WDIO selector call styles:
+        //   $('sel')              — WDIO shorthand (original, still supported)
+        //   driver.$('sel')       — WDIO v8 explicit driver reference
+        //   browser.$('sel')      — WDIO browser global
+        //   driver.findElement()  — W3C WebDriver API
+        const SELECTOR_PATTERN = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/;
+        const SELECTOR_PATTERN_ALL = /(?:(?:driver|browser)\.)?\$\(\s*['"`](.+?)['"`]\s*\)/g;
+        const FIND_ELEMENT_PATTERN = /(?:driver|browser)\.findElement\s*\(\s*['"`]?([^)]+?)['"`]?\s*\)/g;
+
+        // Scan getters
+        for (const getter of cls.getGetAccessors()) {
+          const body = getter.getBody()?.getText() ?? '';
+          const match = body.match(SELECTOR_PATTERN);
+          if (match) {
+            entries.push(this.classifyEntry(relPath, className, getter.getName(), match[1]));
+          }
+        }
+
+        // Scan properties
+        for (const prop of cls.getProperties()) {
+          const initializer = prop.getInitializer()?.getText() ?? '';
+          const match = initializer.match(SELECTOR_PATTERN);
+          if (match) {
+            entries.push(this.classifyEntry(relPath, className, prop.getName(), match[1]));
+          }
+        }
+
+        // Scan method bodies for inline selectors (all WDIO patterns + findElement)
+        for (const method of cls.getMethods()) {
+          const body = method.getBody()?.getText() ?? '';
+          for (const m of body.matchAll(SELECTOR_PATTERN_ALL)) {
+            entries.push(this.classifyEntry(relPath, className, `${method.getName()}() inline`, m[1]));
+          }
+          for (const m of body.matchAll(FIND_ELEMENT_PATTERN)) {
+            entries.push(this.classifyEntry(relPath, className, `${method.getName()}() findElement`, m[1]));
+          }
+        }
+      }
+    }
+    return entries;
+  }
+
+  /**
+   * Recursively finds files with the given extensions in a directory (sync).
+   */
+  private findFilesRecursive(dir: string, exts: string[]): string[] {
+    const results: string[] = [];
+    let dirEntries: fsSync.Dirent[];
+    try {
+      dirEntries = fsSync.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return results;
+    }
+    for (const entry of dirEntries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        results.push(...this.findFilesRecursive(fullPath, exts));
+      } else if (exts.some(ext => entry.name.endsWith(ext))) {
+        results.push(fullPath);
+      }
+    }
+    return results;
   }
 
   private classifyEntry(file: string, className: string, locatorName: string, selector: string): LocatorAuditEntry {
