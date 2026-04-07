@@ -38,6 +38,29 @@ This server bridges the gap between natural language test intent and executable,
 
 ---
 
+## ⚡ For AI Agents Working on This Project
+
+**🚨 MANDATORY READING BEFORE STARTING ANY WORK:**
+
+1. **Universal Token Optimization Guide**: [`docs/AGENT_TOKEN_OPTIMIZATION_GUIDE.md`](docs/AGENT_TOKEN_OPTIMIZATION_GUIDE.md)
+   - Universal best practices for minimizing token consumption
+   - Applies to ANY codebase, not just AppForge
+   - Read this FIRST to understand efficient workflow patterns
+
+2. **AppForge-Specific Optimization Notes**: [`.ai-context/optimization-notes.md`](.ai-context/optimization-notes.md)
+   - Project-specific shortcuts and token traps
+   - Known "god nodes" and file reading patterns
+   - Task-specific optimization strategies
+
+**Expected Token Budget**:
+- Simple bug fix: 5,000-10,000 tokens
+- Feature addition: 15,000-30,000 tokens
+- Refactoring: 20,000-40,000 tokens
+
+**Key Principle**: Think first, search second, read targeted sections third. Avoid reading entire files or exploring all services blindly.
+
+---
+
 ## 📦 Installation & Setup
 
 1. **Prerequisites**:

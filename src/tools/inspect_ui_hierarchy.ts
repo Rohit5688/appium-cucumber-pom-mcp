@@ -13,6 +13,7 @@ export function registerInspectUiHierarchy(
       title: "Inspect UI Hierarchy",
       description: "SEE WHAT'S ON SCREEN. Two modes: (1) NO ARGS — fetches live XML and screenshot from the active Appium session. ⚡ REQUIRES ACTIVE SESSION — call start_appium_session first. (2) Pass xmlDump — parses offline with no session needed. Returns: { source, elements[], snapshot }. Use locatorStrategies to build accurate Page Object selectors.",
       inputSchema: z.object({
+        projectRoot: z.string().optional(),
         xmlDump: z.string().optional(),
         screenshotBase64: z.string().optional()
       }),
