@@ -12,3 +12,9 @@ dist/
 test-data/users.local.json
 test-data/users.staging.json
 test-data/users.prod.json
+
+graphify-out
+.AppForge
+help.txt
+detect.json
+.claude/settings.json
