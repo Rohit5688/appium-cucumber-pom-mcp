@@ -12,7 +12,9 @@ export function registerExportNavigationMap(
     "export_navigation_map",
     {
       title: "Export Navigation Map",
-      description: "VISUALIZE APP NAVIGATION. Returns the known screen navigation graph as a Mermaid diagram. Use to understand what screens AppForge has explored and how to navigate between them. Also shows visit counts and confidence scores for each path. Returns: Mermaid diagram string.",
+      description: `VISUALIZE APP NAVIGATION. Returns the known screen navigation graph as a Mermaid diagram. Use to understand what screens AppForge has explored and how to navigate between them. Also shows visit counts and confidence scores for each path. Returns: Mermaid diagram string.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({ projectRoot: z.string() }),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },

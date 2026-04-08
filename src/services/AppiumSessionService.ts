@@ -2,8 +2,10 @@ import { remote, type Browser } from 'webdriverio';
 import { McpConfigService, type McpConfig } from './McpConfigService.js';
 import http from 'http';
 import { Questioner } from '../utils/Questioner.js';
-import { AppForgeError } from '../utils/ErrorFactory.js';
+import { McpErrors } from '../types/ErrorSystem.js';
 import { Logger } from '../utils/Logger.js';
+import type { AppiumCapabilitiesMap } from '../types/AppiumTypes.js';
+import { withRetry, RetryPolicies } from '../utils/RetryEngine.js';
 export interface SessionInfo {
   sessionId: string;
   platformName: string;
@@ -39,7 +41,7 @@ export class AppiumSessionService {
   }
 
   public getPlatform(): string {
-    return ((this.driver?.capabilities as any)?.platformName || 'android').toLowerCase();
+    return ((this.driver?.capabilities as AppiumCapabilitiesMap)?.platformName || 'android').toLowerCase();
   }
 
   /**
@@ -81,30 +83,44 @@ export class AppiumSessionService {
     // Enhanced error handling with proper cleanup
     let driver: Browser | null = null;
     try {
-      driver = await remote({
-        protocol: 'http',
-        hostname,
-        port,
-        path: serverPath,
-        capabilities,
-        // CRITICAL: Suppress WebdriverIO stdout logs to prevent MCP JSON-RPC pipe corruption.
-        // Log output must ONLY go to stderr (console.error), never stdout.
-        logLevel: 'error',
-        // Add connection timeout to prevent hanging
-        connectionRetryTimeout: 30000, // 30 seconds max
-        connectionRetryCount: 3,       // Max 3 retries
-      });
-
-      // Validate session was created successfully
-      if (!driver || !driver.sessionId) {
-        throw new Error('Session created but missing sessionId');
-      }
+      // Wrap session creation with exponential backoff retry for transient Appium failures
+      // (e.g. device USB reconnect, server warm-up delays, CI race conditions).
+      const retryResult = await withRetry(
+        async () => {
+          const d = await remote({
+            protocol: 'http',
+            hostname,
+            port,
+            path: serverPath,
+            capabilities,
+            // CRITICAL: Suppress WebdriverIO stdout logs to prevent MCP JSON-RPC pipe corruption.
+            // Log output must ONLY go to stderr (console.error), never stdout.
+            logLevel: 'error',
+            // Disable wdio's own retries — our RetryEngine manages the outer loop.
+            connectionRetryTimeout: 30000, // 30 seconds max
+            connectionRetryCount: 1,       // Single attempt per withRetry iteration
+          });
+          if (!d || !d.sessionId) {
+            throw new Error('Session created but missing sessionId');
+          }
+          return d;
+        },
+        {
+          ...RetryPolicies.appiumSession,
+          onRetry: (err, attempt, delayMs) => {
+            Logger.warn(
+              `[AppForge] Appium session start failed (attempt ${attempt}): ${err.message}. Retrying in ${delayMs}ms...`
+            );
+          },
+        }
+      );
+      driver = retryResult.value;
 
       // Store the driver reference immediately - session is valid even if initial fetch is slow
       this.driver = driver;
 
       // Get session info
-      const caps = driver.capabilities as any;
+      const caps = driver.capabilities as AppiumCapabilitiesMap;
 
       return {
         sessionId: driver.sessionId,
@@ -121,7 +137,7 @@ export class AppiumSessionService {
           shortcutNote: 'Use openDeepLink(url) from BasePage to jump directly to any deep-linked screen. For Android, use startActivity(package, activity) to open any Activity directly without UI navigation.'
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Critical: Clean up driver on ANY error to prevent resource leaks
       if (driver) {
         try {
@@ -131,49 +147,29 @@ export class AppiumSessionService {
         }
       }
 
-      const msg = error.message || String(error);
+      const msg = error instanceof Error ? error.message : String(error);
 
       if (msg.includes('ECONNREFUSED')) {
-        throw new AppForgeError("E002_DEVICE_OFFLINE",
-          `Cannot connect to Appium at ${serverUrl}. ` +
-          `Make sure Appium is running:\n  npx appium\n` +
-          `Or start it with a specific port:\n  npx appium --port 4723`,
-          ["Start Appium on localhost:4723"]
-        );
+        throw McpErrors.appiumNotReachable(serverUrl, 'start_appium_session');
       }
 
       if (msg.includes('session not created') || msg.includes('Could not start')) {
-        throw new AppForgeError("E001_NO_SESSION",
-          `Appium session creation failed.\n` +
-          `Raw error: ${msg}`,
-          [
-            "Is an emulator/simulator running? (adb devices / xcrun simctl list)",
-            `Is the app installed? (app path: ${capabilities['appium:app'] ?? 'not set'})`,
-            "Are the capabilities correct?"
-          ]
+        throw McpErrors.appiumCommandFailed(
+          `Session creation failed. ${msg}`,
+          error instanceof Error ? error : undefined,
+          'start_appium_session'
         );
       }
 
       if (msg.includes('timeout')) {
-        throw new AppForgeError("E002_DEVICE_OFFLINE",
-          `Session creation timed out. Device or app may be unresponsive.\n` +
-          `Raw error: ${msg}`,
-          [
-            "Restart the device/emulator",
-            "Force-stop and restart the app",
-            "Check device performance (low memory, CPU usage)"
-          ]
-        );
+        throw McpErrors.sessionTimeout('start_appium_session');
       }
 
       // Re-throw with enhanced context
-      throw new AppForgeError("E001_NO_SESSION",
+      throw McpErrors.appiumCommandFailed(
         `Unexpected session creation error: ${msg}`,
-        [
-          "Check Appium server logs for details",
-          "Verify device capabilities are correct",
-          "Try restarting Appium server"
-        ]
+        error instanceof Error ? error : undefined,
+        'start_appium_session'
       );
     }
   }
@@ -227,7 +223,7 @@ export class AppiumSessionService {
   /**
    * Executes a mobile command (swipe, scroll, deeplink, etc.)
    */
-  public async executeMobile(command: string, args: Record<string, any> = {}): Promise<any> {
+  public async executeMobile(command: string, args: Record<string, unknown> = {}): Promise<unknown> {
     this.ensureSession();
     return await this.driver!.execute(`mobile: ${command}`, args);
   }
@@ -253,7 +249,7 @@ export class AppiumSessionService {
     try {
       // getStatus() calls the Appium /status endpoint — fast, no side effects.
       // If the server or device is gone, this throws immediately.
-      await (this.driver as any).getStatus();
+      await (this.driver as Browser & { getStatus(): Promise<unknown> }).getStatus();
       return true;
     } catch {
       // Session is dead — clean up the stale reference so future callers get false
@@ -317,9 +313,9 @@ export class AppiumSessionService {
 
   private ensureSession(): void {
     if (!this.driver) {
-      throw new Error(
-        'No active Appium session. Call start_appium_session first, ' +
-        'or use inspect_ui_hierarchy with an XML dump.'
+      throw McpErrors.sessionNotFound(
+        'none',
+        'AppiumSessionService'
       );
     }
   }
@@ -365,18 +361,18 @@ export class AppiumSessionService {
    * Resolves capabilities from mcp-config.json.
    * Picks a named profile or the first one available.
    */
-  private resolveCapabilities(config: McpConfig, profileName?: string): Record<string, any> {
+  private resolveCapabilities(config: McpConfig, profileName?: string): Record<string, unknown> {
     const profiles = config.mobile.capabilitiesProfiles;
     const names = Object.keys(profiles);
 
     if (names.length === 0) {
-      throw new Error('No capability profiles defined in mcp-config.json. Run setup_project first.');
+      throw McpErrors.missingConfig('capabilitiesProfiles', 'start_appium_session');
     }
 
     const name = profileName ?? names[0];
     const caps = profiles[name];
     if (!caps) {
-      throw new Error(`Capability profile "${name}" not found. Available: ${names.join(', ')}`);
+      throw McpErrors.invalidParameter('profileName', `Profile "${name}" not found. Available: ${names.join(', ')}`, 'start_appium_session');
     }
 
     // If a build profile is active, inject its app path

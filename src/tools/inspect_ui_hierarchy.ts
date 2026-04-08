@@ -1,7 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { ExecutionService } from "../services/ExecutionService.js";
-import { textResult, truncate } from "./_helpers.js";
+import { textResult, truncate, getPlatformSkill } from "./_helpers.js";
+import { PreFlightService } from "../services/PreFlightService.js";
+import { SessionManager } from "../services/SessionManager.js";
 
 export function registerInspectUiHierarchy(
   server: McpServer,
@@ -11,11 +13,14 @@ export function registerInspectUiHierarchy(
     "inspect_ui_hierarchy",
     {
       title: "Inspect UI Hierarchy",
-      description: "SEE WHAT'S ON SCREEN. Two modes: (1) NO ARGS — fetches live XML and screenshot from the active Appium session. ⚡ REQUIRES ACTIVE SESSION — call start_appium_session first. (2) Pass xmlDump — parses offline with no session needed. Returns: { source, elements[], snapshot }. Use locatorStrategies to build accurate Page Object selectors.",
+      description: `SEE WHAT'S ON SCREEN. Two modes: (1) NO ARGS — fetches live XML and screenshot from the active Appium session. ⚡ REQUIRES ACTIVE SESSION — call start_appium_session first. (2) Pass xmlDump — parses offline with no session needed. Returns: { source, elements[], snapshot }. Use locatorStrategies to build accurate Page Object selectors.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string().optional(),
         xmlDump: z.string().optional(),
-        screenshotBase64: z.string().optional()
+        screenshotBase64: z.string().optional(),
+        includeRawXml: z.boolean().optional()
       }),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },
@@ -43,14 +48,30 @@ export function registerInspectUiHierarchy(
         };
       }
 
+      // Pre-flight check
+      const sessionManager = SessionManager.getInstance();
+      const sessionInfo = sessionManager.getSessionInfo(projectRoot);
+      const sessionId = sessionInfo?.sessionId;
+      const preFlight = PreFlightService.getInstance();
+      const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionId);
+      
+      if (!report.allPassed) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: preFlight.formatReport(report) }]
+        };
+      }
+
       const result = await executionService.inspectHierarchy(
         projectRoot,
         args.xmlDump as string | undefined,
         args.screenshotBase64 as string | undefined,
-        (args as any).stepHints as string[] | undefined
+        (args as any).stepHints as string[] | undefined,
+        args.includeRawXml
       );
       const data = result;
-      return textResult(truncate(JSON.stringify(data, null, 2), "pass xmlDump with a specific subtree to reduce output"), data);
+      const platformContext = getPlatformSkill({ projectRoot });
+      return textResult(truncate(JSON.stringify(data, null, 2), "pass xmlDump with a specific subtree to reduce output") + platformContext, data);
     }
   );
 }

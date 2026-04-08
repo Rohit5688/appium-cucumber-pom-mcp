@@ -64,6 +64,27 @@ import { registerVerifySelector } from "./tools/verify_selector.js";
 import { registerWorkflowGuide } from "./tools/workflow_guide.js";
 import { registerExtractNavigationMap } from "./tools/extract_navigation_map.js";
 import { registerExportNavigationMap } from "./tools/export_navigation_map.js";
+import { registerGetTokenBudget } from "./tools/get_token_budget.js";
+import { registerCheckAppiumReady } from './tools/check_appium_ready.js';
+import { registerScanStructuralBrain } from './tools/scan_structural_brain.js';
+import { TokenBudgetService } from "./services/TokenBudgetService.js";
+import { ObservabilityService } from "./services/ObservabilityService.js";
+import { StructuralBrainService } from "./services/StructuralBrainService.js";
+
+// Initialize at startup (background scan)
+StructuralBrainService.getInstance().scanProject().catch(() => {
+  // Non-fatal — warnings just won't be available
+});
+
+/** Extract a safe summary (non-PII, size-limited) for logging */
+function summarize(result: any): Record<string, any> {
+  if (!result) return {};
+  return {
+    isError: result.isError ?? false,
+    contentLength: JSON.stringify(result).length,
+    hasContent: Array.isArray(result.content) && result.content.length > 0,
+  };
+}
 
 /**
  * AppForge — Mobile Automation MCP Server
@@ -77,7 +98,7 @@ class AppForgeServer {
   private generationService = new TestGenerationService();
   private fileWriterService = new FileWriterService();
   private executionService = new ExecutionService();
-  private selfHealingService = new SelfHealingService();
+  private selfHealingService = SelfHealingService.getInstance();
   private credentialService = new CredentialService();
   private auditLocatorService = new AuditLocatorService();
   private summarySuiteService = new SummarySuiteService();
@@ -99,6 +120,39 @@ class AppForgeServer {
     this.server = new McpServer(
       { name: "AppForge", version: APPFORGE_VERSION }
     );
+
+    // Context & Token Tracking Wrapper
+    const obs = ObservabilityService.getInstance();
+    const originalRegisterTool = this.server.registerTool.bind(this.server);
+    (this.server as any).registerTool = (name: string, info: any, handler: any) => {
+      const wrappedHandler = async (args: any, extraOptions?: any) => {
+        const startTime = Date.now();
+        const traceId = obs.toolStart(name, args ?? {}, undefined);
+        
+        try {
+          const result = await handler(args, extraOptions);
+          
+          const tokenService = TokenBudgetService.getInstance();
+          const inputText = JSON.stringify(args ?? '');
+          const outputText = JSON.stringify(result ?? '');
+          const usage = tokenService.trackToolCall(name, inputText, outputText);
+
+          if (usage.warning) {
+            if (Array.isArray(result?.content)) {
+              result.content.push({ type: 'text', text: `\n⚠️ ${usage.warning}` });
+            }
+          }
+          
+          obs.toolEnd(traceId, name, true, summarize(result), startTime);
+          return result;
+        } catch (err) {
+          obs.toolError(traceId, name, err, startTime);
+          throw err;
+        }
+      };
+      return originalRegisterTool(name, info, wrappedHandler);
+    };
+
     this.setupToolHandlers();
     Metrics.registerShutdownHook();
     this.server.server.onerror = (error) => Logger.error("[MCP Error]", { error: String(error) });
@@ -144,6 +198,9 @@ class AppForgeServer {
     registerWorkflowGuide(this.server);
     registerExtractNavigationMap(this.server, this.navigationGraphServices);
     registerExportNavigationMap(this.server, this.navigationGraphServices);
+    registerGetTokenBudget(this.server);
+    registerCheckAppiumReady(this.server);
+    registerScanStructuralBrain(this.server);
   }
 
   async run() {

@@ -1,6 +1,6 @@
 # TASK-GS-01 — Tool Description Audit (<2048 Character Limit)
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~45 min)  
 **Depends on**: Nothing — foundational task  
 **Build check**: `npm run build` in `/Users/rsakhawalkar/forge/AppForge`
@@ -156,13 +156,13 @@ Based on typical patterns, focus on these tools (verify actual counts first):
 
 ## Done Criteria
 
-- [ ] All tool descriptions audited for character count
-- [ ] Every description ≤2048 characters
-- [ ] Essential information retained (what, when, parameters, output)
-- [ ] Non-essential verbosity removed
-- [ ] `npm run build` passes with zero errors
-- [ ] At least one tool tested to verify description clarity
-- [ ] Change `Status` above to `DONE`
+- [x] All tool descriptions audited for character count
+- [x] Every description ≤2048 characters (max found: 462 chars in extract_navigation_map)
+- [x] Essential information retained (what, when, parameters, output)
+- [x] Non-essential verbosity removed
+- [x] `npm run build` passes with zero errors
+- [x] At least one tool tested to verify description clarity
+- [x] Change `Status` above to `DONE`
 
 ---
 

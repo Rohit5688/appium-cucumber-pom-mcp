@@ -11,7 +11,9 @@ export function registerAuditUtils(
     "audit_utils",
     {
       title: "Audit Utils",
-      description: "CHECK UTILITY COVERAGE. Use when the user asks 'what helpers are missing / check my utilities / what Appium methods are not wrapped'. Scans for implementations of essential Appium wrappers and reports gaps. Returns: { coveragePercent, missing[], actionableSuggestions[] }.",
+      description: `CHECK UTILITY COVERAGE. Use when the user asks 'what helpers are missing / check my utilities / what Appium methods are not wrapped'. Scans for implementations of essential Appium wrappers and reports gaps. Returns: { coveragePercent, missing[], actionableSuggestions[] }.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         customWrapperPackage: z.string().optional()

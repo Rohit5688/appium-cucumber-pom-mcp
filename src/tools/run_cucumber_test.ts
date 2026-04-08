@@ -11,7 +11,9 @@ export function registerRunCucumberTest(
     "run_cucumber_test",
     {
       title: "Run Cucumber Test",
-      description: "RUN TESTS. Use when the user says 'run my tests / execute / run @smoke'. Executes the Appium Cucumber suite. Auto-detects execution command from mcp-config.json. Supports Cucumber tag expressions and platform filtering. Returns: { success, output, stats, reportPath }. If tests fail, pass the output to self_heal_test.",
+      description: `RUN TESTS. Use when the user says 'run my tests / execute / run @smoke'. Executes the Appium Cucumber suite. Auto-detects execution command from mcp-config.json. Supports Cucumber tag expressions and platform filtering. Returns: { success, output, stats, reportPath }. If tests fail, pass the output to self_heal_test.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         tags: z.string().optional(),

@@ -5,6 +5,8 @@ import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
 import { AppForgeError } from "../utils/ErrorFactory.js";
 import { textResult } from "./_helpers.js";
+import { PreFlightService } from "../services/PreFlightService.js";
+import { SessionManager } from "../services/SessionManager.js";
 
 export function registerVerifySelector(
   server: McpServer,
@@ -14,7 +16,9 @@ export function registerVerifySelector(
     "verify_selector",
     {
       title: "Verify Selector",
-      description: "TEST A SELECTOR LIVE. Use after self_heal_test returns candidates to confirm a selector works before updating your Page Object. ⚡ REQUIRES ACTIVE SESSION. Returns: { exists, displayed, enabled, tagName, text }. If exists is true and this fixes a broken selector, also pass oldSelector and projectRoot to auto-learn the fix.",
+      description: `TEST A SELECTOR LIVE. Use after self_heal_test returns candidates to confirm a selector works before updating your Page Object. ⚡ REQUIRES ACTIVE SESSION. Returns: { exists, displayed, enabled, tagName, text }. If exists is true and this fixes a broken selector, also pass oldSelector and projectRoot to auto-learn the fix.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         selector: z.string(),
         projectRoot: z.string().optional(),
@@ -25,7 +29,22 @@ export function registerVerifySelector(
     async (args) => {
       try {
         return await safeExecute(async () => {
-          const verification = await selfHealingService.verifyHealedSelector(args.projectRoot ?? process.cwd(), args.selector);
+          const projectRoot = args.projectRoot ?? process.cwd();
+          
+          // Pre-flight check
+          const sessionManager = SessionManager.getInstance();
+          const sessionInfo = sessionManager.getSessionInfo(projectRoot);
+          const preFlight = PreFlightService.getInstance();
+          const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionInfo?.sessionId);
+          
+          if (!report.allPassed) {
+            return {
+              isError: true,
+              content: [{ type: 'text', text: preFlight.formatReport(report) }]
+            };
+          }
+
+          const verification = await selfHealingService.verifyHealedSelector(projectRoot, args.selector);
           if (verification.exists && args.projectRoot) {
             if (args.oldSelector) {
               // Full heal: record the old→new mapping

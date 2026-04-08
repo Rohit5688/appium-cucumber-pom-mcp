@@ -5,7 +5,7 @@ import type { CodebaseAnalyzerService } from "../services/CodebaseAnalyzerServic
 import type { TestGenerationService } from "../services/TestGenerationService.js";
 import type { LearningService } from "../services/LearningService.js";
 import { Logger } from "../utils/Logger.js";
-import { textResult } from "./_helpers.js";
+import { textResult, getPlatformSkill } from "./_helpers.js";
 
 export function registerGenerateCucumberPom(
   server: McpServer,
@@ -18,7 +18,9 @@ export function registerGenerateCucumberPom(
     "generate_cucumber_pom",
     {
       title: "Generate Cucumber POM",
-      description: "WRITE A NEW TEST. Use when the user asks to 'write a test / create a scenario / add automation for X'. Returns a generation PROMPT pre-loaded with your project's existing steps, page objects, and architecture pattern. Does NOT write files itself. After generating, call validate_and_write to save. Returns: generation prompt text.",
+      description: `WRITE A NEW TEST. Use when the user asks to 'write a test / create a scenario / add automation for X'. Returns a generation PROMPT pre-loaded with your project's existing steps, page objects, and architecture pattern. Does NOT write files itself. After generating, call validate_and_write to save. Returns: generation prompt text.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         testDescription: z.string(),
@@ -48,7 +50,13 @@ export function registerGenerateCucumberPom(
         args.screenXml,
         args.screenshotBase64
       );
-      return textResult(prompt);
+      
+      const platformContext = getPlatformSkill({ 
+        projectRoot: args.projectRoot, 
+        testName: args.testName, 
+        testDescription: args.testDescription 
+      });
+      return textResult(prompt + platformContext);
     }
   );
 }

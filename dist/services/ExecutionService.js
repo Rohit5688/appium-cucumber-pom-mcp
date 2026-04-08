@@ -5,6 +5,11 @@ import { McpConfigService } from './McpConfigService.js';
 import { Logger } from '../utils/Logger.js';
 import { ScreenshotStorage } from '../utils/ScreenshotStorage.js';
 import { AppForgeError } from '../utils/ErrorFactory.js';
+import { FileGuard } from '../utils/FileGuard.js';
+import { MobileSmartTreeService } from './MobileSmartTreeService.js';
+import { ContextManager } from './ContextManager.js';
+import { ShellSecurityEngine } from '../utils/ShellSecurityEngine.js';
+import { McpErrors } from '../types/ErrorSystem.js';
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 export class ExecutionService {
@@ -24,17 +29,6 @@ export class ExecutionService {
         // Allowlist: @ (tag prefix), word chars, spaces, brackets, and logical operators
         const allowedPattern = /^[@\w\s()!&|,]+$/;
         return allowedPattern.test(tags);
-    }
-    /**
-     * Rejects specificArgs containing shell metacharacters.
-     * Issue #17: Prevent shell injection via unescaped specificArgs.
-     */
-    validateSpecificArgs(args) {
-        if (!args || args.trim() === '')
-            return true; // Empty is OK
-        // Reject anything containing shell metacharacters: ; & | ` $ > < ' " \ ! and newlines
-        const forbiddenPattern = /[;&|`$><'"\\!\n\r]/;
-        return !forbiddenPattern.test(args);
     }
     /**
      * Executes Cucumber Appium tests with tag and platform filtering.
@@ -61,12 +55,12 @@ export class ExecutionService {
                 error: `Invalid tag expression: "${options.tags}". Tags must only contain alphanumeric characters, @, spaces, parentheses, and logical operators (!, &, |, comma).`
             };
         }
-        if (options?.specificArgs && !this.validateSpecificArgs(options.specificArgs)) {
-            return {
-                success: false,
-                output: '',
-                error: `Invalid specificArgs: "${options.specificArgs}". Arguments must not contain shell metacharacters (;, &, |, backtick, $, >, <, quotes, backslash, !).`
-            };
+        if (options?.specificArgs) {
+            const specificArgsArr = options.specificArgs.split(/\s+/).filter(arg => arg.length > 0);
+            const argsCheck = ShellSecurityEngine.validateArgs(specificArgsArr, 'run_cucumber_test');
+            if (!argsCheck.safe) {
+                throw McpErrors.shellInjectionDetected(ShellSecurityEngine.formatViolations(argsCheck), 'run_cucumber_test');
+            }
         }
         // Resolve config + timeout BEFORE the execution try-catch so that:
         //   1. Invalid timeoutMs throws and rejects the promise (instead of being swallowed)
@@ -85,13 +79,11 @@ export class ExecutionService {
             const fs = await import('fs');
             let command = '';
             if (options?.overrideCommand) {
-                // Issue #17: Validate overrideCommand doesn't contain obvious injection attempts
-                if (/[;&|`$]/.test(options.overrideCommand)) {
-                    return {
-                        success: false,
-                        output: '',
-                        error: `Invalid overrideCommand: contains shell metacharacters. Use executionCommand in mcp-config.json instead.`
-                    };
+                // Validate overrideCommand doesn't contain obvious injection attempts via ShellSecurityEngine
+                const overrideArgs = options.overrideCommand.split(/\s+/).filter(a => a.length > 0);
+                const argCheck = ShellSecurityEngine.validateArgs(overrideArgs, 'run_cucumber_test');
+                if (!argCheck.safe) {
+                    throw McpErrors.shellInjectionDetected(ShellSecurityEngine.formatViolations(argCheck), 'run_cucumber_test');
                 }
                 command = options.overrideCommand;
             }
@@ -233,7 +225,7 @@ export class ExecutionService {
      * Issue #15 FIX: Now generates valid locatorStrategies for each element.
      * SCREENSHOT STORAGE FIX: Requires projectRoot to store screenshots correctly in MCP context.
      */
-    async inspectHierarchy(projectRoot, xmlDump, screenshotBase64, stepHints) {
+    async inspectHierarchy(projectRoot, xmlDump, screenshotBase64, stepHints, includeRawXml) {
         let xml = xmlDump ?? '';
         let screenshot = screenshotBase64 ?? '';
         let source = 'provided';
@@ -280,8 +272,23 @@ export class ExecutionService {
         if (!xml) {
             throw new AppForgeError('SESSION_REQUIRED', 'No active Appium session and no XML dump provided.', ['Call start_appium_session first before inspecting UI, or provide xmlDump.']);
         }
-        const elements = this.parseXmlElements(xml);
-        const snapshot = this.buildAccessibilitySnapshot(elements, source);
+        let platformToUse = 'android';
+        if (this.sessionManager?.hasActiveSession(projectRoot)) {
+            const sessionService = await this.sessionManager.getSession(projectRoot);
+            platformToUse = sessionService.getPlatform() ?? 'android';
+        }
+        const smartTree = MobileSmartTreeService.getInstance();
+        const actionMap = smartTree.buildSparseMap(xml, platformToUse === 'both' ? 'android' : platformToUse, source);
+        // Add context compression
+        const ctxManager = ContextManager.getInstance();
+        const screenNameMatch = actionMap.screenSummary.match(/^([^:]+)/);
+        const screenName = screenNameMatch ? screenNameMatch[1] : 'UnknownScreen';
+        ctxManager.recordScan(undefined, screenName, actionMap);
+        const history = ctxManager.getCompactedHistory();
+        if (history) {
+            Logger.info('[ContextManager] Injecting compacted screen history');
+        }
+        const snapshot = actionMap.dehydratedText;
         // Store screenshot locally instead of returning base64 in response
         let screenshotPath;
         let screenshotSize;
@@ -293,162 +300,15 @@ export class ExecutionService {
         }
         return {
             snapshot,
-            elementCount: { total: elements.length, interactive: elements.filter(e => e.locatorStrategies.length > 0).length },
+            sessionHistory: history || undefined,
+            elementCount: { total: actionMap.totalElements, interactive: actionMap.interactiveCount },
             screenshotPath,
             screenshotSize,
             timestamp: new Date().toISOString(),
             source,
             // Raw XML only for healer tools that explicitly need it
-            xml: xmlDump ? xml : undefined
+            rawXml: includeRawXml ? xml : undefined
         };
-    }
-    /**
-     * Extracts interactive elements from Appium XML page source.
-     *
-     * Issue #15 FIX: Generates valid WebdriverIO/Appium locator strategies.
-     * Previously generated invalid `*[text()="..."]` selectors.
-     * Now returns proper XPath, accessibility-id, and resource-id selectors.
-     */
-    parseXmlElements(xml) {
-        const elements = [];
-        // Simple regex-based extraction from XML (no external XML parser needed)
-        // Matches: <TagName attrs... /> or <TagName attrs...>
-        const nodeRegex = /<(\w+(?:\.\w+)*)\s+([^>]*?)\/?>/g;
-        let match;
-        while ((match = nodeRegex.exec(xml)) !== null) {
-            const tag = match[1];
-            const attrs = match[2];
-            // Extract all relevant attributes
-            const resourceIdMatch = attrs.match(/resource-id="([^"]*)"/);
-            const contentDescMatch = attrs.match(/content-desc="([^"]*)"/);
-            const accessibilityIdMatch = attrs.match(/accessibility-id="([^"]*)"/);
-            const nameMatch = attrs.match(/name="([^"]*)"/);
-            const textMatch = attrs.match(/(?:text|value)="([^"]*)"/);
-            const boundsMatch = attrs.match(/bounds="([^"]*)"/);
-            const clickableMatch = attrs.match(/clickable="true"/);
-            const enabledMatch = attrs.match(/enabled="true"/);
-            const classMatch = attrs.match(/class="([^"]*)"/);
-            let boundsStr = boundsMatch?.[1] ?? '';
-            if (!boundsStr) {
-                const x = attrs.match(/x="([^"]*)"/)?.[1];
-                const y = attrs.match(/y="([^"]*)"/)?.[1];
-                const w = attrs.match(/width="([^"]*)"/)?.[1];
-                const h = attrs.match(/height="([^"]*)"/)?.[1];
-                if (x && y && w && h) {
-                    boundsStr = `x=${x},y=${y},w=${w},h=${h}`;
-                }
-            }
-            // Extract attribute values
-            const resourceId = resourceIdMatch?.[1] ?? '';
-            const contentDesc = contentDescMatch?.[1] ?? '';
-            const accessibilityId = accessibilityIdMatch?.[1] ?? '';
-            const name = nameMatch?.[1] ?? '';
-            const text = textMatch?.[1] ?? '';
-            const className = classMatch?.[1] ?? '';
-            // Only include interactable or identifiable elements
-            if (resourceId || contentDesc || accessibilityId || name || text || clickableMatch || boundsStr) {
-                // Issue #15 FIX: Generate valid locator strategies in priority order
-                const locatorStrategies = [];
-                // Priority 1: Accessibility ID (most stable)
-                if (contentDesc) {
-                    locatorStrategies.push(`~${contentDesc}`);
-                }
-                if (accessibilityId) {
-                    locatorStrategies.push(`~${accessibilityId}`);
-                }
-                if (name && !contentDesc && !accessibilityId) {
-                    // iOS uses 'name' for accessibility
-                    locatorStrategies.push(`~${name}`);
-                }
-                // Priority 2: Resource ID (stable on Android)
-                if (resourceId) {
-                    locatorStrategies.push(`id=${resourceId}`);
-                }
-                // Priority 3: XPath with text (less stable, but sometimes necessary)
-                // Issue #15 FIX: Use valid XPath syntax instead of invalid *[text()="..."]
-                if (text && text.trim().length > 0 && text.trim().length < 50) {
-                    // Escape double quotes in text for XPath
-                    const escapedText = text.replace(/"/g, '&quot;');
-                    locatorStrategies.push(`//*[@text="${escapedText}"]`);
-                }
-                // Priority 4: XPath with content-desc
-                if (contentDesc && contentDesc.trim().length > 0) {
-                    const escapedDesc = contentDesc.replace(/"/g, '&quot;');
-                    locatorStrategies.push(`//*[@content-desc="${escapedDesc}"]`);
-                }
-                // Priority 5: XPath with resource-id
-                if (resourceId) {
-                    locatorStrategies.push(`//*[@resource-id="${resourceId}"]`);
-                }
-                // Priority 6: Class-based selector (least stable, last resort)
-                if (className && locatorStrategies.length === 0) {
-                    locatorStrategies.push(`//${className}`);
-                }
-                elements.push({
-                    tag,
-                    id: resourceId || accessibilityId || contentDesc || name || '',
-                    text: text || '',
-                    bounds: boundsStr,
-                    className,
-                    contentDesc,
-                    resourceId,
-                    locatorStrategies
-                });
-            }
-        }
-        return elements;
-    }
-    /**
-     * Builds a compact Mobile Accessibility Snapshot from parsed elements.
-     * Modeled on Playwright MCP's ARIA snapshot — returns only interactive elements
-     * in a human-readable format the LLM can process in ~150 tokens.
-     *
-     * Format per element:
-     *   #ref  role  "visible label"   best_locator   [states]
-     */
-    buildAccessibilitySnapshot(elements, source) {
-        const interactive = elements.filter(el => el.locatorStrategies.length > 0 &&
-            (el.text || el.contentDesc || el.resourceId));
-        if (interactive.length === 0) {
-            return `[Screen: ${source} | No interactive elements found — screen may still be loading]`;
-        }
-        const roleMap = {
-            'android.widget.Button': 'button',
-            'android.widget.EditText': 'input',
-            'android.widget.TextView': 'text',
-            'android.widget.ImageButton': 'button',
-            'android.widget.CheckBox': 'checkbox',
-            'android.widget.Switch': 'toggle',
-            'android.widget.RadioButton': 'radio',
-            'android.widget.ImageView': 'image',
-            'XCUIElementTypeButton': 'button',
-            'XCUIElementTypeTextField': 'input',
-            'XCUIElementTypeSecureTextField': 'input',
-            'XCUIElementTypeStaticText': 'text',
-            'XCUIElementTypeSwitch': 'toggle',
-        };
-        const lines = [
-            `[Screen: ${source} | timestamp: ${new Date().toLocaleTimeString()}]`,
-            `Interactive elements: ${interactive.length} of ${elements.length} total`,
-            ''
-        ];
-        interactive.forEach((el, i) => {
-            const ref = `#${i + 1}`;
-            const role = roleMap[el.tag] ?? el.tag.split('.').pop() ?? 'element';
-            const label = el.text || el.contentDesc || el.id || '(no label)';
-            const bestLocator = el.locatorStrategies[0] ?? 'no-locator';
-            const states = [];
-            if (el.tag.includes('EditText') || el.tag.includes('TextField'))
-                states.push('editable');
-            if (el.tag.includes('SecureTextField') || el.contentDesc?.toLowerCase().includes('password'))
-                states.push('secure');
-            const stateStr = states.length > 0 ? `[${states.join(', ')}]` : '[clickable]';
-            lines.push(`${ref.padEnd(4)} ${role.padEnd(10)} "${label.substring(0, 40).padEnd(40)}"   ${bestLocator.padEnd(35)} ${stateStr}`);
-        });
-        lines.push('');
-        lines.push('LOCATOR PRIORITY: Use accessibility-id (~) → resource-id (id=) → xpath as last resort.');
-        lines.push('USE #ref number to reference elements in your Page Object locators.');
-        return lines.join('\n');
     }
     /**
      * Extracts actionable keywords from natural-language step descriptions.
@@ -591,6 +451,10 @@ export class ExecutionService {
                 const configPath = path.default.join(projectRoot, configFile);
                 if (!fs.default.existsSync(configPath))
                     continue;
+                const check = FileGuard.isBinary(configPath);
+                if (check.binary) {
+                    return null;
+                }
                 const content = fs.default.readFileSync(configPath, 'utf8');
                 // Priority 1: cucumberOpts.timeout — per-step Cucumber timeout
                 const cucumberTimeoutMatch = content.match(/cucumberOpts[\s\S]{0,200}?timeout\s*:\s*(\d+)/);

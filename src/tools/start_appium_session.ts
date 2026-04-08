@@ -1,7 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { SessionManager } from "../services/SessionManager.js";
+import { ContextManager } from '../services/ContextManager.js';
 import { textResult } from "./_helpers.js";
+import { SelfHealingService } from '../services/SelfHealingService.js';
+import { TokenBudgetService } from '../services/TokenBudgetService.js';
 
 export function registerStartAppiumSession(
   server: McpServer,
@@ -11,7 +14,9 @@ export function registerStartAppiumSession(
     "start_appium_session",
     {
       title: "Start Appium Session",
-      description: "CONNECT TO DEVICE. Use when the user says 'connect to the device / start a session / inspect the app / I want to see what's on screen'. Connects to Appium and starts a session on the device in mcp-config.json. Returns: { sessionId, platform, device, hint }. After success, call inspect_ui_hierarchy with no args to see the current screen.",
+      description: `CONNECT TO DEVICE. Use when the user says 'connect to the device / start a session / inspect the app / I want to see what's on screen'. Connects to Appium and starts a session on the device in mcp-config.json. Returns: { sessionId, platform, device, hint }. After success, call inspect_ui_hierarchy with no args to see the current screen.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         profileName: z.string().optional()
@@ -20,7 +25,10 @@ export function registerStartAppiumSession(
     },
     async (args) => {
       try {
+        ContextManager.getInstance().reset();
+        TokenBudgetService.getInstance().reset();
         const sessionService = await sessionManager.getSession(args.projectRoot, args.profileName, true);
+        SelfHealingService.getInstance().resetAttemptCounts();
         const driver = sessionService.getDriver()!;
         const caps = driver.capabilities as any;
         const sessionInfo = {

@@ -11,7 +11,9 @@ export function registerCheckEnvironment(
     "check_environment",
     {
       title: "Check Environment",
-      description: "PRE-FLIGHT CHECK. Use when the user says 'is my environment ready / why isn't Appium connecting / tests won't start / check my setup'. Verifies the entire Appium stack: Node.js, Appium server, drivers, Android SDK, Xcode, connected device/emulator, app binary, node_modules, and mcp-config.json. Returns: { summary, ready, failCount, warnCount }.",
+      description: `PRE-FLIGHT CHECK. Use when the user says 'is my environment ready / why isn't Appium connecting / tests won't start / check my setup'. Verifies the entire Appium stack: Node.js, Appium server, drivers, Android SDK, Xcode, connected device/emulator, app binary, node_modules, and mcp-config.json. Returns: { summary, ready, failCount, warnCount }.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         platform: z.enum(["android", "ios", "both"]).optional(),

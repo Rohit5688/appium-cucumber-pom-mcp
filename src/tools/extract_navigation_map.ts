@@ -14,7 +14,9 @@ export function registerExtractNavigationMap(
     "extract_navigation_map",
     {
       title: "Extract Navigation Map",
-      description: "EXTRACT APP NAVIGATION FLOW. Use when the user says 'understand the app flow / map the navigation / how do I get to X screen'. Analyzes existing step definitions, page objects, and test flows to build a navigation graph. Helps LLMs understand multi-screen app navigation patterns for intelligent test generation. Returns: { navigationMap: graph of screen connections, reusableFlows: common navigation paths, suggestions: how to reuse existing navigation steps }.",
+      description: `EXTRACT APP NAVIGATION FLOW. Use when the user says 'understand the app flow / map the navigation / how do I get to X screen'. Analyzes existing step definitions, page objects, and test flows to build a navigation graph. Helps LLMs understand multi-screen app navigation patterns for intelligent test generation. Returns: { navigationMap: graph of screen connections, reusableFlows: common navigation paths, suggestions: how to reuse existing navigation steps }.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         targetScreen: z.string().optional(),

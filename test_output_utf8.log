@@ -1,0 +1,3366 @@
+﻿TAP version 13
+# Subtest: AuditLocatorService - YAML Locator Parsing (Issue \#11)
+    # Subtest: [ISSUE \#11] should parse YAML files with accessibility-id selectors
+    ok 1 - [ISSUE \#11] should parse YAML files with accessibility-id selectors
+      ---
+      duration_ms: 9.5137
+      ...
+    # Subtest: [ISSUE \#11] should parse YAML files with xpath selectors
+    not ok 2 - [ISSUE \#11] should parse YAML files with xpath selectors
+      ---
+      duration_ms: 7.6296
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:62:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        All 3 should be xpath
+        
+        0 !== 3
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 3
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:73:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should parse YAML files with resource-id selectors
+    not ok 3 - [ISSUE \#11] should parse YAML files with resource-id selectors
+      ---
+      duration_ms: 15.4685
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:83:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find 3 locators
+        
+        6 !== 3
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 3
+      actual: 6
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:93:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should classify YAML selectors correctly (~ = ok, // = critical)
+    not ok 4 - [ISSUE \#11] should classify YAML selectors correctly (~ = ok, // = critical)
+      ---
+      duration_ms: 5.8381
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:102:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find 3 locators
+        
+        8 !== 3
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 3
+      actual: 8
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:112:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should ignore non-selector YAML keys
+    not ok 5 - [ISSUE \#11] should ignore non-selector YAML keys
+      ---
+      duration_ms: 6.3997
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:120:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find only 2 selectors, ignoring config keys
+        
+        10 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 10
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:136:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should generate correct health scores for YAML projects
+    not ok 6 - [ISSUE \#11] should generate correct health scores for YAML projects
+      ---
+      duration_ms: 15.6941
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:138:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find 10 locators
+        
+        20 !== 10
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 10
+      actual: 20
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:156:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should handle mixed TS + YAML projects
+    not ok 7 - [ISSUE \#11] should handle mixed TS + YAML projects
+      ---
+      duration_ms: 78.4513
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:163:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find 4 locators (2 TS + 2 YAML)
+        
+        23 !== 4
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 4
+      actual: 23
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:184:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should report 0 locators when YAML files are empty
+    not ok 8 - [ISSUE \#11] should report 0 locators when YAML files are empty
+      ---
+      duration_ms: 7.1701
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:188:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should report 0 locators for empty YAML
+        
+        21 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 21
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:194:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should handle YAML with quoted and unquoted values
+    not ok 9 - [ISSUE \#11] should handle YAML with quoted and unquoted values
+      ---
+      duration_ms: 6.2735
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:198:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find 5 locators regardless of quotes
+        
+        26 !== 5
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 5
+      actual: 26
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:210:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should include YAML file path in report entries
+    not ok 10 - [ISSUE \#11] should include YAML file path in report entries
+      ---
+      duration_ms: 8.9507
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:214:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should have 1 entry
+        
+        27 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 27
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:220:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should handle multiple YAML files in same directory
+    not ok 11 - [ISSUE \#11] should handle multiple YAML files in same directory
+      ---
+      duration_ms: 9.0143
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:225:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find locators from all 3 YAML files
+        
+        30 !== 3
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 3
+      actual: 30
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:232:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should generate markdown report with YAML locators
+    not ok 12 - [ISSUE \#11] should generate markdown report with YAML locators
+      ---
+      duration_ms: 8.0696
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:240:5'
+      failureType: 'testCodeFailure'
+      error: 'Report should show 50% health score'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:253:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should handle YAML files in subdirectories
+    not ok 13 - [ISSUE \#11] should handle YAML files in subdirectories
+      ---
+      duration_ms: 10.6726
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:256:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find locator in subdirectory
+        
+        33 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 33
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:262:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#11] should skip non-selector lines in YAML
+    not ok 14 - [ISSUE \#11] should skip non-selector lines in YAML
+      ---
+      duration_ms: 8.6836
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:265:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should only count actual selectors
+        
+        35 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 35
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue11.test.js:282:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    1..14
+not ok 1 - AuditLocatorService - YAML Locator Parsing (Issue \#11)
+  ---
+  duration_ms: 226.1303
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue11.test.js:20:1'
+  failureType: 'subtestsFailed'
+  error: '13 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AuditLocatorService - YAML Parser Coverage (Issue \#18)
+    # Subtest: [ISSUE \#18] should detect id= prefix selectors in YAML
+    ok 1 - [ISSUE \#18] should detect id= prefix selectors in YAML
+      ---
+      duration_ms: 23.8593
+      ...
+    # Subtest: [ISSUE \#18] should detect CSS class selectors in YAML
+    not ok 2 - [ISSUE \#18] should detect CSS class selectors in YAML
+      ---
+      duration_ms: 30.1276
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:63:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find all 3 CSS class selectors
+        
+        0 !== 3
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 3
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:75:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#18] should detect hash ID selectors in YAML
+    not ok 3 - [ISSUE \#18] should detect hash ID selectors in YAML
+      ---
+      duration_ms: 11.3178
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:86:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find all 3 hash ID selectors
+        
+        0 !== 3
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 3
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:98:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#18] REGRESSION: should still detect ~ accessibility-id selectors
+    ok 4 - [ISSUE \#18] REGRESSION: should still detect ~ accessibility-id selectors
+      ---
+      duration_ms: 7.3505
+      ...
+    # Subtest: [ISSUE \#18] REGRESSION: should still detect // xpath selectors
+    not ok 5 - [ISSUE \#18] REGRESSION: should still detect // xpath selectors
+      ---
+      duration_ms: 7.494
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:131:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should still find // xpath selectors
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:142:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#18] REGRESSION: should still detect :id/ resource-id selectors
+    ok 6 - [ISSUE \#18] REGRESSION: should still detect :id/ resource-id selectors
+      ---
+      duration_ms: 13.872
+      ...
+    # Subtest: [ISSUE \#18] should detect ALL 5 selector types in mixed YAML file
+    not ok 7 - [ISSUE \#18] should detect ALL 5 selector types in mixed YAML file
+      ---
+      duration_ms: 10.2078
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:175:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find all 6 selectors from all 5 types
+        
+        3 !== 6
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 6
+      actual: 3
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:191:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#18] should handle quoted and unquoted new selector types
+    not ok 8 - [ISSUE \#18] should handle quoted and unquoted new selector types
+      ---
+      duration_ms: 9.7904
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:212:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find all 9 selectors regardless of quotes
+        
+        3 !== 9
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 9
+      actual: 3
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:230:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#18] real-world reproduction: dashboard.yaml with id= and xpath
+    not ok 9 - [ISSUE \#18] real-world reproduction: dashboard.yaml with id= and xpath
+      ---
+      duration_ms: 8.5846
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:242:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find both id= and xpath selectors
+        
+        1 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:253:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#18] should correctly classify id= and xpath selectors with proper severity
+    not ok 10 - [ISSUE \#18] should correctly classify id= and xpath selectors with proper severity
+      ---
+      duration_ms: 9.0859
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:265:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find 2 locators
+        
+        1 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:276:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#18] should handle CSS selectors with complex patterns
+    not ok 11 - [ISSUE \#18] should handle CSS selectors with complex patterns
+      ---
+      duration_ms: 7.0972
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:297:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should find all CSS selectors
+        
+        0 !== 4
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 4
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:310:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#18] should not match false positives in YAML values
+    not ok 12 - [ISSUE \#18] should not match false positives in YAML values
+      ---
+      duration_ms: 15.9852
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:320:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should only match actual selectors
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/AuditLocatorService.issue18.test.js:338:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    1..12
+not ok 2 - AuditLocatorService - YAML Parser Coverage (Issue \#18)
+  ---
+  duration_ms: 160.2814
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\AuditLocatorService.issue18.test.js:21:1'
+  failureType: 'subtestsFailed'
+  error: '9 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: CB-1: Shell Injection Prevention via projectRoot Parameter
+    # Subtest: SecurityUtils.validateProjectRoot
+        # Subtest: should accept valid absolute paths
+        ok 1 - should accept valid absolute paths
+          ---
+          duration_ms: 5.9331
+          ...
+        # Subtest: should accept paths with hyphens, underscores, and dots
+        ok 2 - should accept paths with hyphens, underscores, and dots
+          ---
+          duration_ms: 1.0777
+          ...
+        # Subtest: should accept paths with spaces
+        ok 3 - should accept paths with spaces
+          ---
+          duration_ms: 0.6155
+          ...
+        # Subtest: should reject projectRoot with semicolon (shell command separator)
+        ok 4 - should reject projectRoot with semicolon (shell command separator)
+          ---
+          duration_ms: 1.6647
+          ...
+        # Subtest: should reject projectRoot with backtick (command substitution)
+        ok 5 - should reject projectRoot with backtick (command substitution)
+          ---
+          duration_ms: 0.8412
+          ...
+        # Subtest: should reject projectRoot with dollar sign (variable expansion)
+        ok 6 - should reject projectRoot with dollar sign (variable expansion)
+          ---
+          duration_ms: 2.5794
+          ...
+        # Subtest: should reject projectRoot with pipe operator (command chaining)
+        ok 7 - should reject projectRoot with pipe operator (command chaining)
+          ---
+          duration_ms: 0.6423
+          ...
+        # Subtest: should reject projectRoot with ampersand (background execution)
+        ok 8 - should reject projectRoot with ampersand (background execution)
+          ---
+          duration_ms: 1.1528
+          ...
+        # Subtest: should reject projectRoot with redirection operators
+        ok 9 - should reject projectRoot with redirection operators
+          ---
+          duration_ms: 1.272
+          ...
+        # Subtest: should reject projectRoot with parentheses (subshell)
+        ok 10 - should reject projectRoot with parentheses (subshell)
+          ---
+          duration_ms: 1.1867
+          ...
+        # Subtest: should reject projectRoot with curly braces
+        ok 11 - should reject projectRoot with curly braces
+          ---
+          duration_ms: 1.3803
+          ...
+        # Subtest: should reject empty or null projectRoot
+        ok 12 - should reject empty or null projectRoot
+          ---
+          duration_ms: 1.1737
+          ...
+        # Subtest: should reject the exact CB-1 reproduction payload
+        ok 13 - should reject the exact CB-1 reproduction payload
+          ---
+          duration_ms: 0.8957
+          ...
+        1..13
+    ok 1 - SecurityUtils.validateProjectRoot
+      ---
+      duration_ms: 24.8639
+      type: 'suite'
+      ...
+    # Subtest: FileWriterService.validateAndWrite - CB-1 Protection
+        # Subtest: should reject malicious projectRoot with semicolon before any file operations
+        ok 1 - should reject malicious projectRoot with semicolon before any file operations
+          ---
+          duration_ms: 6.387
+          ...
+        # Subtest: should reject malicious projectRoot with command substitution
+        ok 2 - should reject malicious projectRoot with command substitution
+          ---
+          duration_ms: 0.9241
+          ...
+        # Subtest: should reject malicious projectRoot with pipe operator
+        ok 3 - should reject malicious projectRoot with pipe operator
+          ---
+          duration_ms: 1.6344
+          ...
+        # Subtest: should accept valid projectRoot and proceed with validation
+        not ok 4 - should accept valid projectRoot and proceed with validation
+          ---
+          duration_ms: 218.4535
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB1.shell-injection.test.js:146:9'
+          failureType: 'testCodeFailure'
+          error: 'TypeScript compilation failed during validation.'
+          code: 'E006_TS_COMPILE_FAIL'
+          name: 'AppForgeError'
+          stack: |-
+            FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+            async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/CB1.shell-injection.test.js:151:32)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should prevent shell execution via malicious projectRoot in tsc command
+        not ok 5 - should prevent shell execution via malicious projectRoot in tsc command
+          ---
+          duration_ms: 74.3046
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB1.shell-injection.test.js:164:9'
+          failureType: 'testCodeFailure'
+          error: 'TypeScript compilation failed during validation.'
+          code: 'E006_TS_COMPILE_FAIL'
+          name: 'AppForgeError'
+          stack: |-
+            FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+            async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/CB1.shell-injection.test.js:172:32)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        1..5
+    not ok 2 - FileWriterService.validateAndWrite - CB-1 Protection
+      ---
+      duration_ms: 304.7008
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB1.shell-injection.test.js:117:5'
+      failureType: 'subtestsFailed'
+      error: '2 subtests failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: ProjectMaintenanceService.upgradeProject - CB-1 Protection
+        # Subtest: should reject malicious projectRoot with semicolon
+        ok 1 - should reject malicious projectRoot with semicolon
+          ---
+          duration_ms: 2.1697
+          ...
+        # Subtest: should reject malicious projectRoot with backtick
+        ok 2 - should reject malicious projectRoot with backtick
+          ---
+          duration_ms: 1.2022
+          ...
+        # Subtest: should reject malicious projectRoot with dollar sign
+        ok 3 - should reject malicious projectRoot with dollar sign
+          ---
+          duration_ms: 0.7503
+          ...
+        # Subtest: should reject malicious projectRoot with pipe
+        ok 4 - should reject malicious projectRoot with pipe
+          ---
+          duration_ms: 0.7249
+          ...
+        # Subtest: should validate projectRoot before checking package.json
+        ok 5 - should validate projectRoot before checking package.json
+          ---
+          duration_ms: 1.1801
+          ...
+        1..5
+    ok 3 - ProjectMaintenanceService.upgradeProject - CB-1 Protection
+      ---
+      duration_ms: 6.9543
+      type: 'suite'
+      ...
+    # Subtest: ProjectMaintenanceService.repairProject - CB-1 Protection
+        # Subtest: should reject malicious projectRoot with semicolon
+        ok 1 - should reject malicious projectRoot with semicolon
+          ---
+          duration_ms: 1.3118
+          ...
+        # Subtest: should reject malicious projectRoot with command substitution
+        ok 2 - should reject malicious projectRoot with command substitution
+          ---
+          duration_ms: 0.7008
+          ...
+        # Subtest: should reject malicious projectRoot with dollar expansion
+        ok 3 - should reject malicious projectRoot with dollar expansion
+          ---
+          duration_ms: 1.7926
+          ...
+        1..3
+    ok 4 - ProjectMaintenanceService.repairProject - CB-1 Protection
+      ---
+      duration_ms: 4.6393
+      type: 'suite'
+      ...
+    # Subtest: Regression: CB-1 Original Vulnerability Scenarios
+        # Subtest: should block the exact injection from CB-1 documentation
+        ok 1 - should block the exact injection from CB-1 documentation
+          ---
+          duration_ms: 0.799
+          ...
+        # Subtest: should not execute injected commands in any scenario
+        ok 2 - should not execute injected commands in any scenario
+          ---
+          duration_ms: 1.9485
+          ...
+        # Subtest: should validate projectRoot before any file system operations
+        ok 3 - should validate projectRoot before any file system operations
+          ---
+          duration_ms: 0.6758
+          ...
+        1..3
+    ok 5 - Regression: CB-1 Original Vulnerability Scenarios
+      ---
+      duration_ms: 3.9395
+      type: 'suite'
+      ...
+    # Subtest: Defense in Depth: execFile vs execSync
+        # Subtest: should use execFile which does not invoke shell by default
+        not ok 1 - should use execFile which does not invoke shell by default
+          ---
+          duration_ms: 274.1596
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB1.shell-injection.test.js:276:9'
+          failureType: 'testCodeFailure'
+          error: 'TypeScript compilation failed during validation.'
+          code: 'E006_TS_COMPILE_FAIL'
+          name: 'AppForgeError'
+          stack: |-
+            FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+            async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/CB1.shell-injection.test.js:288:32)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        1..1
+    not ok 6 - Defense in Depth: execFile vs execSync
+      ---
+      duration_ms: 276.4298
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB1.shell-injection.test.js:275:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: Edge Cases
+        # Subtest: should handle paths with legitimate special characters
+        not ok 1 - should handle paths with legitimate special characters
+          ---
+          duration_ms: 237.5221
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB1.shell-injection.test.js:299:9'
+          failureType: 'testCodeFailure'
+          error: 'TypeScript compilation failed during validation.'
+          code: 'E006_TS_COMPILE_FAIL'
+          name: 'AppForgeError'
+          stack: |-
+            FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+            async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/CB1.shell-injection.test.js:308:32)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should handle Windows-style paths correctly
+        ok 2 - should handle Windows-style paths correctly
+          ---
+          duration_ms: 1.6457
+          ...
+        # Subtest: should reject Windows paths with injection attempts
+        ok 3 - should reject Windows paths with injection attempts
+          ---
+          duration_ms: 2.5177
+          ...
+        1..3
+    not ok 7 - Edge Cases
+      ---
+      duration_ms: 242.931
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB1.shell-injection.test.js:298:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    1..7
+not ok 3 - CB-1: Shell Injection Prevention via projectRoot Parameter
+  ---
+  duration_ms: 869.9929
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB1.shell-injection.test.js:18:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: CB-2: Directory Traversal Prevention in File Paths
+    # Subtest: SecurityUtils.validateFilePath
+        # Subtest: should accept valid relative paths within project
+        ok 1 - should accept valid relative paths within project
+          ---
+          duration_ms: 4.3939
+          ...
+        # Subtest: should accept paths with dots in filenames
+        ok 2 - should accept paths with dots in filenames
+          ---
+          duration_ms: 0.9319
+          ...
+        # Subtest: should accept deeply nested paths
+        ok 3 - should accept deeply nested paths
+          ---
+          duration_ms: 0.4443
+          ...
+        # Subtest: should reject path with parent directory traversal (..)
+        ok 4 - should reject path with parent directory traversal (..)
+          ---
+          duration_ms: 1.1278
+          ...
+        # Subtest: should reject path with multiple parent directory traversals
+        ok 5 - should reject path with multiple parent directory traversals
+          ---
+          duration_ms: 0.5153
+          ...
+        # Subtest: should reject the exact CB-2 documentation example
+        ok 6 - should reject the exact CB-2 documentation example
+          ---
+          duration_ms: 0.4747
+          ...
+        # Subtest: should reject deep traversal to sensitive system files
+        ok 7 - should reject deep traversal to sensitive system files
+          ---
+          duration_ms: 2.6307
+          ...
+        # Subtest: should reject absolute paths
+        ok 8 - should reject absolute paths
+          ---
+          duration_ms: 2.5324
+          ...
+        # Subtest: should reject Windows-style absolute paths
+        ok 9 - should reject Windows-style absolute paths
+          ---
+          duration_ms: 1.4034
+          ...
+        # Subtest: should reject traversal mixed with valid path components
+        ok 10 - should reject traversal mixed with valid path components
+          ---
+          duration_ms: 1.8829
+          ...
+        # Subtest: should reject empty or null file paths
+        ok 11 - should reject empty or null file paths
+          ---
+          duration_ms: 0.7781
+          ...
+        # Subtest: should handle path normalization correctly
+        not ok 12 - should handle path normalization correctly
+          ---
+          duration_ms: 4.4826
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB2.directory-traversal.test.js:140:9'
+          failureType: 'testCodeFailure'
+          error: 'Missing expected exception: Normalized traversal "src/pages/./../../.ssh/authorized_keys" should be rejected'
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected:
+          operator: 'throws'
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/CB2.directory-traversal.test.js:148:24)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should accept paths starting with ./ that stay within project
+        ok 13 - should accept paths starting with ./ that stay within project
+          ---
+          duration_ms: 0.9815
+          ...
+        # Subtest: should detect traversal on Windows paths
+        ok 14 - should detect traversal on Windows paths
+          ---
+          duration_ms: 3.8996
+          ...
+        1..14
+    not ok 1 - SecurityUtils.validateFilePath
+      ---
+      duration_ms: 37.8997
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB2.directory-traversal.test.js:37:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async Promise.all (index 0)
+      ...
+    # Subtest: FileWriterService.validateAndWrite - CB-2 Protection
+        # Subtest: should reject files with parent directory traversal
+        ok 1 - should reject files with parent directory traversal
+          ---
+          duration_ms: 11.0822
+          ...
+        # Subtest: should reject the exact CB-2 attack: overwriting authorized_keys
+        ok 2 - should reject the exact CB-2 attack: overwriting authorized_keys
+          ---
+          duration_ms: 5.133
+          ...
+        # Subtest: should reject attempt to overwrite /etc/passwd
+        ok 3 - should reject attempt to overwrite /etc/passwd
+          ---
+          duration_ms: 7.5591
+          ...
+        # Subtest: should reject absolute path attempts
+        ok 4 - should reject absolute path attempts
+          ---
+          duration_ms: 14.3592
+          ...
+        # Subtest: should reject mixed attack with valid and malicious paths
+        ok 5 - should reject mixed attack with valid and malicious paths
+          ---
+          duration_ms: 8.0444
+          ...
+        # Subtest: should accept all files when paths are valid
+        not ok 6 - should accept all files when paths are valid
+          ---
+          duration_ms: 122.6873
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB2.directory-traversal.test.js:269:9'
+          failureType: 'testCodeFailure'
+          error: 'TypeScript compilation failed during validation.'
+          code: 'E006_TS_COMPILE_FAIL'
+          name: 'AppForgeError'
+          stack: |-
+            FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+            async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/CB2.directory-traversal.test.js:278:32)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should prevent file writes before security validation completes
+        ok 7 - should prevent file writes before security validation completes
+          ---
+          duration_ms: 6.0561
+          ...
+        # Subtest: should validate each file path individually
+        ok 8 - should validate each file path individually
+          ---
+          duration_ms: 8.749
+          ...
+        # Subtest: should handle Windows-style traversal attacks
+        ok 9 - should handle Windows-style traversal attacks
+          ---
+          duration_ms: 6.1128
+          ...
+        1..9
+    not ok 2 - FileWriterService.validateAndWrite - CB-2 Protection
+      ---
+      duration_ms: 191.1492
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB2.directory-traversal.test.js:174:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: Regression: CB-2 Original Vulnerability Scenarios
+        # Subtest: should block the exact scenario from CB-2 documentation
+        ok 1 - should block the exact scenario from CB-2 documentation
+          ---
+          duration_ms: 6.0976
+          ...
+        # Subtest: should validate paths before any file system operations occur
+        ok 2 - should validate paths before any file system operations occur
+          ---
+          duration_ms: 4.8503
+          ...
+        # Subtest: should maintain defense-in-depth: check every file in batch
+        ok 3 - should maintain defense-in-depth: check every file in batch
+          ---
+          duration_ms: 5.4925
+          ...
+        1..3
+    ok 3 - Regression: CB-2 Original Vulnerability Scenarios
+      ---
+      duration_ms: 16.8761
+      type: 'suite'
+      ...
+    # Subtest: Edge Cases and Special Scenarios
+        # Subtest: should handle deeply nested valid paths correctly
+        not ok 1 - should handle deeply nested valid paths correctly
+          ---
+          duration_ms: 203.585
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB2.directory-traversal.test.js:419:9'
+          failureType: 'testCodeFailure'
+          error: 'TypeScript compilation failed during validation.'
+          code: 'E006_TS_COMPILE_FAIL'
+          name: 'AppForgeError'
+          stack: |-
+            FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+            async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/CB2.directory-traversal.test.js:425:32)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject sneaky traversal hidden in deep path
+        ok 2 - should reject sneaky traversal hidden in deep path
+          ---
+          duration_ms: 6.775
+          ...
+        # Subtest: should handle paths with legitimate dots in filenames
+        not ok 3 - should handle paths with legitimate dots in filenames
+          ---
+          duration_ms: 20.6
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB2.directory-traversal.test.js:449:9'
+          failureType: 'testCodeFailure'
+          error: 'TypeScript compilation failed during validation.'
+          code: 'E006_TS_COMPILE_FAIL'
+          name: 'AppForgeError'
+          stack: |-
+            FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+            async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/CB2.directory-traversal.test.js:458:32)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        1..3
+    not ok 4 - Edge Cases and Special Scenarios
+      ---
+      duration_ms: 232.1641
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB2.directory-traversal.test.js:418:5'
+      failureType: 'subtestsFailed'
+      error: '2 subtests failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    1..4
+not ok 4 - CB-2: Directory Traversal Prevention in File Paths
+  ---
+  duration_ms: 482.6303
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\CB2.directory-traversal.test.js:20:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: CodebaseAnalyzerService (AppForge Unit Tests)
+    # Subtest: should analyze standard Appium Page Object Models
+    ok 1 - should analyze standard Appium Page Object Models
+      ---
+      duration_ms: 102.4698
+      ...
+    # Subtest: should detect Page Registries in Appium apps (BUG-04 Extracted Feature)
+    ok 2 - should detect Page Registries in Appium apps (BUG-04 Extracted Feature)
+      ---
+      duration_ms: 91.1785
+      ...
+    1..2
+ok 5 - CodebaseAnalyzerService (AppForge Unit Tests)
+  ---
+  duration_ms: 209.7885
+  type: 'suite'
+  ...
+# {"timestamp":"2026-04-07T21:27:30.648Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:30.715Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# Subtest: ExecutionService - Issue \#17: Edge Cases and Additional Security
+    # Subtest: Newline character injection prevention
+        # Subtest: should reject specificArgs with newline character (\\n)
+        not ok 1 - should reject specificArgs with newline character (\\n)
+          ---
+          duration_ms: 65.6438
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:24:9'
+          failureType: 'testCodeFailure'
+          error: 'Expected specificArgs validation error, got: spawn npx ENOENT'
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:32:24)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+            async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+# {"timestamp":"2026-04-07T21:27:30.732Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+        # Subtest: should reject specificArgs with carriage return (\\r)
+        not ok 2 - should reject specificArgs with carriage return (\\r)
+          ---
+          duration_ms: 25.7815
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:38:9'
+          failureType: 'testCodeFailure'
+          error: 'Expected specificArgs validation error, got: spawn npx ENOENT'
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:46:24)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject specificArgs with CRLF sequence
+        not ok 3 - should reject specificArgs with CRLF sequence
+          ---
+          duration_ms: 16.2557
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:52:9'
+          failureType: 'testCodeFailure'
+          error: 'Expected specificArgs validation error, got: spawn npx ENOENT'
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:60:24)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        1..3
+    not ok 1 - Newline character injection prevention
+      ---
+      duration_ms: 111.5803
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:23:5'
+      failureType: 'subtestsFailed'
+      error: '3 subtests failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async Promise.all (index 0)
+      ...
+    # Subtest: overrideCommand validation
+        # Subtest: should reject overrideCommand with semicolon
+        not ok 1 - should reject overrideCommand with semicolon
+          ---
+          duration_ms: 22.7879
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:68:9'
+          failureType: 'testCodeFailure'
+          error: "Expected overrideCommand validation error, got: Shell injection pattern detected: '[HIGH] SEMICOLON_INJECTION: detected ';' in 'test;''. Command blocked."
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:75:24)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject overrideCommand with pipe
+        not ok 2 - should reject overrideCommand with pipe
+          ---
+          duration_ms: 11.7499
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:81:9'
+          failureType: 'testCodeFailure'
+          error: "Expected overrideCommand validation error, got: Shell injection pattern detected: '[HIGH] PIPE_INJECTION: detected '|' in '|''. Command blocked."
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:88:24)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject overrideCommand with backtick
+        not ok 3 - should reject overrideCommand with backtick
+          ---
+          duration_ms: 18.769
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:94:9'
+          failureType: 'testCodeFailure'
+          error: "Expected overrideCommand validation error, got: Shell injection pattern detected: '[CRITICAL] COMMAND_SUBSTITUTION: detected '$() or ``' in '`whoami`''. Command blocked."
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:101:24)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject overrideCommand with dollar sign
+        not ok 4 - should reject overrideCommand with dollar sign
+          ---
+          duration_ms: 19.5462
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:107:9'
+          failureType: 'testCodeFailure'
+          error: "Expected overrideCommand validation error, got: Shell injection pattern detected: '[CRITICAL] COMMAND_SUBSTITUTION: detected '$() or ``' in '$(whoami)''. Command blocked."
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:114:24)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject overrideCommand with ampersand
+        not ok 5 - should reject overrideCommand with ampersand
+          ---
+          duration_ms: 14.2022
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:120:9'
+          failureType: 'testCodeFailure'
+          error: "Expected overrideCommand validation error, got: Shell injection pattern detected: '[HIGH] AMPERSAND_INJECTION: detected '&&' in '&''. Command blocked."
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:127:24)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should accept valid overrideCommand without metacharacters
+        ok 6 - should accept valid overrideCommand without metacharacters
+          ---
+          duration_ms: 15.5864
+          ...
+        1..6
+    not ok 2 - overrideCommand validation
+      ---
+      duration_ms: 104.6941
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:67:5'
+      failureType: 'subtestsFailed'
+      error: '5 subtests failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+# {"timestamp":"2026-04-07T21:27:30.854Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:30.876Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+    # Subtest: Empty string and whitespace handling
+        # Subtest: should handle empty tags gracefully
+        ok 1 - should handle empty tags gracefully
+          ---
+          duration_ms: 16.356
+          ...
+# {"timestamp":"2026-04-07T21:27:30.892Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+        # Subtest: should handle whitespace-only tags gracefully
+        ok 2 - should handle whitespace-only tags gracefully
+          ---
+          duration_ms: 17.3582
+          ...
+# {"timestamp":"2026-04-07T21:27:30.907Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+        # Subtest: should handle empty specificArgs gracefully
+        ok 3 - should handle empty specificArgs gracefully
+          ---
+          duration_ms: 14.9464
+          ...
+        # Subtest: should filter empty strings from split specificArgs
+        ok 4 - should filter empty strings from split specificArgs
+          ---
+          duration_ms: 39.0612
+          ...
+        1..4
+    ok 3 - Empty string and whitespace handling
+      ---
+      duration_ms: 90.5993
+      type: 'suite'
+      ...
+    # Subtest: Path traversal prevention in executable
+        # Subtest: should reject executable with path traversal (..)
+        ok 1 - should reject executable with path traversal (..)
+          ---
+          duration_ms: 12.809
+          ...
+        # Subtest: should reject relative paths in executable
+        ok 2 - should reject relative paths in executable
+          ---
+          duration_ms: 12.5501
+          ...
+        # Subtest: should accept absolute paths in executable
+        ok 3 - should accept absolute paths in executable
+          ---
+          duration_ms: 23.7333
+          ...
+        # Subtest: should accept plain binary names
+        ok 4 - should accept plain binary names
+          ---
+          duration_ms: 12.3731
+          ...
+        1..4
+    ok 4 - Path traversal prevention in executable
+      ---
+      duration_ms: 62.853
+      type: 'suite'
+      ...
+    # Subtest: Unicode and special character handling
+        # Subtest: should reject tags with Unicode control characters
+        ok 1 - should reject tags with Unicode control characters
+          ---
+          duration_ms: 0.6518
+          ...
+        # Subtest: should document that Unicode characters are NOT matched by \\w in tag validation
+        ok 2 - should document that Unicode characters are NOT matched by \\w in tag validation
+          ---
+          duration_ms: 0.4723
+          ...
+        1..2
+    ok 5 - Unicode and special character handling
+      ---
+      duration_ms: 1.4089
+      type: 'suite'
+      ...
+    # Subtest: Combined attack vectors
+        # Subtest: should reject multiple injection techniques combined
+        ok 1 - should reject multiple injection techniques combined
+          ---
+          duration_ms: 8.5454
+          ...
+        # Subtest: should validate all parameters before execution
+        not ok 2 - should validate all parameters before execution
+          ---
+          duration_ms: 18.432
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:313:9'
+          failureType: 'testCodeFailure'
+          error: "Shell injection pattern detected: '[HIGH] SEMICOLON_INJECTION: detected ';' in '--malicious;''. Command blocked."
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.edgecases.test.js:316:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+          ...
+        1..2
+    not ok 6 - Combined attack vectors
+      ---
+      duration_ms: 27.3136
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:297:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    1..6
+not ok 6 - ExecutionService - Issue \#17: Edge Cases and Additional Security
+  ---
+  duration_ms: 401.8307
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.edgecases.test.js:6:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# {"timestamp":"2026-04-07T21:27:30.618Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.622Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.626Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.628Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.629Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.631Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.632Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.634Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.635Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# {"timestamp":"2026-04-07T21:27:30.635Z","level":"INFO","message":"[ContextManager] Injecting compacted screen history"}
+# Subtest: ExecutionService - Issue \#15: Valid Locator Strategies
+    # Subtest: should generate snapshot containing accessibility-id selector with ~ prefix
+    not ok 1 - should generate snapshot containing accessibility-id selector with ~ prefix
+      ---
+      duration_ms: 34.7209
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:12:5'
+      failureType: 'testCodeFailure'
+      error: 'Snapshot should include accessibility-id selector'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:19:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1135:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should generate snapshot containing resource-id selector with id= prefix
+    not ok 2 - should generate snapshot containing resource-id selector with id= prefix
+      ---
+      duration_ms: 0.9161
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:23:5'
+      failureType: 'testCodeFailure'
+      error: 'Snapshot should include resource-id selector'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:27:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should generate snapshot containing valid XPath selector for text attribute
+    not ok 3 - should generate snapshot containing valid XPath selector for text attribute
+      ---
+      duration_ms: 3.7397
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:31:5'
+      failureType: 'testCodeFailure'
+      error: 'Snapshot should include valid XPath with @text attribute'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:36:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should escape double quotes in text for valid XPath
+    not ok 4 - should escape double quotes in text for valid XPath
+      ---
+      duration_ms: 4.1429
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:40:5'
+      failureType: 'testCodeFailure'
+      error: 'Snapshot should escape double quotes in XPath'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:45:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should prioritize selectors in correct stability order (accessibility-id first)
+    not ok 5 - should prioritize selectors in correct stability order (accessibility-id first)
+      ---
+      duration_ms: 1.142
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:47:5'
+      failureType: 'testCodeFailure'
+      error: 'Accessibility-id selector should be in snapshot'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:63:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should not generate selectors for invalid text (too long)
+    not ok 6 - should not generate selectors for invalid text (too long)
+      ---
+      duration_ms: 1.4924
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:67:5'
+      failureType: 'testCodeFailure'
+      error: 'Snapshot should include resource-id'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:73:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should handle iOS elements with name attribute
+    not ok 7 - should handle iOS elements with name attribute
+      ---
+      duration_ms: 1.3737
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:77:5'
+      failureType: 'testCodeFailure'
+      error: 'Snapshot should use name attribute for accessibility-id on iOS'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:82:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should generate class-based XPath as last resort
+    not ok 8 - should generate class-based XPath as last resort
+      ---
+      duration_ms: 1.0144
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:84:5'
+      failureType: 'testCodeFailure'
+      error: 'Snapshot should use class-based XPath as last resort'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:89:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: regression test: should never generate invalid *[attribute] selectors
+    not ok 9 - regression test: should never generate invalid *[attribute] selectors
+      ---
+      duration_ms: 1.2487
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:91:5'
+      failureType: 'testCodeFailure'
+      error: 'Snapshot should contain valid XPath //*[@text="Submit"] instead'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.issue15.test.js:99:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should return elementCount metadata
+    ok 10 - should return elementCount metadata
+      ---
+      duration_ms: 1.1593
+      ...
+    # Subtest: should only return raw xml when includeRawXml is explicitly passed
+    ok 11 - should only return raw xml when includeRawXml is explicitly passed
+      ---
+      duration_ms: 0.7513
+      ...
+    # Subtest: should include source and timestamp in result
+    ok 12 - should include source and timestamp in result
+      ---
+      duration_ms: 0.7133
+      ...
+    1..12
+not ok 7 - ExecutionService - Issue \#15: Valid Locator Strategies
+  ---
+  duration_ms: 61.7927
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.issue15.test.js:11:1'
+  failureType: 'subtestsFailed'
+  error: '9 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# {"timestamp":"2026-04-07T21:27:31.717Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:31.771Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:31.790Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:31.801Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:31.831Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:31.842Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:31.916Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# Subtest: ExecutionService - Issue \#17: Shell Injection Prevention
+    # Subtest: Tag Expression Validation
+        # Subtest: should accept valid tag expressions with @, alphanumeric, spaces, brackets, and logical operators
+        ok 1 - should accept valid tag expressions with @, alphanumeric, spaces, brackets, and logical operators
+          ---
+          duration_ms: 171.4937
+          ...
+        # Subtest: should reject tag expression with shell injection attempt (semicolon)
+        ok 2 - should reject tag expression with shell injection attempt (semicolon)
+          ---
+          duration_ms: 10.972
+          ...
+        # Subtest: should reject tag expression with shell injection attempt (backtick)
+        ok 3 - should reject tag expression with shell injection attempt (backtick)
+          ---
+          duration_ms: 9.0903
+          ...
+        # Subtest: should reject tag expression with shell injection attempt (dollar sign)
+        ok 4 - should reject tag expression with shell injection attempt (dollar sign)
+          ---
+          duration_ms: 7.6447
+          ...
+        # Subtest: should reject tag expression with pipe operator (shell redirection)
+        ok 5 - should reject tag expression with pipe operator (shell redirection)
+          ---
+          duration_ms: 9.3866
+          ...
+# {"timestamp":"2026-04-07T21:27:31.986Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+        # Subtest: should accept empty tag expression
+        ok 6 - should accept empty tag expression
+          ---
+          duration_ms: 57.0926
+          ...
+        1..6
+    ok 1 - Tag Expression Validation
+      ---
+      duration_ms: 270.259
+      type: 'suite'
+      ...
+# {"timestamp":"2026-04-07T21:27:32.001Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:32.033Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:32.150Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+    # Subtest: specificArgs Validation
+        # Subtest: should accept valid specificArgs without shell metacharacters
+        ok 1 - should accept valid specificArgs without shell metacharacters
+          ---
+          duration_ms: 89.0624
+          ...
+        # Subtest: should reject specificArgs with semicolon injection
+        not ok 2 - should reject specificArgs with semicolon injection
+          ---
+          duration_ms: 13.2489
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:134:9'
+          failureType: 'testCodeFailure'
+          error: "Shell injection pattern detected: '[HIGH] SEMICOLON_INJECTION: detected ';' in '30000;''. Command blocked."
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.test.js:138:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+          ...
+        # Subtest: should reject specificArgs with ampersand injection
+        not ok 3 - should reject specificArgs with ampersand injection
+          ---
+          duration_ms: 17.8276
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:146:9'
+          failureType: 'testCodeFailure'
+          error: "Shell injection pattern detected: '[HIGH] AMPERSAND_INJECTION: detected '&&' in '&''. Command blocked."
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.test.js:150:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject specificArgs with backtick injection
+        not ok 4 - should reject specificArgs with backtick injection
+          ---
+          duration_ms: 9.6854
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:158:9'
+          failureType: 'testCodeFailure'
+          error: "Shell injection pattern detected: '[CRITICAL] COMMAND_SUBSTITUTION: detected '$() or ``' in '`whoami`''. Command blocked."
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.test.js:162:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject specificArgs with dollar sign injection
+        not ok 5 - should reject specificArgs with dollar sign injection
+          ---
+          duration_ms: 11.8925
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:170:9'
+          failureType: 'testCodeFailure'
+          error: "Shell injection pattern detected: '[CRITICAL] COMMAND_SUBSTITUTION: detected '$() or ``' in '$(cat''. Command blocked."
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.test.js:174:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject specificArgs with pipe operator
+        not ok 6 - should reject specificArgs with pipe operator
+          ---
+          duration_ms: 8.4415
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:182:9'
+          failureType: 'testCodeFailure'
+          error: "Shell injection pattern detected: '[HIGH] PIPE_INJECTION: detected '|' in '|''. Command blocked."
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.test.js:186:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject specificArgs with greater-than redirection
+        not ok 7 - should reject specificArgs with greater-than redirection
+          ---
+          duration_ms: 13.4915
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:194:9'
+          failureType: 'testCodeFailure'
+          error: "Shell injection pattern detected: '[HIGH] REDIRECT_INJECTION: detected '< or >' in '>''. Command blocked."
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.test.js:198:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should reject specificArgs with quotes injection
+        not ok 8 - should reject specificArgs with quotes injection
+          ---
+          duration_ms: 9.3227
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:206:9'
+          failureType: 'testCodeFailure'
+          error: `Shell injection pattern detected: '[HIGH] SEMICOLON_INJECTION: detected ';' in '"30000;''. Command blocked.`
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.test.js:210:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should accept empty specificArgs
+        ok 9 - should accept empty specificArgs
+          ---
+          duration_ms: 68.7268
+          ...
+        1..9
+    not ok 2 - specificArgs Validation
+      ---
+      duration_ms: 244.976
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:113:5'
+      failureType: 'subtestsFailed'
+      error: '7 subtests failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: Combined validation scenarios
+        # Subtest: should validate both tags and specificArgs together
+        ok 1 - should validate both tags and specificArgs together
+          ---
+          duration_ms: 8.0897
+          ...
+        # Subtest: should catch specificArgs even when tags are valid
+        not ok 2 - should catch specificArgs even when tags are valid
+          ---
+          duration_ms: 17.5438
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:247:9'
+          failureType: 'testCodeFailure'
+          error: "Shell injection pattern detected: '[HIGH] SEMICOLON_INJECTION: detected ';' in '30000;''. Command blocked."
+          code: -32053
+          name: 'McpError'
+          stack: |-
+            Object.shellInjectionDetected (file:///C:/Users/Rohit/mcp/AppForge/dist/types/ErrorSystem.js:97:52)
+            ExecutionService.runTest (file:///C:/Users/Rohit/mcp/AppForge/dist/services/ExecutionService.js:62:33)
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ExecutionService.test.js:250:65)
+            Test.runInAsyncScope (node:async_hooks:206:9)
+            Test.run (node:internal/test_runner/test:796:25)
+            Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+            Test.postRun (node:internal/test_runner/test:889:19)
+            Test.run (node:internal/test_runner/test:835:12)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+          ...
+        # Subtest: should reject request with both tags and specificArgs injected
+        ok 3 - should reject request with both tags and specificArgs injected
+          ---
+          duration_ms: 12.0872
+          ...
+        1..3
+    not ok 3 - Combined validation scenarios
+      ---
+      duration_ms: 38.9247
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:232:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: Regression: Original vulnerability scenarios
+        # Subtest: should block the exact injection from Issue \#17 reproduction steps
+        ok 1 - should block the exact injection from Issue \#17 reproduction steps
+          ---
+          duration_ms: 11.2819
+          ...
+        # Subtest: should not write files or execute operations if validation fails
+        ok 2 - should not write files or execute operations if validation fails
+          ---
+          duration_ms: 7.9208
+          ...
+        1..2
+    ok 4 - Regression: Original vulnerability scenarios
+      ---
+      duration_ms: 19.906
+      type: 'suite'
+      ...
+    1..4
+not ok 8 - ExecutionService - Issue \#17: Shell Injection Prevention
+  ---
+  duration_ms: 578.4487
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ExecutionService.test.js:6:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# {"timestamp":"2026-04-07T21:27:31.740Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# {"timestamp":"2026-04-07T21:27:31.822Z","level":"WARN","message":"Timeout capped at 2 hours (7200000ms). Requested: 10000000ms"}
+# {"timestamp":"2026-04-07T21:27:31.832Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+# Subtest: ExecutionService - Timeout Resolution
+    # Subtest: Timeout Priority Resolution
+        # Subtest: should use explicit timeout when provided
+        ok 1 - should use explicit timeout when provided
+          ---
+          duration_ms: 86.1375
+          ...
+        # Subtest: should cap timeout at 2 hours maximum
+        ok 2 - should cap timeout at 2 hours maximum
+          ---
+          duration_ms: 33.5116
+          ...
+        # Subtest: should reject invalid timeout values (negative)
+        ok 3 - should reject invalid timeout values (negative)
+          ---
+          duration_ms: 38.2268
+          ...
+        # Subtest: should reject invalid timeout values (zero)
+        ok 4 - should reject invalid timeout values (zero)
+          ---
+          duration_ms: 12.3928
+          ...
+# {"timestamp":"2026-04-07T21:27:31.986Z","level":"INFO","message":"Detected cucumberOpts.timeout from wdio.conf.ts: 180000ms"}
+# {"timestamp":"2026-04-07T21:27:31.987Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+        # Subtest: should use mcp-config timeout when no explicit timeout provided
+        ok 5 - should use mcp-config timeout when no explicit timeout provided
+          ---
+          duration_ms: 69.7798
+          ...
+# {"timestamp":"2026-04-07T21:27:32.036Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+        # Subtest: should detect cucumberOpts.timeout from wdio.conf.ts
+        ok 6 - should detect cucumberOpts.timeout from wdio.conf.ts
+          ---
+          duration_ms: 57.0806
+          ...
+        # Subtest: should fall back to default timeout (30 min) when nothing configured
+        ok 7 - should fall back to default timeout (30 min) when nothing configured
+          ---
+          duration_ms: 24.6432
+          ...
+        # Subtest: should prioritize explicit over mcp-config
+        ok 8 - should prioritize explicit over mcp-config
+          ---
+          duration_ms: 42.3235
+          ...
+# {"timestamp":"2026-04-07T21:27:32.165Z","level":"INFO","message":"Detected waitforTimeout from wdio.conf.js: 90000ms"}
+# {"timestamp":"2026-04-07T21:27:32.166Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+        # Subtest: should prioritize mcp-config over detected wdio.conf timeout
+        ok 9 - should prioritize mcp-config over detected wdio.conf timeout
+          ---
+          duration_ms: 42.2629
+          ...
+# {"timestamp":"2026-04-07T21:27:32.190Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+        # Subtest: should detect waitforTimeout from wdio.conf.js
+        ok 10 - should detect waitforTimeout from wdio.conf.js
+          ---
+          duration_ms: 43.6466
+          ...
+        1..10
+    ok 1 - Timeout Priority Resolution
+      ---
+      duration_ms: 458.8467
+      type: 'suite'
+      ...
+# {"timestamp":"2026-04-07T21:27:32.211Z","level":"INFO","message":"No executionCommand configured ΓÇö using detected: npx wdio run wdio.conf.ts"}
+    # Subtest: Timeout Output Logging
+        # Subtest: should include timeout info in output with correct format
+        ok 1 - should include timeout info in output with correct format
+          ---
+          duration_ms: 21.4842
+          ...
+        1..1
+    ok 2 - Timeout Output Logging
+      ---
+      duration_ms: 22.2076
+      type: 'suite'
+      ...
+    # Subtest: Integration with Test Execution
+        # Subtest: should pass timeout to child process execution
+        ok 1 - should pass timeout to child process execution
+          ---
+          duration_ms: 66.5775
+          ...
+        1..1
+    ok 3 - Integration with Test Execution
+      ---
+      duration_ms: 67.4435
+      type: 'suite'
+      ...
+    1..3
+ok 9 - ExecutionService - Timeout Resolution
+  ---
+  duration_ms: 556.1364
+  type: 'suite'
+  ...
+# Subtest: ExecutionService - Issue \#17: Input Validation
+    # Subtest: Private method validation via direct testing
+        # Subtest: should have validateTagExpression method that rejects shell injection
+        ok 1 - should have validateTagExpression method that rejects shell injection
+          ---
+          duration_ms: 4.4357
+          ...
+        # Subtest: should have validateSpecificArgs method that rejects shell metacharacters
+        ok 2 - should have validateSpecificArgs method that rejects shell metacharacters
+          ---
+          duration_ms: 0.7573
+          ...
+        # Subtest: Issue \#17: Code inspection should show validation methods exist
+        ok 3 - Issue \#17: Code inspection should show validation methods exist
+          ---
+          duration_ms: 0.924
+          ...
+        # Subtest: should use execFile instead of execSync
+        ok 4 - should use execFile instead of execSync
+          ---
+          duration_ms: 0.6888
+          ...
+        1..4
+    ok 1 - Private method validation via direct testing
+      ---
+      duration_ms: 10.3318
+      type: 'suite'
+      ...
+    # Subtest: Security: Shell injection prevention requirements
+        # Subtest: Issue \#17: Tags should only allow safe Cucumber tag characters
+        ok 1 - Issue \#17: Tags should only allow safe Cucumber tag characters
+          ---
+          duration_ms: 1.3893
+          ...
+        # Subtest: Issue \#17: specificArgs should reject all shell metacharacters
+        ok 2 - Issue \#17: specificArgs should reject all shell metacharacters
+          ---
+          duration_ms: 1.0636
+          ...
+        # Subtest: Issue \#17 FIX: Should use execFile with args array instead of execSync with string
+        ok 3 - Issue \#17 FIX: Should use execFile with args array instead of execSync with string
+          ---
+          duration_ms: 0.7711
+          ...
+        1..3
+    ok 2 - Security: Shell injection prevention requirements
+      ---
+      duration_ms: 5.3202
+      type: 'suite'
+      ...
+    # Subtest: Regression: Issue \#17 exact reproduction case
+        # Subtest: should prevent the exact injection from Issue \#17 reproduction
+        ok 1 - should prevent the exact injection from Issue \#17 reproduction
+          ---
+          duration_ms: 0.9922
+          ...
+        # Subtest: should prevent curl-based data exfiltration attempts
+        ok 2 - should prevent curl-based data exfiltration attempts
+          ---
+          duration_ms: 1.0049
+          ...
+        # Subtest: should prevent arbitrary command execution via rm, chmod, etc.
+        ok 3 - should prevent arbitrary command execution via rm, chmod, etc.
+          ---
+          duration_ms: 1.0031
+          ...
+        1..3
+    ok 3 - Regression: Issue \#17 exact reproduction case
+      ---
+      duration_ms: 4.4864
+      type: 'suite'
+      ...
+    # Subtest: Validation: execFile eliminates shell parsing
+        # Subtest: should document the security benefit of execFile vs execSync
+        ok 1 - should document the security benefit of execFile vs execSync
+          ---
+          duration_ms: 1.2141
+          ...
+        1..1
+    ok 4 - Validation: execFile eliminates shell parsing
+      ---
+      duration_ms: 1.615
+      type: 'suite'
+      ...
+    1..4
+ok 10 - ExecutionService - Issue \#17: Input Validation
+  ---
+  duration_ms: 27.413
+  type: 'suite'
+  ...
+# Subtest: FileWriterService.validateAndWrite - Issue \#12 Fix (Staging & Rollback)
+    # Subtest: [ISSUE \#12] should NOT write files to disk if TypeScript validation fails
+    ok 1 - [ISSUE \#12] should NOT write files to disk if TypeScript validation fails
+      ---
+      duration_ms: 283.6095
+      ...
+    # Subtest: [ISSUE \#12] should clean up staging directory after failed validation
+    ok 2 - [ISSUE \#12] should clean up staging directory after failed validation
+      ---
+      duration_ms: 310.2747
+      ...
+    # Subtest: [ISSUE \#12] should write files to disk AFTER successful TypeScript validation
+    not ok 3 - [ISSUE \#12] should write files to disk AFTER successful TypeScript validation
+      ---
+      duration_ms: 179.7332
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\FileWriterService.issue12.test.js:108:5'
+      failureType: 'testCodeFailure'
+      error: 'TypeScript compilation failed during validation.'
+      code: 'E006_TS_COMPILE_FAIL'
+      name: 'AppForgeError'
+      stack: |-
+        FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+        async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/FileWriterService.issue12.test.js:135:24)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#12] should write multiple files atomically (all or nothing)
+    not ok 4 - [ISSUE \#12] should write multiple files atomically (all or nothing)
+      ---
+      duration_ms: 241.4562
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\FileWriterService.issue12.test.js:146:5'
+      failureType: 'testCodeFailure'
+      error: 'TypeScript compilation failed during validation.'
+      code: 'E006_TS_COMPILE_FAIL'
+      name: 'AppForgeError'
+      stack: |-
+        FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+        async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/FileWriterService.issue12.test.js:170:24)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#12] should support dry-run mode (validate without writing)
+    not ok 5 - [ISSUE \#12] should support dry-run mode (validate without writing)
+      ---
+      duration_ms: 156.7692
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\FileWriterService.issue12.test.js:180:5'
+      failureType: 'testCodeFailure'
+      error: 'TypeScript compilation failed during validation.'
+      code: 'E006_TS_COMPILE_FAIL'
+      name: 'AppForgeError'
+      stack: |-
+        FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+        async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/FileWriterService.issue12.test.js:194:24)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#12] should include clear error message when TypeScript validation fails
+    not ok 6 - [ISSUE \#12] should include clear error message when TypeScript validation fails
+      ---
+      duration_ms: 202.4896
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\FileWriterService.issue12.test.js:202:5'
+      failureType: 'testCodeFailure'
+      error: 'Error should include remediation details'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/FileWriterService.issue12.test.js:220:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#12] should not leave .mcp-staging directory on disk after failed validation
+    ok 7 - [ISSUE \#12] should not leave .mcp-staging directory on disk after failed validation
+      ---
+      duration_ms: 176.9512
+      ...
+    # Subtest: [ISSUE \#12] should not leave .mcp-staging directory on disk after successful write
+    not ok 8 - [ISSUE \#12] should not leave .mcp-staging directory on disk after successful write
+      ---
+      duration_ms: 227.3825
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\FileWriterService.issue12.test.js:239:5'
+      failureType: 'testCodeFailure'
+      error: 'TypeScript compilation failed during validation.'
+      code: 'E006_TS_COMPILE_FAIL'
+      name: 'AppForgeError'
+      stack: |-
+        FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+        async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/FileWriterService.issue12.test.js:252:24)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#12] should validate TypeScript before writing Gherkin files
+    ok 9 - [ISSUE \#12] should validate TypeScript before writing Gherkin files
+      ---
+      duration_ms: 271.9634
+      ...
+    # Subtest: [ISSUE \#12] should provide backup/recovery information in success response
+    not ok 10 - [ISSUE \#12] should provide backup/recovery information in success response
+      ---
+      duration_ms: 250.0432
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\FileWriterService.issue12.test.js:290:5'
+      failureType: 'testCodeFailure'
+      error: 'TypeScript compilation failed during validation.'
+      code: 'E006_TS_COMPILE_FAIL'
+      name: 'AppForgeError'
+      stack: |-
+        FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+        async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/FileWriterService.issue12.test.js:303:24)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#12] message should clearly state validation failure vs. successful write
+    not ok 11 - [ISSUE \#12] message should clearly state validation failure vs. successful write
+      ---
+      duration_ms: 445.8023
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\FileWriterService.issue12.test.js:310:5'
+      failureType: 'testCodeFailure'
+      error: 'TypeScript compilation failed during validation.'
+      code: 'E006_TS_COMPILE_FAIL'
+      name: 'AppForgeError'
+      stack: |-
+        FileWriterService.validateAndWrite (file:///C:/Users/Rohit/mcp/AppForge/dist/services/FileWriterService.js:77:23)
+        async TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/FileWriterService.issue12.test.js:324:31)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    1..11
+not ok 11 - FileWriterService.validateAndWrite - Issue \#12 Fix (Staging & Rollback)
+  ---
+  duration_ms: 2817.3031
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\FileWriterService.issue12.test.js:18:1'
+  failureType: 'subtestsFailed'
+  error: '7 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing incremental update for 1 changed files
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing incremental update for 1 changed files
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# Subtest: NavigationGraphService - P2 Enhancement 3: Test Coverage
+    # Subtest: P2 Improvement 2: Graph Caching & Incremental Updates
+        # Subtest: should use cached graph when no files have changed
+        ok 1 - should use cached graph when no files have changed
+          ---
+          duration_ms: 172.1586
+          ...
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing incremental update for 1 changed files
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing incremental update for 1 changed files
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Finding path from 'screen1' to 'screen2'
+# [NavigationGraph] No path found from 'screen1' to 'screen2'
+# [NavigationGraph] Finding path from 'screen1' to 'screen7'
+# [NavigationGraph] No path found from 'screen1' to 'screen7'
+# [NavigationGraph] Finding path from 'loginscreen' to 'dashboardscreen'
+# [NavigationGraph] No path found from 'loginscreen' to 'dashboardscreen'
+# [NavigationGraph] Finding path from 'loginscreen' to 'dashboardscreen'
+# [NavigationGraph] No path found from 'loginscreen' to 'dashboardscreen'
+# [NavigationGraph] Finding path from 'dashboardscreen' to 'dashboardscreen'
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Error loading graph, starting fresh: SyntaxError: Expected property name or '}' in JSON at position 2
+#     at JSON.parse (<anonymous>)
+#     at NavigationGraphService.loadGraph (file:///C:/Users/Rohit/mcp/AppForge/dist/services/NavigationGraphService.js:678:37)
+#     at new NavigationGraphService (file:///C:/Users/Rohit/mcp/AppForge/dist/services/NavigationGraphService.js:21:27)
+#     at TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/NavigationGraphService.test.js:263:30)
+#     at Test.runInAsyncScope (node:async_hooks:206:9)
+#     at Test.run (node:internal/test_runner/test:796:25)
+#     at async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Using cached graph (no changes detected)
+        # Subtest: should rebuild graph when files are modified
+        not ok 2 - should rebuild graph when files are modified
+          ---
+          duration_ms: 178.0503
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\NavigationGraphService.test.js:48:9'
+          failureType: 'testCodeFailure'
+          error: |-
+            Expected "actual" to be strictly unequal to:
+            
+            'Wed Apr 08 2026 02:57:32 GMT+0530 (India Standard Time)'
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: 'Wed Apr 08 2026 02:57:32 GMT+0530 (India Standard Time)'
+          actual: 'Wed Apr 08 2026 02:57:32 GMT+0530 (India Standard Time)'
+          operator: 'notStrictEqual'
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/NavigationGraphService.test.js:67:20)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should save and load file hashes correctly
+        ok 3 - should save and load file hashes correctly
+          ---
+          duration_ms: 71.2186
+          ...
+        1..3
+    not ok 1 - P2 Improvement 2: Graph Caching & Incremental Updates
+      ---
+      duration_ms: 456.3217
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\NavigationGraphService.test.js:24:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        async Promise.all (index 0)
+      ...
+    # Subtest: P2 Improvement 3: Multi-Factor Confidence Scoring
+        # Subtest: should calculate path quality metrics
+        ok 1 - should calculate path quality metrics
+          ---
+          duration_ms: 35.8642
+          ...
+        # Subtest: should identify long navigation path as risk
+        ok 2 - should identify long navigation path as risk
+          ---
+          duration_ms: 97.9715
+          ...
+        # Subtest: should calculate higher maintenance score for accessibility IDs
+        ok 3 - should calculate higher maintenance score for accessibility IDs
+          ---
+          duration_ms: 32.902
+          ...
+        1..3
+    ok 2 - P2 Improvement 3: Multi-Factor Confidence Scoring
+      ---
+      duration_ms: 176.482
+      type: 'suite'
+      ...
+    # Subtest: Navigation Context Generation
+        # Subtest: should generate navigation context for target screen
+        not ok 1 - should generate navigation context for target screen
+          ---
+          duration_ms: 160.9958
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\NavigationGraphService.test.js:198:9'
+          failureType: 'testCodeFailure'
+          error: |-
+            The expression evaluated to a falsy value:
+            
+              assert.ok(context.includes('loginscreen'))
+            
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/NavigationGraphService.test.js:232:20)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        # Subtest: should return message when no navigation paths found
+        ok 2 - should return message when no navigation paths found
+          ---
+          duration_ms: 256.4378
+          ...
+        1..2
+    not ok 3 - Navigation Context Generation
+      ---
+      duration_ms: 418.5964
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\NavigationGraphService.test.js:197:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: Error Handling
+        # Subtest: should handle missing project directory gracefully
+        ok 1 - should handle missing project directory gracefully
+          ---
+          duration_ms: 25.9709
+          ...
+        # Subtest: should handle corrupted graph file
+        ok 2 - should handle corrupted graph file
+          ---
+          duration_ms: 80.4296
+          ...
+        1..2
+    ok 4 - Error Handling
+      ---
+      duration_ms: 106.9439
+      type: 'suite'
+      ...
+    # Subtest: Entry Point Detection
+        # Subtest: should identify screens with no incoming connections as entry points
+        not ok 1 - should identify screens with no incoming connections as entry points
+          ---
+          duration_ms: 34.6566
+          location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\NavigationGraphService.test.js:270:9'
+          failureType: 'testCodeFailure'
+          error: |-
+            The expression evaluated to a falsy value:
+            
+              assert.ok(!entryPoints.includes('nextscreen'))
+            
+          code: 'ERR_ASSERTION'
+          name: 'AssertionError'
+          expected: true
+          actual: false
+          operator: '=='
+          stack: |-
+            TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/NavigationGraphService.test.js:304:20)
+            async Test.run (node:internal/test_runner/test:797:9)
+            async Promise.all (index 0)
+            async Suite.run (node:internal/test_runner/test:1135:7)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+          ...
+        1..1
+    not ok 5 - Entry Point Detection
+      ---
+      duration_ms: 35.0098
+      type: 'suite'
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\NavigationGraphService.test.js:269:5'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    # Subtest: Reachable Screens Detection
+        # Subtest: should find all reachable screens from entry point
+        ok 1 - should find all reachable screens from entry point
+          ---
+          duration_ms: 27.7887
+          ...
+        # Subtest: should respect maxDepth parameter
+        ok 2 - should respect maxDepth parameter
+          ---
+          duration_ms: 19.8985
+          ...
+        1..2
+    ok 6 - Reachable Screens Detection
+      ---
+      duration_ms: 48.3371
+      type: 'suite'
+      ...
+    1..6
+not ok 12 - NavigationGraphService - P2 Enhancement 3: Test Coverage
+  ---
+  duration_ms: 1276.4501
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\NavigationGraphService.test.js:6:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Issue \#16: wdio.conf.ts platform-specific imports
+    # Subtest: platform: ios - wdio.conf.ts should NOT import from wdio.android.conf
+    not ok 1 - platform: ios - wdio.conf.ts should NOT import from wdio.android.conf
+      ---
+      duration_ms: 28.7141
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ProjectSetupService.issue16.test.js:28:5'
+      failureType: 'testCodeFailure'
+      error: 'wdio.conf.ts should exist for iOS project'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ProjectSetupService.issue16.test.js:33:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1135:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: platform: android - wdio.conf.ts should NOT import from wdio.ios.conf
+    not ok 2 - platform: android - wdio.conf.ts should NOT import from wdio.ios.conf
+      ---
+      duration_ms: 9.1619
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ProjectSetupService.issue16.test.js:46:5'
+      failureType: 'testCodeFailure'
+      error: 'wdio.conf.ts should exist for Android project'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ProjectSetupService.issue16.test.js:51:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: platform: both - should NOT generate wdio.conf.ts
+    not ok 3 - platform: both - should NOT generate wdio.conf.ts
+      ---
+      duration_ms: 22.8701
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ProjectSetupService.issue16.test.js:64:5'
+      failureType: 'testCodeFailure'
+      error: 'wdio.android.conf.ts should exist'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ProjectSetupService.issue16.test.js:75:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: iOS project should be runnable without wdio.android.conf.ts
+    not ok 4 - iOS project should be runnable without wdio.android.conf.ts
+      ---
+      duration_ms: 10.6475
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ProjectSetupService.issue16.test.js:88:5'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, open 'C:\\Users\\Rohit\\AppData\\Local\\Temp\\appforge-issue16-zXOMKz\\wdio.conf.ts'"
+      code: 'ENOENT'
+      stack: |-
+        Object.readFileSync (node:fs:449:20)
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ProjectSetupService.issue16.test.js:97:32)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: Android project should be runnable without wdio.ios.conf.ts
+    not ok 5 - Android project should be runnable without wdio.ios.conf.ts
+      ---
+      duration_ms: 9.9262
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ProjectSetupService.issue16.test.js:106:5'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, open 'C:\\Users\\Rohit\\AppData\\Local\\Temp\\appforge-issue16-iEITgh\\wdio.conf.ts'"
+      code: 'ENOENT'
+      stack: |-
+        Object.readFileSync (node:fs:449:20)
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ProjectSetupService.issue16.test.js:115:32)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: default platform (no argument) defaults to android
+    not ok 6 - default platform (no argument) defaults to android
+      ---
+      duration_ms: 25.2137
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ProjectSetupService.issue16.test.js:123:5'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, open 'C:\\Users\\Rohit\\AppData\\Local\\Temp\\appforge-issue16-Fa4soL\\wdio.conf.ts'"
+      code: 'ENOENT'
+      stack: |-
+        Object.readFileSync (node:fs:449:20)
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/ProjectSetupService.issue16.test.js:128:32)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    1..6
+not ok 13 - Issue \#16: wdio.conf.ts platform-specific imports
+  ---
+  duration_ms: 118.8275
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\ProjectSetupService.issue16.test.js:16:1'
+  failureType: 'subtestsFailed'
+  error: '6 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: RefactoringService - Unused Method Detection (Issue \#12)
+    # Subtest: [ISSUE \#12] should NOT flag methods called as page.method()
+    ok 1 - [ISSUE \#12] should NOT flag methods called as page.method()
+      ---
+      duration_ms: 7.9384
+      ...
+    # Subtest: [ISSUE \#12] should NOT flag methods called through wrappers
+    ok 2 - [ISSUE \#12] should NOT flag methods called through wrappers
+      ---
+      duration_ms: 0.8563
+      ...
+    # Subtest: [ISSUE \#12] should correctly flag genuinely unused methods
+    ok 3 - [ISSUE \#12] should correctly flag genuinely unused methods
+      ---
+      duration_ms: 3.296
+      ...
+    # Subtest: [ISSUE \#12] should handle instance variable patterns (loginPage.method)
+    ok 4 - [ISSUE \#12] should handle instance variable patterns (loginPage.method)
+      ---
+      duration_ms: 0.9239
+      ...
+    # Subtest: [ISSUE \#12] should include false-positive warning in report
+    not ok 5 - [ISSUE \#12] should include false-positive warning in report
+      ---
+      duration_ms: 4.7041
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\RefactoringService.issue12.test.js:168:5'
+      failureType: 'testCodeFailure'
+      error: 'Should include false positive warning'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/RefactoringService.issue12.test.js:193:16)
+        Test.runInAsyncScope (node:async_hooks:206:9)
+        Test.run (node:internal/test_runner/test:796:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:526:18)
+        Test.postRun (node:internal/test_runner/test:889:19)
+        Test.run (node:internal/test_runner/test:835:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: [ISSUE \#12] should assign high confidence when <50% methods flagged
+    ok 6 - [ISSUE \#12] should assign high confidence when <50% methods flagged
+      ---
+      duration_ms: 8.0285
+      ...
+    # Subtest: [ISSUE \#12] should assign low confidence when >80% methods flagged
+    ok 7 - [ISSUE \#12] should assign low confidence when >80% methods flagged
+      ---
+      duration_ms: 4.281
+      ...
+    # Subtest: [ISSUE \#12] should handle await patterns correctly
+    ok 8 - [ISSUE \#12] should handle await patterns correctly
+      ---
+      duration_ms: 1.5223
+      ...
+    # Subtest: [ISSUE \#12] should detect duplicate step definitions
+    ok 9 - [ISSUE \#12] should detect duplicate step definitions
+      ---
+      duration_ms: 2.4718
+      ...
+    # Subtest: [ISSUE \#12] should report clean codebase when no issues
+    ok 10 - [ISSUE \#12] should report clean codebase when no issues
+      ---
+      duration_ms: 2.0118
+      ...
+    # Subtest: [ISSUE \#12] should group unused methods by confidence level
+    ok 11 - [ISSUE \#12] should group unused methods by confidence level
+      ---
+      duration_ms: 4.9164
+      ...
+    # Subtest: [ISSUE \#12] should detect XPath over-usage
+    ok 12 - [ISSUE \#12] should detect XPath over-usage
+      ---
+      duration_ms: 1.304
+      ...
+    # Subtest: [ISSUE \#12] should handle case-insensitive matching
+    ok 13 - [ISSUE \#12] should handle case-insensitive matching
+      ---
+      duration_ms: 1.2468
+      ...
+    # Subtest: [ISSUE \#12] should provide helpful suggestion for low confidence results
+    ok 14 - [ISSUE \#12] should provide helpful suggestion for low confidence results
+      ---
+      duration_ms: 4.61
+      ...
+    1..14
+not ok 14 - RefactoringService - Unused Method Detection (Issue \#12)
+  ---
+  duration_ms: 62.1792
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\RefactoringService.issue12.test.js:19:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: RefactoringService - Custom Directory Layout (Issue \#13)
+    # Subtest: [ISSUE \#13] should use custom stepDefinitions path from mcp-config.json
+    ok 1 - [ISSUE \#13] should use custom stepDefinitions path from mcp-config.json
+      ---
+      duration_ms: 443.1325
+      ...
+    # Subtest: [ISSUE \#13] should use custom pagesRoot path from mcp-config.json
+    ok 2 - [ISSUE \#13] should use custom pagesRoot path from mcp-config.json
+      ---
+      duration_ms: 423.8104
+      ...
+    # Subtest: [ISSUE \#13] should fall back to defaults when mcp-config.json is missing paths
+    ok 3 - [ISSUE \#13] should fall back to defaults when mcp-config.json is missing paths
+      ---
+      duration_ms: 3.3537
+      ...
+    # Subtest: [ISSUE \#13] should handle deeply nested custom directory structures
+    ok 4 - [ISSUE \#13] should handle deeply nested custom directory structures
+      ---
+      duration_ms: 724.4068
+      ...
+    # Subtest: [ISSUE \#13] should not return false empty results for non-standard layouts
+    ok 5 - [ISSUE \#13] should not return false empty results for non-standard layouts
+      ---
+      duration_ms: 525.513
+      ...
+    # Subtest: [ISSUE \#13] should respect partial path overrides
+    ok 6 - [ISSUE \#13] should respect partial path overrides
+      ---
+      duration_ms: 9.934
+      ...
+    # Subtest: [ISSUE \#13] integration: full suggest_refactorings workflow with custom paths
+    ok 7 - [ISSUE \#13] integration: full suggest_refactorings workflow with custom paths
+      ---
+      duration_ms: 388.6184
+      ...
+    # Subtest: [ISSUE \#13] should handle Windows-style paths correctly
+    ok 8 - [ISSUE \#13] should handle Windows-style paths correctly
+      ---
+      duration_ms: 3.9523
+      ...
+    1..8
+ok 15 - RefactoringService - Custom Directory Layout (Issue \#13)
+  ---
+  duration_ms: 2591.5065
+  type: 'suite'
+  ...
+# Subtest: SandboxEngine Security Tests (Issue \#19)
+    # Subtest: Block require() access
+        # Subtest: should block direct require() calls
+        ok 1 - should block direct require() calls
+          ---
+          duration_ms: 5.5011
+          ...
+        # Subtest: should block require with single quotes
+        ok 2 - should block require with single quotes
+          ---
+          duration_ms: 4.077
+          ...
+        1..2
+    ok 1 - Block require() access
+      ---
+      duration_ms: 12.927
+      type: 'suite'
+      ...
+    # Subtest: Block process access
+        # Subtest: should block direct process.env access
+        ok 1 - should block direct process.env access
+          ---
+          duration_ms: 1.2367
+          ...
+        # Subtest: should block child_process references
+        ok 2 - should block child_process references
+          ---
+          duration_ms: 1.5716
+          ...
+        1..2
+    ok 2 - Block process access
+      ---
+      duration_ms: 3.5026
+      type: 'suite'
+      ...
+    # Subtest: Block constructor-based escapes
+        # Subtest: should block this.constructor.constructor pattern
+        ok 1 - should block this.constructor.constructor pattern
+          ---
+          duration_ms: 1.2163
+          ...
+        # Subtest: should block ({}).constructor.constructor pattern
+        ok 2 - should block ({}).constructor.constructor pattern
+          ---
+          duration_ms: 1.3497
+          ...
+        1..2
+    ok 3 - Block constructor-based escapes
+      ---
+      duration_ms: 3.5255
+      type: 'suite'
+      ...
+    # Subtest: Block global object access
+        # Subtest: should block global object access
+        ok 1 - should block global object access
+          ---
+          duration_ms: 1.7003
+          ...
+        # Subtest: should block globalThis access
+        ok 2 - should block globalThis access
+          ---
+          duration_ms: 1.2404
+          ...
+        # Subtest: should block __dirname access
+        ok 3 - should block __dirname access
+          ---
+          duration_ms: 2.0343
+          ...
+        1..3
+    ok 4 - Block global object access
+      ---
+      duration_ms: 6.0652
+      type: 'suite'
+      ...
+    # Subtest: Block eval() and Function() constructor
+        # Subtest: should block eval() calls
+        ok 1 - should block eval() calls
+          ---
+          duration_ms: 1.5604
+          ...
+        # Subtest: should block new Function() constructor
+        ok 2 - should block new Function() constructor
+          ---
+          duration_ms: 0.8073
+          ...
+        1..2
+    ok 5 - Block eval() and Function() constructor
+      ---
+      duration_ms: 3.2356
+      type: 'suite'
+      ...
+    # Subtest: Block module system access
+        # Subtest: should block import() calls
+        ok 1 - should block import() calls
+          ---
+          duration_ms: 1.1413
+          ...
+        # Subtest: should block worker_threads references
+        ok 2 - should block worker_threads references
+          ---
+          duration_ms: 1.2911
+          ...
+        1..2
+    ok 6 - Block module system access
+      ---
+      duration_ms: 3.0761
+      type: 'suite'
+      ...
+    # Subtest: Verify safe operations work correctly
+        # Subtest: should allow safe JSON operations
+        ok 1 - should allow safe JSON operations
+          ---
+          duration_ms: 43.2586
+          ...
+        # Subtest: should allow safe Math operations
+        ok 2 - should allow safe Math operations
+          ---
+          duration_ms: 18.1026
+          ...
+        # Subtest: should allow safe Array operations
+        ok 3 - should allow safe Array operations
+          ---
+          duration_ms: 46.9669
+          ...
+        # Subtest: should allow forge.api calls
+        ok 4 - should allow forge.api calls
+          ---
+          duration_ms: 28.5082
+          ...
+        # Subtest: should capture console.log output
+        ok 5 - should capture console.log output
+          ---
+          duration_ms: 15.5076
+          ...
+        # Subtest: should handle undefined return gracefully
+        ok 6 - should handle undefined return gracefully
+          ---
+          duration_ms: 12.6337
+          ...
+        1..6
+    ok 7 - Verify safe operations work correctly
+      ---
+      duration_ms: 167.5726
+      type: 'suite'
+      ...
+    # Subtest: Timeout enforcement
+        # Subtest: should timeout long-running scripts
+        ok 1 - should timeout long-running scripts
+          ---
+          duration_ms: 142.8056
+          ...
+        # Subtest: should allow scripts within timeout
+        ok 2 - should allow scripts within timeout
+          ---
+          duration_ms: 53.8694
+          ...
+        1..2
+    ok 8 - Timeout enforcement
+      ---
+      duration_ms: 197.2491
+      type: 'suite'
+      ...
+    # Subtest: Error handling
+        # Subtest: should capture runtime errors gracefully
+        ok 1 - should capture runtime errors gracefully
+          ---
+          duration_ms: 29.4385
+          ...
+        # Subtest: should handle API errors gracefully
+        ok 2 - should handle API errors gracefully
+          ---
+          duration_ms: 46.206
+          ...
+        1..2
+    ok 9 - Error handling
+      ---
+      duration_ms: 76.6617
+      type: 'suite'
+      ...
+    # Subtest: Regression tests for Issue \#19 - CRITICAL
+        # Subtest: should NOT allow SSH key exfiltration via require
+        ok 1 - should NOT allow SSH key exfiltration via require
+          ---
+          duration_ms: 1.2575
+          ...
+        # Subtest: should NOT allow file system access via require
+        ok 2 - should NOT allow file system access via require
+          ---
+          duration_ms: 0.5376
+          ...
+        # Subtest: should NOT allow network requests via require
+        ok 3 - should NOT allow network requests via require
+          ---
+          duration_ms: 0.6366
+          ...
+        # Subtest: should NOT expose require via undefined check bypass
+        ok 4 - should NOT expose require via undefined check bypass
+          ---
+          duration_ms: 34.7892
+          ...
+        # Subtest: should NOT expose process via undefined check bypass
+        ok 5 - should NOT expose process via undefined check bypass
+          ---
+          duration_ms: 0.7554
+          ...
+        1..5
+    ok 10 - Regression tests for Issue \#19 - CRITICAL
+      ---
+      duration_ms: 38.7126
+      type: 'suite'
+      ...
+    1..10
+ok 16 - SandboxEngine Security Tests (Issue \#19)
+  ---
+  duration_ms: 520.334
+  type: 'suite'
+  ...
+# {"timestamp":"2026-04-07T21:27:37.878Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.886Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.943Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.944Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.944Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.967Z","level":"INFO","message":"Creating session for C:/Users/Rohit/mcp/AppForge/test-session-1775597257959 (attempt 1/1)"}
+# {"timestamp":"2026-04-07T21:27:37.970Z","level":"ERROR","message":"Session creation failed (attempt 1)","context":{"error":"Configuration file not found at C:\\\\Users\\\\Rohit\\\\mcp\\\\AppForge\\\\test-session-1775597257959\\\\mcp-config.json. Please run setup_project first."}}
+# {"timestamp":"2026-04-07T21:27:37.973Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.973Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.980Z","level":"INFO","message":"Creating session for /non/existent/path (attempt 1/1)"}
+# {"timestamp":"2026-04-07T21:27:37.981Z","level":"ERROR","message":"Session creation failed (attempt 1)","context":{"error":"Configuration file not found at \\\\non\\\\existent\\\\path\\\\mcp-config.json. Please run setup_project first."}}
+# {"timestamp":"2026-04-07T21:27:37.982Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.982Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:37.993Z","level":"INFO","message":"Creating session for C:/Users/Rohit/mcp/AppForge/test-session-1775597257987 (attempt 1/1)"}
+# {"timestamp":"2026-04-07T21:27:38.032Z","level":"INFO","message":"Waiting for in-progress session creation: C:/Users/Rohit/mcp/AppForge/test-session-1775597257987"}
+# {"timestamp":"2026-04-07T21:27:38.032Z","level":"INFO","message":"Waiting for in-progress session creation: C:/Users/Rohit/mcp/AppForge/test-session-1775597257987"}
+# Subtest: SessionManager - Critical Session Stability Tests
+    # Subtest: ≡ƒöÑ Session Manager Singleton Behavior
+        # Subtest: should create and manage singleton instance correctly
+        ok 1 - should create and manage singleton instance correctly
+          ---
+          duration_ms: 91.2463
+          ...
+        # Subtest: should destroy and recreate singleton correctly
+        ok 2 - should destroy and recreate singleton correctly
+          ---
+          duration_ms: 20.2393
+          ...
+        1..2
+    ok 1 - ≡ƒöÑ Session Manager Singleton Behavior
+      ---
+      duration_ms: 119.4679
+      type: 'suite'
+      ...
+    # Subtest: ≡ƒÜ¿ Session Creation Failure Handling
+        # Subtest: should handle missing mcp-config.json gracefully
+        ok 1 - should handle missing mcp-config.json gracefully
+          ---
+          duration_ms: 17.4537
+          ...
+        # Subtest: should validate project root path
+        ok 2 - should validate project root path
+          ---
+          duration_ms: 11.1918
+          ...
+# {"timestamp":"2026-04-07T21:27:38.116Z","level":"WARN","message":"Could not probe Appium at localhost:4723. Defaulting to Appium 2 path '/'. Ensure Appium is running: npx appium"}
+# {"timestamp":"2026-04-07T21:27:38.116Z","level":"INFO","message":"Detected Appium server path: / at localhost:4723"}
+# 2026-04-07T21:27:38.263Z ERROR webdriver: WebDriverError: Request failed with error code ECONNREFUSED when running "http://localhost:4723/session" with method "POST"
+# 2026-04-07T21:27:38.267Z ERROR webdriver: Error: WebDriverError: Request failed with error code ECONNREFUSED when running "http://localhost:4723/session" with method "POST"
+#     at FetchRequest._libRequest (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1947:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+#     at async FetchRequest._request (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1973:20)
+#     at async startWebDriverSession (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1110:16)
+#     at async _WebDriver.newSession (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1532:41)
+#     at async remote (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriverio/build/node.js:9848:20)
+#     at async withRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/services/AppiumSessionService.js:62:27)
+#     at async withRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/utils/RetryEngine.js:50:27)
+#     at async AppiumSessionService.startSession (file:///C:/Users/Rohit/mcp/AppForge/dist/services/AppiumSessionService.js:61:33)
+#     at async SessionManager.createSessionWithRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/services/SessionManager.js:209:37)
+# {"timestamp":"2026-04-07T21:27:38.278Z","level":"ERROR","message":"Session creation failed (attempt 1)","context":{"error":"Appium command failed: Unexpected session creation error: Unable to connect to \\"http://localhost:4723/\\", make sure browser driver is running on that address.\\nIt seems like the service failed to start or is rejecting any connections."}}
+# {"timestamp":"2026-04-07T21:27:38.278Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.279Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.299Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.299Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.311Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.311Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.311Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.326Z","level":"INFO","message":"Creating session for C:/Users/Rohit/mcp/AppForge/test-session-1775597258316 (attempt 1/1)"}
+# {"timestamp":"2026-04-07T21:27:38.327Z","level":"ERROR","message":"Session creation failed (attempt 1)","context":{"error":"Failed to parse mcp-config.json: Expected property name or '}' in JSON at position 2. Fix the JSON syntax error (trailing comma, missing brace, etc.) and retry."}}
+# {"timestamp":"2026-04-07T21:27:38.327Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.328Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.336Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.336Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.337Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.337Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.337Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.337Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.338Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:38.346Z","level":"INFO","message":"Creating session for C:/Users/Rohit/mcp/AppForge/test-session-1775597258343 (attempt 1/2)"}
+        # Subtest: should prevent duplicate sessions for same project
+        ok 3 - should prevent duplicate sessions for same project
+          ---
+          duration_ms: 299.6127
+          ...
+        1..3
+    ok 2 - ≡ƒÜ¿ Session Creation Failure Handling
+      ---
+      duration_ms: 331.0322
+      type: 'suite'
+      ...
+    # Subtest: ≡ƒÆÑ Memory and Resource Management
+        # Subtest: should track session statistics correctly
+        ok 1 - should track session statistics correctly
+          ---
+          duration_ms: 16.3188
+          ...
+        # Subtest: should handle session cleanup on destroy
+        ok 2 - should handle session cleanup on destroy
+          ---
+          duration_ms: 8.3448
+          ...
+        1..2
+    ok 3 - ≡ƒÆÑ Memory and Resource Management
+      ---
+      duration_ms: 26.5429
+      type: 'suite'
+      ...
+    # Subtest: ΓÅ░ Error Boundaries and Safety
+        # Subtest: should handle malformed config gracefully
+        ok 1 - should handle malformed config gracefully
+          ---
+          duration_ms: 14.6379
+          ...
+        # Subtest: should handle rapid session manager creation/destruction cycles
+        ok 2 - should handle rapid session manager creation/destruction cycles
+          ---
+          duration_ms: 10.8
+          ...
+# {"timestamp":"2026-04-07T21:27:38.378Z","level":"WARN","message":"Could not probe Appium at localhost:4723. Defaulting to Appium 2 path '/'. Ensure Appium is running: npx appium"}
+# {"timestamp":"2026-04-07T21:27:38.379Z","level":"INFO","message":"Detected Appium server path: / at localhost:4723"}
+# 2026-04-07T21:27:38.409Z ERROR webdriver: WebDriverError: Request failed with error code ECONNREFUSED when running "http://localhost:4723/session" with method "POST"
+# 2026-04-07T21:27:38.410Z ERROR webdriver: Error: WebDriverError: Request failed with error code ECONNREFUSED when running "http://localhost:4723/session" with method "POST"
+#     at FetchRequest._libRequest (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1947:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+#     at async FetchRequest._request (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1973:20)
+#     at async startWebDriverSession (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1110:16)
+#     at async _WebDriver.newSession (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1532:41)
+#     at async remote (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriverio/build/node.js:9848:20)
+#     at async withRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/services/AppiumSessionService.js:62:27)
+#     at async withRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/utils/RetryEngine.js:50:27)
+#     at async AppiumSessionService.startSession (file:///C:/Users/Rohit/mcp/AppForge/dist/services/AppiumSessionService.js:61:33)
+#     at async SessionManager.createSessionWithRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/services/SessionManager.js:209:37)
+# {"timestamp":"2026-04-07T21:27:38.412Z","level":"ERROR","message":"Session creation failed (attempt 1)","context":{"error":"Appium command failed: Unexpected session creation error: Unable to connect to \\"http://localhost:4723/\\", make sure browser driver is running on that address.\\nIt seems like the service failed to start or is rejecting any connections."}}
+# {"timestamp":"2026-04-07T21:27:38.412Z","level":"INFO","message":"Retrying in 1000ms..."}
+# {"timestamp":"2026-04-07T21:27:39.416Z","level":"INFO","message":"Creating session for C:/Users/Rohit/mcp/AppForge/test-session-1775597258343 (attempt 2/2)"}
+# {"timestamp":"2026-04-07T21:27:39.461Z","level":"WARN","message":"Could not probe Appium at localhost:4723. Defaulting to Appium 2 path '/'. Ensure Appium is running: npx appium"}
+# {"timestamp":"2026-04-07T21:27:39.463Z","level":"INFO","message":"Detected Appium server path: / at localhost:4723"}
+# 2026-04-07T21:27:39.505Z ERROR webdriver: WebDriverError: Request failed with error code ECONNREFUSED when running "http://localhost:4723/session" with method "POST"
+# 2026-04-07T21:27:39.506Z ERROR webdriver: Error: WebDriverError: Request failed with error code ECONNREFUSED when running "http://localhost:4723/session" with method "POST"
+#     at FetchRequest._libRequest (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1947:13)
+#     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+#     at async FetchRequest._request (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1973:20)
+#     at async startWebDriverSession (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1110:16)
+#     at async _WebDriver.newSession (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriver/build/node.js:1532:41)
+#     at async remote (file:///C:/Users/Rohit/mcp/AppForge/node_modules/webdriverio/build/node.js:9848:20)
+#     at async withRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/services/AppiumSessionService.js:62:27)
+#     at async withRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/utils/RetryEngine.js:50:27)
+#     at async AppiumSessionService.startSession (file:///C:/Users/Rohit/mcp/AppForge/dist/services/AppiumSessionService.js:61:33)
+#     at async SessionManager.createSessionWithRetry (file:///C:/Users/Rohit/mcp/AppForge/dist/services/SessionManager.js:209:37)
+# {"timestamp":"2026-04-07T21:27:39.508Z","level":"ERROR","message":"Session creation failed (attempt 2)","context":{"error":"Appium command failed: Unexpected session creation error: Unable to connect to \\"http://localhost:4723/\\", make sure browser driver is running on that address.\\nIt seems like the service failed to start or is rejecting any connections."}}
+# {"timestamp":"2026-04-07T21:27:39.509Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:39.509Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:39.520Z","level":"INFO","message":"Creating session for C:/Users/Rohit/mcp/AppForge/test-session-1775597259515 (attempt 1/1)"}
+# {"timestamp":"2026-04-07T21:27:39.524Z","level":"ERROR","message":"Session creation failed (attempt 1)","context":{"error":"Cannot read properties of undefined (reading 'capabilitiesProfiles')"}}
+# {"timestamp":"2026-04-07T21:27:39.525Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# {"timestamp":"2026-04-07T21:27:39.525Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+        # Subtest: should respect retry configuration limits
+        ok 3 - should respect retry configuration limits
+          ---
+          duration_ms: 1172.0102
+          ...
+        1..3
+    ok 4 - ΓÅ░ Error Boundaries and Safety
+      ---
+      duration_ms: 1198.7044
+      type: 'suite'
+      ...
+    # Subtest: ≡ƒº⌐ Integration with Configuration Service
+        # Subtest: should validate config file structure
+        ok 1 - should validate config file structure
+          ---
+          duration_ms: 13.8925
+          ...
+        1..1
+    ok 5 - ≡ƒº⌐ Integration with Configuration Service
+      ---
+      duration_ms: 14.3746
+      type: 'suite'
+      ...
+    1..5
+ok 17 - SessionManager - Critical Session Stability Tests
+  ---
+  duration_ms: 1695.3281
+  type: 'suite'
+  ...
+# {"timestamp":"2026-04-07T21:27:39.559Z","level":"INFO","message":"All sessions cleaned up during shutdown"}
+# Subtest: SummarySuiteService - WebdriverIO Format Support
+    # Subtest: should parse WebdriverIO Cucumber report format correctly
+    ok 1 - should parse WebdriverIO Cucumber report format correctly
+      ---
+      duration_ms: 410.5304
+      ...
+    # Subtest: should parse standard Cucumber JSON format correctly
+    ok 2 - should parse standard Cucumber JSON format correctly
+      ---
+      duration_ms: 341.3569
+      ...
+    # Subtest: should handle WebdriverIO format with background steps excluded
+    ok 3 - should handle WebdriverIO format with background steps excluded
+      ---
+      duration_ms: 203.4648
+      ...
+    # Subtest: should auto-detect report path from common locations
+    ok 4 - should auto-detect report path from common locations
+      ---
+      duration_ms: 389.1743
+      ...
+    1..4
+ok 18 - SummarySuiteService - WebdriverIO Format Support
+  ---
+  duration_ms: 1360.2285
+  type: 'suite'
+  ...
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# [NavigationGraph] Analyzing project navigation patterns...
+# [NavigationGraph] Performing full graph rebuild
+# [NavigationGraph] Extracted 0 screens with 0 navigation paths
+# Subtest: TestGenerationService ΓÇö Issue \#11 Fix Validation
+    # Subtest: should generate a valid prompt string
+    ok 1 - should generate a valid prompt string
+      ---
+      duration_ms: 86.8595
+      ...
+    # Subtest: [ISSUE \#11] prompt header should identify framework as Appium + WebdriverIO + @cucumber/cucumber
+    ok 2 - [ISSUE \#11] prompt header should identify framework as Appium + WebdriverIO + @cucumber/cucumber
+      ---
+      duration_ms: 16.5916
+      ...
+    # Subtest: [ISSUE \#11] prompt must NOT contain the word "Playwright"
+    ok 3 - [ISSUE \#11] prompt must NOT contain the word "Playwright"
+      ---
+      duration_ms: 16.2235
+      ...
+    # Subtest: [ISSUE \#11] prompt must include explicit constraint against Playwright imports
+    ok 4 - [ISSUE \#11] prompt must include explicit constraint against Playwright imports
+      ---
+      duration_ms: 23.3878
+      ...
+    # Subtest: [ISSUE \#11] prompt must emphasize WebdriverIO and Appium usage
+    ok 5 - [ISSUE \#11] prompt must emphasize WebdriverIO and Appium usage
+      ---
+      duration_ms: 11.0007
+      ...
+    # Subtest: [ISSUE \#11] prompt must include critical constraint warning with emphasis marker
+    ok 6 - [ISSUE \#11] prompt must include critical constraint warning with emphasis marker
+      ---
+      duration_ms: 10.1771
+      ...
+    # Subtest: should handle optional parameters (testName, screenXml, screenshotBase64)
+    ok 7 - should handle optional parameters (testName, screenXml, screenshotBase64)
+      ---
+      duration_ms: 14.6768
+      ...
+    # Subtest: should include existing code reuse sections
+    ok 8 - should include existing code reuse sections
+      ---
+      duration_ms: 19.0132
+      ...
+    # Subtest: should include learning prompt if provided
+    ok 9 - should include learning prompt if provided
+      ---
+      duration_ms: 9.9192
+      ...
+    # Subtest: should specify correct JSON output format with jsonPageObjects
+    ok 10 - should specify correct JSON output format with jsonPageObjects
+      ---
+      duration_ms: 10.3173
+      ...
+    1..10
+ok 19 - TestGenerationService ΓÇö Issue \#11 Fix Validation
+  ---
+  duration_ms: 227.1897
+  type: 'suite'
+  ...
+# Subtest: UtilAuditService - Issue \#20: Respect mcp-config directories
+    # Subtest: should scan root-level utils/ directory when present
+    ok 1 - should scan root-level utils/ directory when present
+      ---
+      duration_ms: 445.466
+      ...
+    # Subtest: should scan custom directories from mcp-config.json
+    ok 2 - should scan custom directories from mcp-config.json
+      ---
+      duration_ms: 276.2671
+      ...
+    # Subtest: should de-duplicate methods found in multiple directories
+    ok 3 - should de-duplicate methods found in multiple directories
+      ---
+      duration_ms: 304.9012
+      ...
+    # Subtest: should scan both configured and conventional directories
+    ok 4 - should scan both configured and conventional directories
+      ---
+      duration_ms: 174.2358
+      ...
+    # Subtest: should handle projects without mcp-config.json gracefully
+    ok 5 - should handle projects without mcp-config.json gracefully
+      ---
+      duration_ms: 74.2163
+      ...
+    1..5
+ok 20 - UtilAuditService - Issue \#20: Respect mcp-config directories
+  ---
+  duration_ms: 1316.0758
+  type: 'suite'
+  ...
+# Subtest: UtilAuditService (AppForge Unit Tests)
+    # Subtest: should detect missing native Appium usages without a wrapper
+    not ok 1 - should detect missing native Appium usages without a wrapper
+      ---
+      duration_ms: 309.0176
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\UtilAuditService.test.js:21:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should detect 4 missing Appium surface handlers when starting from scratch
+        
+        37 !== 4
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 4
+      actual: 37
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/UtilAuditService.test.js:37:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1135:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: customWrapperPackage (BUG-12) should ignore wrapper functions acting natively
+    not ok 2 - customWrapperPackage (BUG-12) should ignore wrapper functions acting natively
+      ---
+      duration_ms: 266.6518
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\UtilAuditService.test.js:40:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Should have 0 missing since all 4 are covered by wrapper
+        
+        33 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 33
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/UtilAuditService.test.js:65:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    1..2
+not ok 21 - UtilAuditService (AppForge Unit Tests)
+  ---
+  duration_ms: 619.2727
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\UtilAuditService.test.js:7:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: CredentialService - manage_users (Issue \#14 Fix)
+    # Subtest: should use default src/test-data directory when no config exists
+    not ok 1 - should use default src/test-data directory when no config exists
+      ---
+      duration_ms: 63.5234
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\manage_users.test.js:23:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(result.includes('src/test-data/users.staging.json'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/manage_users.test.js:26:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1135:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should respect testDataRoot from mcp-config.json
+    not ok 2 - should respect testDataRoot from mcp-config.json
+      ---
+      duration_ms: 27.4417
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\manage_users.test.js:33:5'
+      failureType: 'testCodeFailure'
+      error: 'Users file should be in custom-test-data/'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/manage_users.test.js:63:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should read users from correct directory based on config
+    not ok 3 - should read users from correct directory based on config
+      ---
+      duration_ms: 52.5161
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\manage_users.test.js:67:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        undefined !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/manage_users.test.js:91:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should generate getUser helper with correct relative path
+    not ok 4 - should generate getUser helper with correct relative path
+      ---
+      duration_ms: 66.5342
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\manage_users.test.js:95:5'
+      failureType: 'testCodeFailure'
+      error: 'Helper file should be generated'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/manage_users.test.js:116:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should NOT create phantom test-data/ directory at project root
+    not ok 5 - should NOT create phantom test-data/ directory at project root
+      ---
+      duration_ms: 14.0042
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\manage_users.test.js:122:5'
+      failureType: 'testCodeFailure'
+      error: 'Should create directory at configured path'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/manage_users.test.js:147:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should handle multiple environments correctly
+    not ok 6 - should handle multiple environments correctly
+      ---
+      duration_ms: 70.6467
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\manage_users.test.js:149:5'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(fs.existsSync(stagingFile))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/manage_users.test.js:172:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: should return error message when reading non-existent users file
+    not ok 7 - should return error message when reading non-existent users file
+      ---
+      duration_ms: 5.4609
+      location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\manage_users.test.js:179:5'
+      failureType: 'testCodeFailure'
+      error: 'Should return an error object'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Rohit/mcp/AppForge/dist/tests/manage_users.test.js:182:16)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    1..7
+not ok 22 - CredentialService - manage_users (Issue \#14 Fix)
+  ---
+  duration_ms: 306.5432
+  type: 'suite'
+  location: 'C:\\Users\\Rohit\\mcp\\AppForge\\dist\\tests\\manage_users.test.js:7:1'
+  failureType: 'subtestsFailed'
+  error: '7 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..22
+# tests 285
+# suites 71
+# pass 203
+# fail 82
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10050.0424
+

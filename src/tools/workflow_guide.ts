@@ -9,7 +9,9 @@ export function registerWorkflowGuide(
     "workflow_guide",
     {
       title: "Workflow Guide",
-      description: "START HERE IF UNSURE. Returns the recommended step-by-step tool call sequence for common AppForge tasks. Call this FIRST if you don't know which tool to use or how to start. No side effects — safe to call at any time. Returns: { workflows: { [name]: { description, steps[] } } }.",
+      description: `START HERE IF UNSURE. Returns the recommended step-by-step tool call sequence for common AppForge tasks. Call this FIRST if you don't know which tool to use or how to start. No side effects — safe to call at any time. Returns: { workflows: { [name]: { description, steps[] } } }.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         workflow: z.enum(["new_project", "write_test", "run_and_heal", "inspect_device", "all"]).optional()
       }),

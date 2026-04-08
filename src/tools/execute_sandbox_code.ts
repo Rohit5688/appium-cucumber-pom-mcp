@@ -5,6 +5,7 @@ import type { CodebaseAnalyzerService } from "../services/CodebaseAnalyzerServic
 import type { ExecutionService } from "../services/ExecutionService.js";
 import { executeSandbox } from "../services/SandboxEngine.js";
 import type { SandboxApiRegistry } from "../services/SandboxEngine.js";
+import { FileStateService } from "../services/FileStateService.js";
 import { textResult, truncate } from "./_helpers.js";
 
 export function registerExecuteSandboxCode(
@@ -17,7 +18,9 @@ export function registerExecuteSandboxCode(
     "execute_sandbox_code",
     {
       title: "Execute Sandbox Code",
-      description: "🚀 TURBO MODE — USE FOR ALL PROJECT ANALYSIS. Runs a JavaScript snippet in a secure V8 sandbox without reading entire files. Always prefer this over analyze_codebase for real projects. Available APIs: forge.api.analyzeCodebase(projectRoot), forge.api.runTests(projectRoot), forge.api.readFile({ filePath, projectRoot }), forge.api.getConfig(projectRoot). Use `return <value>` in your script.",
+      description: `🚀 TURBO MODE — USE FOR ALL PROJECT ANALYSIS. Runs a JavaScript snippet in a secure V8 sandbox without reading entire files. Always prefer this over analyze_codebase for real projects. Available APIs: forge.api.analyzeCodebase(projectRoot), forge.api.runTests(projectRoot), forge.api.readFile({ filePath, projectRoot }), forge.api.getConfig(projectRoot). Use \`return <value>\` in your script.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         script: z.string(),
         timeoutMs: z.number().optional()
@@ -69,7 +72,9 @@ export function registerExecuteSandboxCode(
           if (!fs.default.existsSync(resolvedFile)) {
             throw new Error(`File not found: ${resolvedFile}`);
           }
-          return fs.default.readFileSync(resolvedFile, 'utf8');
+          const content = fs.default.readFileSync(resolvedFile, 'utf8');
+          FileStateService.getInstance().recordRead(resolvedFile, content);
+          return content;
         },
         getConfig: async (projectRoot: string) => {
           return configService.read(projectRoot);
