@@ -3,7 +3,8 @@ import { z } from "zod";
 import type { SelfHealingService } from "../services/SelfHealingService.js";
 import type { McpConfigService } from "../services/McpConfigService.js";
 import type { SessionManager } from "../services/SessionManager.js";
-import { textResult } from "./_helpers.js";
+import { textResult, getPlatformSkill } from "./_helpers.js";
+import { PreFlightService } from "../services/PreFlightService.js";
 
 export function registerSelfHealTest(
   server: McpServer,
@@ -15,7 +16,9 @@ export function registerSelfHealTest(
     "self_heal_test",
     {
       title: "Self Heal Test",
-      description: "FIX BROKEN TESTS. Use when a test failure says 'element not found / no such element / selector not found'. Parses the error and current XML to find the correct replacement selector. Returns: { candidates[], promptForLLM }. After getting candidates, use verify_selector to confirm the best one works.",
+      description: `FIX BROKEN TESTS. Use when a test failure says 'element not found / no such element / selector not found'. Parses the error and current XML to find the correct replacement selector. Returns: { candidates[], promptForLLM }. After getting candidates, use verify_selector to confirm the best one works.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         testOutput: z.string(),
         xmlHierarchy: z.string().optional(),
@@ -53,6 +56,18 @@ export function registerSelfHealTest(
         }));
       }
 
+      // Pre-flight check
+      const sessionInfo = sessionManager.getSessionInfo(projectRoot);
+      const preFlight = PreFlightService.getInstance();
+      const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionInfo?.sessionId);
+      
+      if (!report.allPassed) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: preFlight.formatReport(report) }]
+        };
+      }
+
       let confidenceThreshold = 0.7;
       let maxCandidates = 3;
       let autoApply = false;
@@ -83,9 +98,10 @@ export function registerSelfHealTest(
         confidenceThreshold,
         maxCandidates
       );
+      const platformContext = getPlatformSkill({ projectRoot, testOutput: args.testOutput });
       const data = {
         candidates: healResult.instruction.alternativeSelectors || [],
-        promptForLLM: healResult.prompt
+        promptForLLM: platformContext + healResult.prompt
       };
       return textResult(JSON.stringify(data, null, 2), data);
     }

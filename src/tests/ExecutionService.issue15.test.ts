@@ -170,13 +170,13 @@ describe('ExecutionService - Issue #15: Valid Locator Strategies', () => {
     assert.ok(result.elementCount.total >= 1, 'Should have at least one element');
   });
 
-  it('should only return raw xml when xmlDump was explicitly passed', async () => {
+  it('should only return raw xml when includeRawXml is explicitly passed', async () => {
     const executionService = new ExecutionService();
     const xmlDump = `<android.widget.Button content-desc="Submit" bounds="[0,0][100,50]" />`;
 
-    // When xmlDump IS passed → xml should be populated
-    const resultWithXml = await executionService.inspectHierarchy('<test>', xmlDump, '');
-    assert.ok(resultWithXml.xml !== undefined, 'xml should be populated when xmlDump is passed');
+    // When includeRawXml IS passed → rawXml should be populated
+    const resultWithXml = await executionService.inspectHierarchy('<test>', xmlDump, '', undefined, true);
+    assert.ok(resultWithXml.rawXml !== undefined, 'rawXml should be populated when includeRawXml is passed');
 
     // When xmlDump is NOT passed (would require a live session — skip session path here)
     // This is covered by integration tests with a live Appium session

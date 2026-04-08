@@ -11,7 +11,9 @@ export function registerManageConfig(
     "manage_config",
     {
       title: "Manage Config",
-      description: "READ OR UPDATE PROJECT CONFIG. Use when the user wants to check or change Appium capabilities, device settings, app paths, or cloud provider. 'read' returns the full mcp-config.json. 'write' does a partial merge — only keys you provide are updated, all others are preserved. Returns: current config on read, updated confirmation on write.",
+      description: `READ OR UPDATE PROJECT CONFIG. Use when the user wants to check or change Appium capabilities, device settings, app paths, or cloud provider. 'read' returns the full mcp-config.json. 'write' does a partial merge — only keys you provide are updated, all others are preserved. Returns: current config on read, updated confirmation on write.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         operation: z.enum(["read", "write"]),

@@ -1,5 +1,5 @@
 import { AppiumSessionService } from './AppiumSessionService.js';
-import { AppForgeError } from '../utils/ErrorFactory.js';
+import { McpErrors } from '../types/ErrorSystem.js';
 import { Logger } from '../utils/Logger.js';
 
 export interface SessionRecord {
@@ -113,11 +113,7 @@ export class SessionManager {
     forceNew = false
   ): Promise<AppiumSessionService> {
     if (this.isShuttingDown) {
-      throw new AppForgeError(
-        "E002_DEVICE_OFFLINE",
-        'SessionManager is shutting down. Cannot create new sessions.',
-        ['Wait for current operations to complete', 'Restart the process if needed']
-      );
+      throw McpErrors.sessionNotFound('shutdown', 'SessionManager');
     }
 
     const normalizedPath = this.normalizePath(projectRoot);
@@ -288,15 +284,9 @@ export class SessionManager {
     }
 
     // All retries failed
-    throw new AppForgeError(
-      "E001_NO_SESSION",
-      `Failed to create session after ${this.config.maxRetryAttempts} attempts. Last error: ${lastError?.message}`,
-      [
-        'Check if Appium server is running (npx appium)',
-        'Verify device/emulator is connected (adb devices / xcrun simctl list)',
-        'Ensure app is installed and capabilities are correct',
-        'Check for port conflicts (kill existing Appium processes)'
-      ]
+    throw McpErrors.appiumNotReachable(
+      `session creation after ${this.config.maxRetryAttempts} attempts. Last error: ${lastError?.message}`,
+      'SessionManager'
     );
   }
 

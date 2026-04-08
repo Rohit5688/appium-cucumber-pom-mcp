@@ -15,7 +15,9 @@ export function registerSuggestRefactorings(
     "suggest_refactorings",
     {
       title: "Suggest Refactorings",
-      description: "FIND CODE QUALITY ISSUES. Use when the user says 'clean up my test code / check for duplicate steps / is my code DRY'. Finds duplicate step definitions, potentially unused Page Object methods, and XPath over-usage percentage. Returns: { report, duplicateStepCount, unusedMethodCount, xpathOverusePercent }.",
+      description: `FIND CODE QUALITY ISSUES. Use when the user says 'clean up my test code / check for duplicate steps / is my code DRY'. Finds duplicate step definitions, potentially unused Page Object methods, and XPath over-usage percentage. Returns: { report, duplicateStepCount, unusedMethodCount, xpathOverusePercent }.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({ projectRoot: z.string() }),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },

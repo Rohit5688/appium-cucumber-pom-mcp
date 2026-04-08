@@ -18,3 +18,4 @@ graphify-out
 help.txt
 detect.json
 .claude/settings.json
+mcp-logs/

@@ -11,7 +11,9 @@ export function registerGetSessionHealth(
     "get_session_health",
     {
       title: "Get Session Health",
-      description: "GET SESSION METRICS. Use to debug session issues, check connection states, or view active Appium connections. Returns memory, uptime, device caps, and singleton pool metrics.",
+      description: `GET SESSION METRICS. Use to debug session issues, check connection states, or view active Appium connections. Returns memory, uptime, device caps, and singleton pool metrics.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },

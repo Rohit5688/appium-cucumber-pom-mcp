@@ -1,6 +1,6 @@
 # TASK-GS-03 — Fuzzy String Matcher (Quote & Whitespace Normalization)
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Small (~45 min)  
 **Depends on**: Nothing — standalone utility  
 **Build check**: `npm run build` in `/Users/rsakhawalkar/forge/AppForge`
@@ -231,13 +231,13 @@ const newContent = result.content;
 
 ## Done Criteria
 
-- [ ] `StringMatcher.ts` created with fuzzy match/replace functions
-- [ ] Quote normalization works (' ↔ " conversion)
-- [ ] Whitespace normalization works
-- [ ] `FileWriterService` uses fuzzy matching for replacements
-- [ ] `npm run build` passes with zero errors
-- [ ] All test cases pass
-- [ ] Change `Status` above to `DONE`
+- [x] `StringMatcher.ts` created with fuzzy match/replace functions
+- [x] Quote normalization works (' ↔ " conversion)
+- [x] Whitespace normalization works
+- [x] `FileWriterService` uses fuzzy matching for replacements
+- [x] `npm run build` passes with zero errors
+- [x] All test cases pass
+- [x] Change `Status` above to `DONE`
 
 ---
 

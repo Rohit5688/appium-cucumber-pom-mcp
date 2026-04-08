@@ -1,6 +1,6 @@
 # TASK-GS-02 — File State Tracker (Prevent External Change Collisions)
 
-**Status**: TODO  
+**Status**: DONE  
 **Effort**: Medium (~90 min)  
 **Depends on**: GS-07 (Type System Expansion) — needs types defined first  
 **Build check**: `npm run build` in `/Users/rsakhawalkar/forge/AppForge`
@@ -272,13 +272,13 @@ case "read_file": {
 
 ## Done Criteria
 
-- [ ] `FileStateService.ts` created with timestamp tracking
-- [ ] `FileWriterService.ts` validates before writes
-- [ ] File read operations record state
-- [ ] External modifications detected and prevented
-- [ ] `npm run build` passes with zero errors
-- [ ] Test script confirms detection works
-- [ ] Change `Status` above to `DONE`
+- [x] `FileStateService.ts` created with timestamp tracking
+- [x] `FileWriterService.ts` validates before writes
+- [x] File read operations record state
+- [x] External modifications detected and prevented
+- [x] `npm run build` passes with zero errors
+- [x] Test script confirms detection works
+- [x] Change `Status` above to `DONE`
 
 ---
 

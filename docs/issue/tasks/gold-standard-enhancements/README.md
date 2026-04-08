@@ -12,10 +12,10 @@ Paste this as your opening message in a new chat:
 
 ```
 Read the task file at:
-/Users/rsakhawalkar/forge/AppForge/docs/issue/tasks/gold-standard-enhancements/TASK-GS-XX-name.md
+C:\Users\Rohit\mcp\AppForge\docs\issue\tasks\gold-standard-enhancements\TASK-GS-XX-name.md
 
 Follow the instructions exactly. Make only the changes described.
-Run npm run build in /Users/rsakhawalkar/forge/AppForge after making changes.
+Run npm run build in C:\Users\Rohit\mcp\AppForge after making changes.
 Mark the task DONE when the build passes.
 ```
 
@@ -23,84 +23,146 @@ Replace `TASK-GS-XX-name` with the actual filename.
 
 ---
 
-## Execution Order
+## Logical Implementation Order (Dependency-Aware)
 
-Tasks are grouped by priority tier based on ROI, complexity, and dependencies.
+> This is the **recommended sequence** based on actual code dependencies between tasks.
+> Each step lists what it unlocks so you understand why the order matters.
 
-### 🔴 TIER 0 — Foundation (Release Blockers — Do First)
+### ── PHASE 1: Core Infrastructure ── (Do these first, in order)
 
-**Critical for production reliability and evaluation readiness (TASK-46)**
+These have zero dependencies and unlock everything else. Completing this phase gives you a stable foundation with unified types, error handling, and retry logic.
 
-| # | Task File | What It Implements | Files Changed | Effort |
-|:--|:----------|:-------------------|:--------------|:-------|
-| **GS-01** | `TASK-GS-01-tool-description-audit.md` | Audit and trim all tool descriptions to <2048 chars (MCP SDK requirement) | `src/index.ts` | Small |
-| **GS-02** | `TASK-GS-02-file-state-tracker.md` | Implement FileStateTracker to prevent external changes causing regressions | `src/services/FileStateService.ts` (new), `src/services/FileWriterService.ts` | Medium |
-| **GS-03** | `TASK-GS-03-fuzzy-string-matcher.md` | Add fuzzy quote/whitespace matching to file operations | `src/utils/StringMatcher.ts` (new), `src/services/FileWriterService.ts` | Small |
-| **GS-04** | `TASK-GS-04-binary-file-guard.md` | Add 64KB sniff buffer to prevent reading binary files as text | `src/utils/FileGuard.ts` (new), `src/services/ExecutionService.ts` | Small |
-| **GS-05** | `TASK-GS-05-error-taxonomy.md` | Consolidate 3 error files into unified system with semantic codes | `src/types/ErrorSystem.ts` (new), delete old error files | Medium |
-| **GS-06** | `TASK-GS-06-retry-engine.md` | Implement exponential backoff retry for transient failures | `src/utils/RetryEngine.ts` (new) | Medium |
-| **GS-07** | `TASK-GS-07-type-system-expansion.md` | Expand type system from 1 file to domain model | `src/types/*` (multiple new files) | Medium |
-| **GS-08** | `TASK-GS-08-minimal-echoes.md` | Update tool prompts to prevent redundant LLM responses | `src/index.ts`, multiple tool descriptions | Small |
+| Step | Task | What It Creates | Unlocks |
+|:----:|:-----|:----------------|:--------|
+| 1 | **GS-05** `TASK-GS-05-error-taxonomy.md` | `ErrorSystem.ts` — unified McpError + error codes | GS-06, GS-12, GS-17, GS-22 |
+| 2 | **GS-07** `TASK-GS-07-type-system-expansion.md` | `AppiumTypes.ts`, `McpToolResult.ts`, `PermissionResult.ts` | GS-09, GS-11, GS-17, GS-20 |
+| 3 | **GS-06** `TASK-GS-06-retry-engine.md` | `RetryEngine.ts` — exponential backoff for transient failures | GS-12 (parallel) |
+| 4 | **GS-01** `TASK-GS-01-tool-description-audit.md` | Trim all tool descriptions to ≤2048 chars | GS-08 |
 
-> ⚠️ **Dependencies**: GS-05 and GS-07 should be done first as they unlock other tasks. GS-01 is critical for evaluation harness.
+> ✅ After Phase 1: You have a type-safe, error-resilient foundation. Build passes clean.
 
 ---
 
-### 🟡 TIER 1 — Token Optimization (Core Value — Massive Cost Savings)
+### ── PHASE 2: File Safety & Utilities ── (Can run parallel after Phase 1)
 
-**These deliver 50-60% token reduction and enable cheaper model usage**
+These are independent utilities. Run them in parallel or sequentially — no dependencies on each other.
 
-| # | Task File | What It Implements | Files Changed | Effort |
-|:--|:----------|:-------------------|:--------------|:-------|
-| **GS-09** | `TASK-GS-09-sparse-action-map.md` | Create MobileSmartTreeService for 60% token reduction on XML | `src/services/MobileSmartTreeService.ts` (new), `src/services/ExecutionService.ts` | Large |
-| **GS-10** | `TASK-GS-10-jit-os-skills.md` | Load android.md/ios.md only when platform-relevant files touched | `src/skills/android.md` (new), `src/skills/ios.md` (new), `src/index.ts` | Medium |
-| **GS-11** | `TASK-GS-11-compact-boundaries.md` | Auto-collapse previous XML scans into semantic summaries | `src/services/ContextManager.ts` (new), `src/services/ExecutionService.ts` | Medium |
-| **GS-12** | `TASK-GS-12-max-turns-guard.md` | Cap self-healing loops at 3 attempts to prevent infinite token burn | `src/services/SelfHealingService.ts` | Small |
-| **GS-13** | `TASK-GS-13-token-budget-tracker.md` | Track and warn on token consumption per session | `src/services/TokenBudgetService.ts` (new), `src/index.ts` | Medium |
+| Step | Task | What It Creates | Unlocks |
+|:----:|:-----|:----------------|:--------|
+| 5a | **GS-03** `TASK-GS-03-fuzzy-string-matcher.md` | `StringMatcher.ts` — quote/whitespace normalization | GS-02 |
+| 5b | **GS-04** `TASK-GS-04-binary-file-guard.md` | `FileGuard.ts` — prevent binary files read as text | (standalone) |
+| 5c | **GS-18** `TASK-GS-18-similar-file-suggestions.md` | `FileSuggester.ts` — "Did you mean?" for ENOENT | (standalone) |
+| 6 | **GS-02** `TASK-GS-02-file-state-tracker.md` | `FileStateService.ts` — detect external file changes | (standalone) |
 
-> ⚠️ **High Impact**: GS-09 (Sparse Action Map) is the single biggest token saver. Do this early in Tier 1.
-
----
-
-### 🟠 TIER 2 — Intelligence & Observability (Production Polish)
-
-**Debuggability, UX improvements, and structural awareness**
-
-| # | Task File | What It Implements | Files Changed | Effort |
-|:--|:----------|:-------------------|:--------------|:-------|
-| **GS-14** | `TASK-GS-14-observability-service.md` | Structured JSONL logging with toolStart/toolEnd traces | `src/services/ObservabilityService.ts` (new), `src/index.ts` | Medium |
-| **GS-15** | `TASK-GS-15-structural-brain.md` | Lightweight JSON map of god nodes for pre-flight warnings | `src/services/StructuralBrainService.ts` (new), `src/index.ts` | Medium |
-| **GS-16** | `TASK-GS-16-multi-choice-questions.md` | Structured clarification with option tables for conflicts | `src/tools/request_user_clarification.ts` | Small |
-| **GS-17** | `TASK-GS-17-pre-flight-checks.md` | Verify Appium readiness before allowing tool execution | `src/services/PreFlightService.ts` (new), `src/index.ts` | Small |
-| **GS-18** | `TASK-GS-18-similar-file-suggestions.md` | "Did you mean?" for ENOENT errors with extension mismatches | `src/utils/FileSuggester.ts` (new), error handlers | Small |
-
-> ⚠️ **Dependencies**: GS-14 (Observability) should be done early for debugging other Tier 2 tasks.
+> ✅ After Phase 2: File operations are safe, binary-guarded, and have fuzzy matching.
 
 ---
 
-### 🟢 TIER 3 — Conditional Enhancements (Data-Driven Decision)
+### ── PHASE 3: Token Optimization ── (Highest ROI — do as early as possible)
 
-**Implement only if usage data proves the need**
+> ⚠️ **GS-09 is the single biggest token saver**. Do it first in this phase.
 
-| # | Task File | What It Implements | Files Changed | Effort |
-|:--|:----------|:-------------------|:--------------|:-------|
-| **GS-19** | `TASK-GS-19-local-healer-cache.md` | SQLite cache for repeated locator fixes (70% latency reduction) | `src/services/HealerCacheService.ts` (new) | Medium |
-| **GS-20** | `TASK-GS-20-neighbor-context.md` | Store neighbor elements for robust healing when IDs change | `src/services/NeighborContextService.ts` (new) | Medium |
-| **GS-21** | `TASK-GS-21-observer-fork.md` | Background status updates during long operations | `src/services/ObserverService.ts` (new) | Medium |
+| Step | Task | What It Creates | Depends On | Unlocks |
+|:----:|:-----|:----------------|:-----------|:--------|
+| 7 | **GS-09** `TASK-GS-09-sparse-action-map.md` | `MobileSmartTreeService.ts` — 96% XML token reduction | GS-07 (types) | GS-11, GS-20 |
+| 8 | **GS-10** `TASK-GS-10-jit-os-skills.md` | `android.md`, `ios.md` — platform skill injection | (standalone) | (standalone) |
+| 9 | **GS-11** `TASK-GS-11-compact-boundaries.md` | `ContextManager.ts` — compress old scan history | GS-09 (ActionMap format) | (standalone) |
+| 10 | **GS-08** `TASK-GS-08-minimal-echoes.md` | OUTPUT INSTRUCTIONS in all tool descriptions | GS-01 (must be done first) | (standalone) |
+| 11 | **GS-12** `TASK-GS-12-max-turns-guard.md` | Healing attempt cap (3 max per test file) | GS-05 (McpErrors) | GS-19 |
+| 12 | **GS-13** `TASK-GS-13-token-budget-tracker.md` | `TokenBudgetService.ts` — session token tracking | (standalone) | (standalone) |
 
-> ⚠️ **Decision Point**: Evaluate healing failure rates after Tier 2. If >20% failure rate, implement GS-19 and GS-20.
+> ✅ After Phase 3: 50–60% token reduction on UI scans, healing loops capped, cost visible.
 
 ---
 
-### 🔵 TIER 4 — Advanced Optimization (Optional — After Validation)
+### ── PHASE 4: Observability & Intelligence ── (Production Polish)
 
-**Lower priority optimizations and cost controls**
+| Step | Task | What It Creates | Depends On | Unlocks |
+|:----:|:-----|:----------------|:-----------|:--------|
+| 13 | **GS-14** `TASK-GS-14-observability-service.md` | `ObservabilityService.ts` — JSONL trace logging | (standalone) | (debugging aid for all later tasks) |
+| 14 | **GS-17** `TASK-GS-17-pre-flight-checks.md` | `PreFlightService.ts` — Appium readiness validation | GS-05, GS-07 (types) | (standalone) |
+| 15 | **GS-15** `TASK-GS-15-structural-brain.md` | `StructuralBrainService.ts` — god node warnings | (standalone) | (standalone) |
+| 16 | **GS-16** `TASK-GS-16-multi-choice-questions.md` | Structured numbered options for clarification | (standalone) | (standalone) |
+| 17 | **GS-22** `TASK-GS-22-shell-security-core.md` | `ShellSecurityEngine.ts` — injection validation | GS-05 (McpErrors) | (standalone) |
 
-| # | Task File | What It Implements | Files Changed | Effort |
-|:--|:----------|:-------------------|:--------------|:-------|
-| **GS-22** | `TASK-GS-22-shell-security-core.md` | Port core bash security validators (not full 2500-line engine) | `src/utils/ShellSecurityEngine.ts` (new) | Medium |
-| **GS-23** | `TASK-GS-23-agent-routing.md` | Multi-model routing (Haiku/Sonnet/Opus by task complexity) | `src/services/AgentRoutingService.ts` (new) | Small |
-| **GS-24** | `TASK-GS-24-scratchpad-memory.md` | Shared .agent_scratchpad for cross-worker knowledge | `src/services/ScratchpadService.ts` (new) | Small |
+> ✅ After Phase 4: Full observability, pre-flight safety, and god node awareness.
+
+---
+
+### ── PHASE 5: Conditional Healing Enhancements ── (Only if healing failure rate > 20%)
+
+> 🔴 **Decision gate**: Evaluate healing failure rate after Phase 4. Only proceed if >20% fail.
+
+| Step | Task | What It Creates | Depends On |
+|:----:|:-----|:----------------|:-----------|
+| 18 | **GS-19** `TASK-GS-19-local-healer-cache.md` | SQLite cache for repeated locator fixes | GS-12 (attempt guard) |
+| 19 | **GS-20** `TASK-GS-20-neighbor-context.md` | Structural fingerprinting for ID-unstable locators | GS-19, GS-09 (ActionMap) |
+
+> ✅ After Phase 5: Healing reuses known fixes. 70% latency reduction on repeated failures.
+
+---
+
+### ── PHASE 6: Advanced / Optional ── (After validation — lowest priority)
+
+These can be done independently in any order. None block other tasks.
+
+| Step | Task | What It Creates | Decision Gate |
+|:----:|:-----|:----------------|:--------------|
+| 20 | **GS-21** `TASK-GS-21-observer-fork.md` | Background status messages during long ops | Only if user frustration with silence |
+| 21 | **GS-23** `TASK-GS-23-agent-routing.md` | Multi-model routing by task complexity | After Phase 3 complete |
+| 22 | **GS-24** `TASK-GS-24-scratchpad-memory.md` | `.agent_scratchpad/` shared memory | Only if parallel agents added |
+
+---
+
+## Dependency Graph (Visual)
+
+```
+GS-05 (ErrorSystem) ──────┬──► GS-06 (RetryEngine)
+                           ├──► GS-12 (MaxTurnsGuard) ──► GS-19 (HealerCache) ──► GS-20 (NeighborCtx)
+                           ├──► GS-17 (PreFlight)
+                           └──► GS-22 (ShellSecurity)
+
+GS-07 (TypeSystem) ────────┬──► GS-09 (SparseActionMap) ──► GS-11 (CompactBoundaries)
+                           │                              └──► GS-20 (NeighborCtx)
+                           └──► GS-17 (PreFlight)
+
+GS-01 (DescAudit) ─────────► GS-08 (MinimalEchoes)
+
+GS-03 (FuzzyMatcher) ──────► GS-02 (FileStateTracker)
+
+── Standalone (no deps) ────  GS-04, GS-10, GS-13, GS-14, GS-15, GS-16, GS-18, GS-21, GS-23, GS-24
+```
+
+---
+
+## Full Task List With Status
+
+| # | Task | Phase | Status | Effort |
+|:--|:-----|:-----:|:------:|:------:|
+| GS-01 | Tool Description Audit | 1 | TODO | Small |
+| GS-02 | File State Tracker | 2 | TODO | Medium |
+| GS-03 | Fuzzy String Matcher | 2 | TODO | Small |
+| GS-04 | Binary File Guard | 2 | TODO | Small |
+| GS-05 | Error Taxonomy | 1 | TODO | Medium |
+| GS-06 | Retry Engine | 1 | TODO | Medium |
+| GS-07 | Type System Expansion | 1 | TODO | Medium |
+| GS-08 | Minimal Echoes | 3 | TODO | Small |
+| GS-09 | Sparse Action Map | 3 | TODO | Large |
+| GS-10 | JIT OS-Specific Skills | 3 | TODO | Medium |
+| GS-11 | Compact Boundaries | 3 | TODO | Medium |
+| GS-12 | Max Turns Guard | 3 | TODO | Small |
+| GS-13 | Token Budget Tracker | 3 | TODO | Medium |
+| GS-14 | Observability Service | 4 | TODO | Medium |
+| GS-15 | Structural Brain | 4 | TODO | Medium |
+| GS-16 | Multi-Choice Questions | 4 | TODO | Small |
+| GS-17 | Pre-Flight Checks | 4 | TODO | Small |
+| GS-18 | Similar File Suggestions | 2 | TODO | Small |
+| GS-19 | Local Healer Cache | 5 | TODO | Medium |
+| GS-20 | Neighbor Context | 5 | TODO | Medium |
+| GS-21 | Observer Fork | 6 | TODO | Medium |
+| GS-22 | Shell Security Core | 4 | TODO | Medium |
+| GS-23 | Agent Routing | 6 | TODO | Small |
+| GS-24 | Scratchpad Memory | 6 | TODO | Small |
 
 ---
 
@@ -135,7 +197,7 @@ Tasks are grouped by priority tier based on ROI, complexity, and dependencies.
 
 ---
 
-## Expected Outcomes After Tier 0-2 Completion
+## Expected Outcomes After Phase 1–4 Completion
 
 - **Token Reduction**: 50-60% savings on UI hierarchy scans
 - **Reliability**: 70% fewer failed healing attempts
@@ -154,12 +216,12 @@ Tasks are grouped by priority tier based on ROI, complexity, and dependencies.
 2. **Make ONLY the changes described** — nothing extra
 3. Run `npm run build` after each task to verify
 4. Mark `Status: TODO` → `Status: DONE` in the task file when complete
-5. **Check dependencies** — some tasks must be done in order
+5. **Check the dependency graph** above before starting — respect the phase order
 
 ---
 
 ## Project Info
 
-- **Root**: `/Users/rsakhawalkar/forge/AppForge`
+- **Root**: `C:\Users\Rohit\mcp\AppForge`
 - **Build**: `npm run build`
 - **Key files**: `src/index.ts`, `src/services/ExecutionService.ts`, `src/services/SelfHealingService.ts`, `src/types/Response.ts`

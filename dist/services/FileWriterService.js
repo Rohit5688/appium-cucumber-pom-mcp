@@ -5,6 +5,9 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { auditGeneratedCode, auditFeatureFile, validateProjectRoot, validateFilePath } from '../utils/SecurityUtils.js';
 import { AppForgeError } from '../utils/ErrorFactory.js';
+import { StringMatcher } from '../utils/StringMatcher.js';
+import { FileSuggester } from '../utils/FileSuggester.js';
+import { FileStateService } from './FileStateService.js';
 const execFileAsync = promisify(execFile);
 export class FileWriterService {
     /**
@@ -40,6 +43,15 @@ export class FileWriterService {
                     file: file.path,
                     message: 'Invalid file path: directory traversal detected.'
                 }, null, 2);
+            }
+        }
+        const fileState = FileStateService.getInstance();
+        // Validate file hasn't changed externally
+        for (const file of files) {
+            const fullPath = path.join(projectRoot, file.path);
+            const validation = fileState.validateWrite(fullPath);
+            if (!validation.valid) {
+                throw new Error(`Cannot write file ${file.path}: ${validation.reason}`);
             }
         }
         // Step 1: Write files to a temp staging area first
@@ -167,6 +179,7 @@ export class FileWriterService {
                     fs.mkdirSync(dir, { recursive: true });
                 }
                 fs.writeFileSync(destPath, file.content, 'utf8');
+                fileState.recordWrite(destPath, file.content);
                 results.push(file.path);
             }
         }
@@ -209,6 +222,24 @@ export class FileWriterService {
     async writeFiles(projectRoot, files) {
         return this.validateAndWrite(projectRoot, files);
     }
+    /**
+     * Replaces a specific string block within an existing file using fuzzy matching.
+     * Leverages StringMatcher to handle LLM quote/whitespace inconsistencies.
+     */
+    async replaceInFile(projectRoot, filePath, oldString, newString, maxRetries = 3, dryRun = false) {
+        const fullPath = path.join(projectRoot, filePath);
+        if (!fs.existsSync(fullPath)) {
+            const enhanced = FileSuggester.enhanceError(fullPath);
+            throw new AppForgeError('E003_FILE_NOT_FOUND', enhanced);
+        }
+        const content = fs.readFileSync(fullPath, 'utf8');
+        FileStateService.getInstance().recordRead(fullPath, content);
+        const result = StringMatcher.fuzzyReplace(oldString, newString, content);
+        if (!result.modified) {
+            throw new Error(`String not found in file: ${oldString.substring(0, 50)}...`);
+        }
+        return this.validateAndWrite(projectRoot, [{ path: filePath, content: result.content }], maxRetries, dryRun);
+    }
     // ─── Private Validators ───────────────────────────────────
     async validateTypeScript(projectRoot, stagingDir, tsFiles) {
         try {
@@ -244,16 +275,17 @@ export class FileWriterService {
                 };
                 fs.writeFileSync(stagingTsconfigPath, JSON.stringify(stagingTsconfig, null, 2), 'utf8');
             }
+            const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
             // CB-1 FIX: Use execFile with args array instead of shell command string
             // to prevent shell injection via projectRoot parameter
             if (hasTsConfig) {
-                await execFileAsync('npx', ['tsc', '--noEmit', '--project', stagingTsconfigPath], {
+                await execFileAsync(npxCmd, ['tsc', '--noEmit', '--project', stagingTsconfigPath], {
                     cwd: projectRoot
                 });
             }
             else {
                 const filePaths = tsFiles.map(f => path.join(stagingDir, f.path));
-                await execFileAsync('npx', [
+                await execFileAsync(npxCmd, [
                     'tsc',
                     '--noEmit',
                     '--strict',

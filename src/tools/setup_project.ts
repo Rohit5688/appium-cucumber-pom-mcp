@@ -13,7 +13,9 @@ export function registerSetupProject(
     "setup_project",
     {
       title: "Setup Project",
-      description: "FIRST-TIME SETUP. Use when starting a brand-new mobile automation project. Call ONCE for a new empty directory. Scaffolds the complete structure: mcp-config.json, BasePage, Cucumber feature, step definitions, wdio config, and hooks. Returns: log of all files created. Next: use manage_config to configure your Appium capabilities.",
+      description: `FIRST-TIME SETUP. Use when starting a brand-new mobile automation project. Call ONCE for a new empty directory. Scaffolds the complete structure: mcp-config.json, BasePage, Cucumber feature, step definitions, wdio config, and hooks. Returns: log of all files created. Next: use manage_config to configure your Appium capabilities.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         platform: z.enum(["android", "ios", "both"]).optional(),

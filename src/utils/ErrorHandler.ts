@@ -1,4 +1,16 @@
-import { ErrorFactory, AppForgeError } from "./ErrorFactory.js";
+/**
+ * ErrorHandler — safeExecute wrapper for tool handlers.
+ *
+ * NOTE: ErrorFactory (AppForgeError) is kept for backward compatibility with
+ * existing tool-level catch blocks.  New code should import McpErrors from
+ * '../types/ErrorSystem.js' directly.
+ *
+ * safeExecute wraps any async tool fn with a global timeout and normalises
+ * caught errors.  It now surfaces McpError (from ErrorSystem) for timeout
+ * events so GS-06 RetryEngine can use isRetryableError() on them.
+ */
+
+import { McpError, McpErrorCode } from '../types/ErrorSystem.js';
 
 const GLOBAL_DEFAULT_TIMEOUT_MS = 60000;
 
@@ -10,7 +22,11 @@ export async function safeExecute<T>(
 
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
-      reject(ErrorFactory.timeout(`Execution timed out after ${timeoutMs}ms`));
+      reject(new McpError(
+        `Execution timed out after ${timeoutMs}ms`,
+        McpErrorCode.NETWORK_TIMEOUT,
+        { retryable: true }
+      ));
     }, timeoutMs);
   });
 
@@ -21,22 +37,11 @@ export async function safeExecute<T>(
     ]);
     return result;
   } catch (err: unknown) {
-    let appError: AppForgeError;
-    
-    if (err instanceof AppForgeError) {
-      appError = err;
-    } else {
-      appError = ErrorFactory.internal(
-        err instanceof Error ? err.message : String(err),
-        err instanceof Error && err.stack ? { stack: err.stack } : undefined
-      );
-    }
-    
     // Log exception via stderr preserving stack-trace
     const stackSnippet = err instanceof Error && err.stack ? `\nStack: ${err.stack}` : '';
-    console.error(`[AppForge] Uncaught Exception intercepted by safeExecute: ${appError.message}${stackSnippet}`);
-
-    throw appError;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[AppForge] Uncaught Exception intercepted by safeExecute: ${msg}${stackSnippet}`);
+    throw err;
   } finally {
     clearTimeout(timeoutId!);
   }

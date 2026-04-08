@@ -13,7 +13,9 @@ export function registerUpgradeProject(
     "upgrade_project",
     {
       title: "Upgrade Project",
-      description: "UPGRADE EXISTING PROJECT. Use when the user says 'update dependencies / upgrade the project / it is outdated'. Upgrades npm packages, migrates mcp-config.json, repairs missing files, and reports utility coverage gaps. Safe to re-run — never overwrites custom code. Returns: upgrade log with warnings.",
+      description: `UPGRADE EXISTING PROJECT. Use when the user says 'update dependencies / upgrade the project / it is outdated'. Upgrades npm packages, migrates mcp-config.json, repairs missing files, and reports utility coverage gaps. Safe to re-run — never overwrites custom code. Returns: upgrade log with warnings.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({ projectRoot: z.string() }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
