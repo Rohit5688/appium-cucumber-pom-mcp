@@ -28,38 +28,17 @@ WHEN NOT TO USE:
 PARAMETER: options — If provided, renders a numbered selection table. User can respond with just the number.
 
 OUTPUT INSTRUCTIONS: Display the question as-is. Do not rephrase or add commentary.`,
-      inputSchema: {
-        type: 'object',
-        properties: {
-          question: {
-            type: 'string',
-            description: 'The clarification question (concise, ≤100 chars)'
-          },
-          context: {
-            type: 'string',
-            description: 'Background context explaining why clarification is needed'
-          },
-          options: {
-            type: 'array',
-            description: 'Structured response options. If provided, renders as numbered list.',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'number', description: 'Option number (1, 2, 3...)' },
-                label: { type: 'string', description: 'Human-readable description' },
-                detail: { type: 'string', description: 'Technical detail (locator, path, etc.)' },
-                recommended: { type: 'boolean', description: 'Marks the recommended option' }
-              },
-              required: ['id', 'label']
-            }
-          },
-          defaultOption: {
-            type: 'number',
-            description: 'Default option to use if user does not respond within the session'
-          }
-        },
-        required: ['question']
-      } as any,
+      inputSchema: z.object({
+        question: z.string().describe('The clarification question (concise, ≤100 chars)'),
+        context: z.string().optional().describe('Background context explaining why clarification is needed'),
+        options: z.array(z.object({
+          id: z.number().describe('Option number (1, 2, 3...)'),
+          label: z.string().describe('Human-readable description'),
+          detail: z.string().optional().describe('Technical detail (locator, path, etc.)'),
+          recommended: z.boolean().optional().describe('Marks the recommended option')
+        })).optional().describe('Structured response options. If provided, renders as numbered list.'),
+        defaultOption: z.number().optional().describe('Default option to use if user does not respond within the session')
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },
     async (args: any) => {

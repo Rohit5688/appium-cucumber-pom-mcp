@@ -155,11 +155,65 @@ export class EnvironmentCheckService {
         }
     }
     checkAndroidSdk() {
-        const androidHome = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
+        // Check environment variables first
+        let androidHome = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
         if (androidHome && fs.existsSync(androidHome)) {
             return { name: 'Android SDK', status: 'pass', message: `ANDROID_HOME: ${androidHome}` };
         }
-        return { name: 'Android SDK', status: 'fail', message: 'ANDROID_HOME / ANDROID_SDK_ROOT not set', fixHint: 'Install Android Studio, then set the env variable:\n  Windows: setx ANDROID_HOME "%LOCALAPPDATA%\\Android\\Sdk"\n  macOS/Linux: export ANDROID_HOME=~/Android/Sdk\n\nThen add platform-tools to PATH.' };
+        // If not in process env, try to detect from adb location (fallback for MCP server)
+        try {
+            const { execSync } = require('child_process');
+            const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+            const adbPath = execSync(`${whichCmd} adb`, { encoding: 'utf8' }).trim().split('\n')[0];
+            if (adbPath && fs.existsSync(adbPath)) {
+                // adb is typically at $ANDROID_HOME/platform-tools/adb
+                const platformTools = path.dirname(adbPath);
+                const sdkRoot = path.dirname(platformTools);
+                // Verify this looks like an Android SDK directory
+                if (fs.existsSync(path.join(sdkRoot, 'platform-tools')) &&
+                    fs.existsSync(path.join(sdkRoot, 'platforms'))) {
+                    return {
+                        name: 'Android SDK',
+                        status: 'pass',
+                        message: `SDK detected via adb: ${sdkRoot} (ANDROID_HOME not in MCP env)`
+                    };
+                }
+            }
+        }
+        catch {
+            // Fallback failed, continue to common paths check
+        }
+        // Try common installation paths as last resort
+        const commonPaths = process.platform === 'darwin'
+            ? [
+                path.join(process.env.HOME || '', 'Library/Android/sdk'),
+                '/usr/local/share/android-sdk'
+            ]
+            : process.platform === 'win32'
+                ? [
+                    path.join(process.env.LOCALAPPDATA || '', 'Android/Sdk'),
+                    path.join(process.env.PROGRAMFILES || '', 'Android/Sdk')
+                ]
+                : [
+                    path.join(process.env.HOME || '', 'Android/Sdk'),
+                    '/opt/android-sdk'
+                ];
+        for (const sdkPath of commonPaths) {
+            if (fs.existsSync(sdkPath) &&
+                fs.existsSync(path.join(sdkPath, 'platform-tools'))) {
+                return {
+                    name: 'Android SDK',
+                    status: 'pass',
+                    message: `SDK detected at: ${sdkPath} (ANDROID_HOME not in MCP env)`
+                };
+            }
+        }
+        return {
+            name: 'Android SDK',
+            status: 'fail',
+            message: 'ANDROID_HOME / ANDROID_SDK_ROOT not set and SDK not found',
+            fixHint: 'Install Android Studio, then set the env variable:\n  Windows: setx ANDROID_HOME "%LOCALAPPDATA%\\Android\\Sdk"\n  macOS/Linux: export ANDROID_HOME=~/Android/Sdk\n\nThen add platform-tools to PATH.'
+        };
     }
     async checkAndroidEmulator() {
         try {
