@@ -228,9 +228,25 @@ export default { getAllUsers, getUserByUsername, getUserByRole };
   - New getUser helper initially reported TS errors: missing Node types and __dirname/import.meta typing issues.
   - Actions: updated tsconfig.json to include "types": ["node"] and adjusted getUser to resolve files via process.cwd()/path rather than relying on __dirname/import.meta in a fragile way. Installing @types/node (dev dep) resolved type errors during build.
 - WDIO spec mismatch / test run failure:
-  - wdio.conf.ts (generated) used spec pattern ./features/**/*.feature but scaffold created features under src/features. Running npm run test:smoke reported "pattern ./features/**/*.feature did not match any file" and "No specs found".
-  - Root cause: scaffolder used default spec pattern instead of honoring mcp-config.paths.featuresRoot when generating wdio.conf.ts.
-  - Fix / recommendation: generate wdio.conf.ts using mcp-config.paths.featuresRoot (or generate platform-specific confs) so spec paths match generated feature files.
+  - What I ran:
+    - npm run test:smoke -> executed `npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@smoke'`
+  - Output observed:
+    - WARN @wdio/config: pattern ./features/**/*.feature did not match any file
+    - ERROR @wdio/cli: No specs found to run, exiting with failure
+    - Result: 0 specs discovered, run exited with failure (no tests executed)
+  - Immediate cause(s):
+    - Generated wdio.conf.ts used spec glob "./features/**/*.feature" while generated feature file is at src/features/sample.feature (mcp-config.paths.featuresRoot = "src/features").
+    - No active Appium session / device connection was attempted; even if specs were discovered, tests would fail without a device/session.
+  - Actions taken here:
+    - Created platform-specific stubs (wdio.android.conf.ts, wdio.ios.conf.ts) and updated docs recommending using mcp-config.paths.featuresRoot.
+    - Suggested commands to validate after fixes:
+      1. Update wdio.conf.ts specs to `${mcp-config.paths.featuresRoot}/**/*.feature` or use the provided platform stubs.
+      2. npm run test:smoke (to verify spec discovery)
+      3. Run check_environment (to validate Appium/device stack) then start_appium_session before executing tests.
+  - Fix / recommendation: 
+    - scaffolder must use mcp-config.paths.featuresRoot when generating runner configs so spec globs match generated features.
+    - Provide a post-scaffold sanity step that runs "spec discovery" (dry run) and reports mismatches.
+    - Document and optionally run check_environment and start_appium_session before attempting test runs.
 - setup_project did not run npm install automatically nor prominently instruct to run it; this caused iterative manual fixes. Recommend an optional --install flag or clearer post-scaffold instructions.
 - Missing platform-specific WDIO configs initially (wdio.android.conf.ts / wdio.ios.conf.ts). I added stubs, but scaffold should generate these when platform="both".
 - Race conditions / file-change detection risk: tools modify files sequentially but do not warn when files changed since last read. Recommend file-hash/mtime checks before edits.
