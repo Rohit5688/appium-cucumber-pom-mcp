@@ -28,7 +28,7 @@ import * as vm from 'node:vm';
  * Each method receives a single JSON-serializable argument and returns a
  * JSON-serializable result (or a Promise of one).
  */
-export type SandboxApiMethod = (args: any) => any | Promise<any>;
+export type SandboxApiMethod = (...args: any[]) => any | Promise<any>;
 
 /**
  * The registry of methods exposed to the sandbox script via `forge.api.*`.
@@ -158,7 +158,7 @@ export async function executeSandbox(
   for (const [name, fn] of Object.entries(apiRegistry)) {
     apiBridge[name] = async (...args: any[]) => {
       try {
-        return await fn(args.length === 1 ? args[0] : args);
+        return await fn(...args);
       } catch (err) {
         throw new Error(`forge.api.${name}() failed: ${(err as Error).message}`);
       }

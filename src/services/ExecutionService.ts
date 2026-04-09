@@ -215,42 +215,6 @@ export class ExecutionService {
           args.push(`--cucumberOpts.tagExpression=${tagExpression}`);
         }
 
-        // Issue #5 FIX: Inject capabilities from mcp-config.json if available
-        // This prevents "Missing capabilities" errors when wdio.conf.ts has incomplete/invalid capabilities
-        if (config?.mobile?.capabilitiesProfiles) {
-          const profiles = config.mobile.capabilitiesProfiles;
-          const profileNames = Object.keys(profiles);
-          
-          // Use first available profile or platform-specific profile
-          let selectedProfile = profileNames[0];
-          if (options?.platform && profileNames.includes(options.platform)) {
-            selectedProfile = options.platform;
-          }
-          
-          if (selectedProfile && profiles[selectedProfile]) {
-            const caps = profiles[selectedProfile];
-            
-            // Inject critical capabilities as CLI args to override wdio.conf.ts
-            if (caps.platformName) {
-              args.push(`--capabilities.platformName=${caps.platformName}`);
-            }
-            if (caps['appium:deviceName']) {
-              args.push(`--capabilities.appium:deviceName=${caps['appium:deviceName']}`);
-            }
-            if (caps['appium:automationName']) {
-              args.push(`--capabilities.appium:automationName=${caps['appium:automationName']}`);
-            }
-            if (caps['appium:app']) {
-              args.push(`--capabilities.appium:app=${caps['appium:app']}`);
-            }
-            if (caps['appium:udid']) {
-              args.push(`--capabilities.appium:udid=${caps['appium:udid']}`);
-            }
-            
-            Logger.info(`Injecting capabilities from profile "${selectedProfile}": ${caps.platformName} / ${caps['appium:deviceName']}`);
-          }
-        }
-
         // Additional args (already validated)
         if (options?.specificArgs) {
           // Split on spaces if multiple args were provided, filter empty strings
