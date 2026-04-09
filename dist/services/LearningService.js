@@ -20,7 +20,13 @@ export class LearningService {
             return { version: '1.0.0', rules: [] };
         }
         try {
-            return JSON.parse(fs.readFileSync(storagePath, 'utf8'));
+            const raw = JSON.parse(fs.readFileSync(storagePath, 'utf8'));
+            // Guard: ensure rules is always an array (handles manually-edited files or schema drifts)
+            if (!raw || typeof raw !== 'object')
+                return { version: '1.0.0', rules: [] };
+            if (!Array.isArray(raw.rules))
+                raw.rules = [];
+            return raw;
         }
         catch {
             return { version: '1.0.0', rules: [] };

@@ -13,9 +13,10 @@ This project is optimized for "Street-Smart" AI collaboration. All agents MUST f
 **Status**: Active / Mandatory for all projects.
 
 ## ⚡ 1. Token-Aware Planning
-1. **Turbo Analysis**: ALWAYS use targeted `grep` or sandbox execution. DO NOT read large source files (>500 lines) multiple times.
+1. **Turbo Analysis**: ALWAYS use targeted `grep` or sandbox execution.
 2. **Context Maintenance**: Break large tasks into sequential, atomic tool calls.
 3. **No-Incomplete-Write**: NEVER start a write you cannot complete within the token limit.
+4. **The Ripple Audit**: Before planning, ALWAYS use `grep` to identify all files impacted by a change. Implementation is incomplete until ripples are resolved.
 
 ## 🔍 2. Atomic Implementation
 1. **Granular Bug Fixes**: Audit -> Analyze -> Minimal Fix -> Verify.

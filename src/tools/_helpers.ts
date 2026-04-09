@@ -8,8 +8,8 @@ const CHARACTER_LIMIT = 25_000;
 export function truncate(text: string, tip?: string): string {
   if (text.length <= CHARACTER_LIMIT) return text;
   const suffix = tip
-    ? `\n\n... [TRUNCATED — response exceeded ${CHARACTER_LIMIT} chars. Tip: ${tip}]`
-    : `\n\n... [TRUNCATED — response exceeded ${CHARACTER_LIMIT} chars]`;
+    ? `\n\n... [TRUNCATED — response exceeded ${CHARACTER_LIMIT} chars. Tip: ${tip}. Use array.slice, array.map, or filter options to reduce output.]`
+    : `\n\n... [TRUNCATED — response exceeded ${CHARACTER_LIMIT} chars. Use pagination (array.slice) or mapping to reduce the returned payload volume.]`;
   return text.slice(0, CHARACTER_LIMIT) + suffix;
 }
 

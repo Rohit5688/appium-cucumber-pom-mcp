@@ -185,7 +185,7 @@ export class CodebaseAnalyzerService {
     stepsRoot?: string;
     pagesRoot?: string;
     utilsRoot?: string;
-  }, customWrapperPackage?: string): Promise<CodebaseAnalysisResult> {
+  }, customWrapperPackage?: string, filters?: { type?: 'all'|'pages'|'steps'|'utils'|'features'; searchPattern?: string }): Promise<CodebaseAnalysisResult> {
     const result: CodebaseAnalysisResult = {
       existingFeatures: [],
       existingStepDefinitions: [],
@@ -213,6 +213,9 @@ export class CodebaseAnalyzerService {
     }
 
     // 2. Discover ALL TypeScript Files dynamically
+    const filterType = filters?.type ?? 'all';
+    if (filterType === 'features') return result;
+
     const tsFiles = await this.listFilesWithExtensions(projectRoot, ['.ts']);
     if (tsFiles.length > 0) {
       const project = new Project({ compilerOptions: { strict: false }, skipAddingFilesFromTsConfig: true });
@@ -229,6 +232,10 @@ export class CodebaseAnalyzerService {
         const relativePath = path.relative(projectRoot, filePath).replace(/\\/g, '/');
         const codeContent = sourceFile.getFullText();
 
+        if (filters?.searchPattern && !codeContent.includes(filters.searchPattern)) {
+          continue; // Skip files that don't match the search pattern
+        }
+
         // Phase 8: Scrutinize for lazy logic — surface warnings to the LLM prompt
         try {
           ASTScrutinizer.scrutinize(codeContent, relativePath);
@@ -236,55 +243,62 @@ export class CodebaseAnalyzerService {
           result.warnings!.push(`[ASTScrutinizer] ${e.message}`);
         }
 
-        const steps = this.extractStepsAST(sourceFile);
-        if (steps.length > 0) {
-          result.existingStepDefinitions.push({ file: relativePath, steps });
-          if (result.detectedPaths.stepsRoot === (customPaths?.stepsRoot ?? 'step-definitions')) {
-             result.detectedPaths.stepsRoot = path.dirname(relativePath);
+        if (filterType === 'all' || filterType === 'steps') {
+          const steps = this.extractStepsAST(sourceFile);
+          if (steps.length > 0) {
+            result.existingStepDefinitions.push({ file: relativePath, steps });
+            if (result.detectedPaths.stepsRoot === (customPaths?.stepsRoot ?? 'step-definitions')) {
+               result.detectedPaths.stepsRoot = path.dirname(relativePath);
+            }
+            continue;
           }
-          continue;
         }
+        
+        if (filterType !== 'all' && filterType !== 'pages' && filterType !== 'utils') continue;
 
         const classes = sourceFile.getClasses();
         let isPageObject = false;
 
         // BUG-04 FIX: Logic for Page Registries
-        for (const cls of classes) {
-          const className = cls.getName() || '';
-          const hasLocators = this.extractLocatorsAST(cls).length > 0;
-          const isStandardPom = className.toLowerCase().includes('page') || className.toLowerCase().includes('screen');
-          if (hasLocators || isStandardPom) {
-            const publicMethods = cls.getMethods()
-              .filter(m => !m.hasModifier(SyntaxKind.PrivateKeyword) && !m.hasModifier(SyntaxKind.ProtectedKeyword))
-              .map(m => m.getName());
-            result.existingPageObjects.push({
-              path: relativePath,
-              className: className || 'AnonymousClass',
-              publicMethods,
-              locators: this.extractLocatorsAST(cls)
-            });
-            isPageObject = true;
-          }
-
-          const pageInsts: { propertyName: string; pageClass: string }[] = [];
-          for (const prop of cls.getProperties()) {
-            const init = prop.getInitializer();
-            if (!init) continue;
-            const initText = init.getText();
-            const newMatch = initText.match(/^new\s+([A-Z][\w]*)\s*\(/);
-            if (newMatch) {
-              const instClass = newMatch[1] ?? '';
-              const looksLikePage =
-                instClass.toLowerCase().endsWith('page') ||
-                instClass.toLowerCase().endsWith('screen') ||
-                instClass.toLowerCase().endsWith('component');
-              if (looksLikePage) pageInsts.push({ propertyName: prop.getName(), pageClass: instClass });
+        if (filterType === 'all' || filterType === 'pages') {
+          for (const cls of classes) {
+            const className = cls.getName() || '';
+            
+            const hasLocators = this.extractLocatorsAST(cls).length > 0;
+            const isStandardPom = className.toLowerCase().includes('page') || className.toLowerCase().includes('screen');
+            if (hasLocators || isStandardPom) {
+              const publicMethods = cls.getMethods()
+                .filter(m => !m.hasModifier(SyntaxKind.PrivateKeyword) && !m.hasModifier(SyntaxKind.ProtectedKeyword))
+                .map(m => m.getName());
+              result.existingPageObjects.push({
+                path: relativePath,
+                className: className || 'AnonymousClass',
+                publicMethods,
+                locators: this.extractLocatorsAST(cls)
+              });
+              isPageObject = true;
             }
-          }
 
-          if (pageInsts.length >= 2) {
-            const registryVar = className.charAt(0).toLowerCase() + className.slice(1);
-            registries.push({ className, path: relativePath, registryVar, pages: pageInsts });
+            const pageInsts: { propertyName: string; pageClass: string }[] = [];
+            for (const prop of cls.getProperties()) {
+              const init = prop.getInitializer();
+              if (!init) continue;
+              const initText = init.getText();
+              const newMatch = initText.match(/^new\s+([A-Z][\w]*)\s*\(/);
+              if (newMatch) {
+                const instClass = newMatch[1] ?? '';
+                const looksLikePage =
+                  instClass.toLowerCase().endsWith('page') ||
+                  instClass.toLowerCase().endsWith('screen') ||
+                  instClass.toLowerCase().endsWith('component');
+                if (looksLikePage) pageInsts.push({ propertyName: prop.getName(), pageClass: instClass });
+              }
+            }
+
+            if (pageInsts.length >= 2) {
+              const registryVar = className.charAt(0).toLowerCase() + className.slice(1);
+              registries.push({ className, path: relativePath, registryVar, pages: pageInsts });
+            }
           }
         }
 

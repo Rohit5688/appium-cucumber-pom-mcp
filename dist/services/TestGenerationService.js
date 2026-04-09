@@ -120,15 +120,15 @@ Generate: .feature file + step definitions + Page Object class.
             utilsRoot: 'utils'
         };
         paths.pagesRoot = path.relative(projectRoot, this.resolvePagesDir(projectRoot, paths.pagesRoot));
-        const existingStepsSummary = analysis.existingStepDefinitions
-            .map(s => `  File: ${s.file}\n    Steps: ${s.steps.map(st => `${st.type}('${st.pattern}')`).join(', ')}`)
+        const existingStepsSummary = (analysis.existingStepDefinitions ?? [])
+            .map(s => `  File: ${s.file}\n    Steps: ${(s.steps ?? []).map(st => `${st.type}('${st.pattern}')`).join(', ')}`)
             .join('\n') || '  (none found)';
-        const existingPagesSummary = analysis.existingPageObjects
-            .map(p => `  ${p.path}: [${p.publicMethods.join(', ')}]`)
+        const existingPagesSummary = (analysis.existingPageObjects ?? [])
+            .map(p => `  ${p.path}: [${(p.publicMethods ?? []).join(', ')}]`)
             .join('\n') || '  (none found)';
         const knownScreenMap = this.buildKnownScreenMap(analysis.existingPageObjects);
-        const existingUtilsSummary = analysis.existingUtils
-            ? analysis.existingUtils.map(u => `  ${u.path}: [${u.publicMethods.join(', ')}]`).join('\n')
+        const existingUtilsSummary = (analysis.existingUtils ?? []).length > 0
+            ? (analysis.existingUtils ?? []).map(u => `  ${u.path}: [${(u.publicMethods ?? []).join(', ')}]`).join('\n')
             : '  (none found)';
         // Generate navigation context to help LLMs understand existing navigation patterns
         const navigationContext = await this.generateNavigationContext(projectRoot, testDescription, analysis);

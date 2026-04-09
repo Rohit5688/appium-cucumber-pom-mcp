@@ -23,6 +23,7 @@ This document records problems observed while scaffolding the MarketPlace mobile
      - Remove known placeholder entries automatically when adding real profiles, OR
      - Provide an explicit "removePlaceholders" option, OR
      - Return a list of profiles still containing CONFIGURE_ME values with JSON paths.
+   - Status: **FIXED** — `McpConfigService.write` now auto-purges any capability entry filled entirely with `CONFIGURE_ME` placeholders, resolving the `myDevice` blocker.
 
 2. replace_in_file operation failed due to exact-text SEARCH mismatch.
    - Severity: Low → Medium (can block scripted edits)
@@ -39,6 +40,7 @@ This document records problems observed while scaffolding the MarketPlace mobile
    - Severity: Low
    - Symptom: manage_users wrote credentials/users.json but it's unclear if/get where a typed getUser helper was created.
    - Suggested fix: manage_users.write must always generate (or explicitly report) the helper path (e.g. src/utils/getUser.ts) and return the path in its response.
+   - Status: **FIXED** — `manage_users` write response now explicitly includes `helperPath` and an exact `nextStep` string containing the proper `import { getUser }` snippet.
 
 5. Race conditions / file-change detection.
    - Severity: Low
@@ -55,18 +57,21 @@ This document records problems observed while scaffolding the MarketPlace mobile
    - Symptom: mcp-config.json contained environments (e.g. local, staging, integration) but setup_project/manage_users did not generate per-environment credential files (e.g. src/credentials/local.json) automatically, nor did setup_project create environment scaffolding files.
    - Root cause hypothesis: setup_project expects the user to create env files manually or manage_users.write should generate per-env files when environments are present.
    - Suggested fix: setup_project/manage_users should detect environments in mcp-config.json and either generate template per-environment credential files (src/credentials/<env>.json) or document explicitly that the user must create them. Return paths of created env files.
+   - Status: **FIXED** — `ProjectSetupService.setup()` now iterates through `config.environments` and natively scaffolds a `users.{env}.json` array placeholder template for each environment.
 
 8. npm install not executed after scaffolding / missing instruction.
    - Severity: Low → Medium (impacts developer experience)
    - Symptom: No npm install was run automatically and setup_project did not instruct to run it as a required next step.
    - Root cause hypothesis: setup_project currently scaffolds files but doesn't manage dependency installation or clear post-scaffold steps.
    - Suggested fix: either run package manager install automatically (with an option like --install) or include an explicit, prominent next-step instruction in the setup_project response (e.g. "Run npm install" and recommended package manager). Return whether install was run or skipped.
+   - Status: **FIXED** — `setup_project` (Phase 2 completion) now injects `⚡ FIRST: Run npm install` at index 0 of the `nextSteps` array array response to ensure it isn't missed.
 
 9. Missing separate WebdriverIO config files for iOS and Android.
    - Severity: Low → Medium
    - Symptom: setup_project created a single wdio.conf.ts but did not generate platform-specific configs (wdio.android.conf.ts, wdio.ios.conf.ts) despite mobile.platforms=both.
-   - Root cause hypothesis: codegen.generateFiles or setup_project did not account for multi-platform scaffolding of config files.
-   - Suggested fix: when platform is "both", generate platform-specific config stubs (wdio.android.conf.ts, wdio.ios.conf.ts) and document how to run platform-specific runs. Alternatively include template overrides and examples in README.
+   - Root cause hypothesis: The schema defines multiple platforms under capabilitiesProfiles, but setup_project might only look at defaultPlatform without scaffolding all declared environments if both are needed.
+   - Suggested fix: When mobile.platforms=both (or similar capability exists), explicitly scaffold wdio.shared.conf.ts, wdio.android.conf.ts, and wdio.ios.conf.ts. Update package.json scripts to call the correct targeted configs.
+   - Status: **FIXED** — The underlying logic already supported this if `defaultPlatform` was strictly `'both'`, but the template incorrectly suggested `'android or ios'`, causing developers to silently bypass the multi-platform scaffolding branch. Changed the template prompt to `'CONFIGURE_ME: android, ios, or both'`.
 
 ## Repro steps for maintainers
 1. Run setup_project in a clean directory.

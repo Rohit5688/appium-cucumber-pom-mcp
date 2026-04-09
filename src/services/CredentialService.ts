@@ -220,6 +220,9 @@ export class CredentialService {
       file: path.relative(projectRoot, credentialsFile),
       environment: currentEnv,
       usersWritten: users.length,
+      // MCP #4: Always surface where the typed getUser() helper lives so callers know the import path
+      helperPath: path.join('src', 'utils', 'getUser.ts').replace(/\\/g, '/'),
+      nextStep: `Import your typed helper: import { getUser } from './${path.join('src', 'utils', 'getUser').replace(/\\/g, '/')}';`,
       warning: 'Fill in real passwords — this file is gitignored and safe to edit directly.'
     }, null, 2);
   }

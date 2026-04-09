@@ -58,7 +58,7 @@ MCP error -32001: Request timed out
 - Suggested fix:
   - Return structured error payload: { errorType, exitCode, stdoutSnippet, stderrSnippet, hint }
   - Include links or exact config values MCP used (env, command, workingDir).
-- Status: Open
+- Status: **FIXED 2026-04-09** — Implemented `ExecutionService.classifyWdioError(output)` which parses raw `stderr` and attaches a structured `diagnosis` JSON key to the tool result for well-known Appium/wdio crash patterns.
 - Notes: Improves developer troubleshooting and reduces context switching.
 
 ---
@@ -118,7 +118,7 @@ Spec Files: 0 passed, 0 total (0% completed)
   - Implement pagination or chunked responses for large outputs
   - Add filtering parameters to `analyzeCodebase()` to limit scope
   - Provide summary view with option to drill down into specific files/sections
-- Status: Open
+- Status: **FIXED 2026-04-09** — Implemented scope `filters` (`{ type: 'pages'|'steps'|'features'|'utils', searchPattern: string }`) directly inside `CodebaseAnalyzerService.analyze()`. Updated `execute_sandbox_code` instructions to guide the LLM to use `filters`, `array.slice()`, or `array.map()` to narrow results before serialization, protecting the agent's context from token explosion while adhering to the 25,000 character limit.
 - Impact: Medium - limits usefulness for large projects
 - Notes: Affects code generation quality as full context may not be available.
 
@@ -158,8 +158,8 @@ require is not defined
 - Suggested fix:
   - Ensure the MCP execution environment supports the module system used by the tool code (CommonJS vs ESM), or bundle/transpile tools appropriately.
   - Add defensive error handling to return structured error payloads instead of uncaught exceptions.
-- Status: Open
-- Impact: Medium — prevents several inspection and readiness tools from executing.
+- Status: **NEEDS LIVE SESSION — Deferred 2026-04-09**
+- Notes: Root cause requires runtime ESM inspection. Static analysis shows all MCP source files use `import` (not `require`). Error likely surfaces from a transitive CommonJS dependency inside webdriverio/appium under certain import paths. To reproduce: start Appium, call `check_appium_ready`, capture the raw Node.js stack trace from stderr. Will be diagnosed next live session.
 
 ## Issue 9 — Code generation (generate_cucumber_pom) crashes
 
@@ -172,9 +172,7 @@ require is not defined
 - Suggested fix:
   - Add input validation and guard clauses for undefined values returned from analysis.
   - Return a clear validation error indicating which context data is missing.
-- Status: Open
-
-## Issue 10 — Learning API (train_on_example) throws on inputs
+- Status: **FIXED 2026-04-09** — Added `?? []` null-coalesce guards on all `CodebaseAnalysisResult` arrays in `TestGenerationService.generateAppiumPrompt()`. Arrays: `existingStepDefinitions`, `existingPageObjects`, `existingUtils`, and inner `steps` / `publicMethods`.
 
 - Severity: Low
 - Observed: `train_on_example` returned "Cannot read properties of undefined (reading 'find')" when invoked.
@@ -184,9 +182,7 @@ require is not defined
 - Suggested fix:
   - Add defensive input validation in the training pipeline.
   - Provide structured validation errors when required fields are missing or malformed.
-- Status: Open
-
-## Note — train_on_example succeeded for a sample rule
+- Status: **FIXED 2026-04-09** — `LearningService.getKnowledge()` now normalizes the JSON result: checks `typeof raw === 'object'` and `Array.isArray(raw.rules)`, falls back to `{ version: '1.0.0', rules: [] }` on any schema drift.
 
 - Observed: `train_on_example` accepted a sample rule and returned ruleId: `rule-20260408-01`.
 - Action: Rule saved to MCP learning store. Consider verifying via export_team_knowledge.
@@ -222,7 +218,7 @@ WebDriverError: Request failed with error code ECONNREFUSED when running "http:/
   - Validate capabilities and configuration before launching test workers.
   - Auto-start or verify Appium server availability and stream its logs into the MCP response.
   - Improve error payload to include which capability or connection check failed.
-- Status: Open
+- Status: **FIXED 2026-04-09** — Addressed along with Issue 3. `ECONNREFUSED` and `Missing capabilities` are now explicitly classified in the `diagnosis` field, eliminating the generic error block and clearly identifying the missing config/service.
 - Impact: Critical — blocks automated test execution via MCP.
 
 ## Issue 13 — Utility wrapper coverage gaps reported by audit_utils

@@ -16,6 +16,9 @@ To prevent incomplete implementations or "brain fog" during complex tasks, agent
 3.  **The "No-Incomplete-Write" Rule**:
     *   NEVER start a code-generation tool call you cannot complete within the token limit.
     *   If you hit a limit, clearly state what was finished and what is still "to-do."
+4.  **The Ripple Audit (Mandatory)**:
+    *   Before creating an Implementation Plan, use `grep` or `structural-brain.json` to identify EVERY file affected by a logic or signature change.
+    *   The Plan MUST list these files and include explicit tasks to update them. Implementation is considered a failure if ripples are ignored.
 
 ---
 
