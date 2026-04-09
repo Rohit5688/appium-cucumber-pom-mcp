@@ -38,9 +38,6 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
           const mcpErr = new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'migrate_test', cause: new Error(JSON.stringify(details)) });
           return toMcpErrorResponse(mcpErr, 'migrate_test');
         }
-        if (err instanceof McpError) {
-          return toMcpErrorResponse(err, 'migrate_test');
-        }
         return toMcpErrorResponse(err, 'migrate_test');
       }
     }

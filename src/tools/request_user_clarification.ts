@@ -79,9 +79,6 @@ OUTPUT INSTRUCTIONS: Display the question as-is. Do not rephrase or add commenta
           const mcpErr = new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'request_user_clarification', cause: new Error(JSON.stringify(details)) });
           return toMcpErrorResponse(mcpErr, 'request_user_clarification');
         }
-        if (err instanceof McpError) {
-          return toMcpErrorResponse(err, 'request_user_clarification');
-        }
         return toMcpErrorResponse(err, 'request_user_clarification');
       }
     }

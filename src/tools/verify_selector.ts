@@ -38,10 +38,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
           const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionInfo?.sessionId);
           
           if (!report.allPassed) {
-            return {
-              isError: true,
-              content: [{ type: 'text', text: preFlight.formatReport(report) }]
-            };
+            return toMcpErrorResponse(new Error(preFlight.formatReport(report)), 'verify_selector');
           }
 
           const verification = await selfHealingService.verifyHealedSelector(projectRoot, args.selector);
