@@ -4,10 +4,12 @@ import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { auditGeneratedCode, auditFeatureFile, validateProjectRoot, validateFilePath } from '../utils/SecurityUtils.js';
-import { AppForgeError } from '../utils/ErrorFactory.js';
+import { McpError, McpErrorCode, McpErrors } from '../types/ErrorSystem.js';
 import { StringMatcher } from '../utils/StringMatcher.js';
 import { FileSuggester } from '../utils/FileSuggester.js';
 import { FileStateService } from './FileStateService.js';
+import { FileGuard } from '../utils/FileGuard.js';
+import { withRetry, RetryPolicies } from '../utils/RetryEngine.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -95,12 +97,9 @@ export class FileWriterService {
       if (!validation.valid) {
         // Clean up staging
         await this.cleanStaging(stagingDir);
-        throw new AppForgeError("E006_TS_COMPILE_FAIL", 
-          "TypeScript compilation failed during validation.",
-          [
-            "Review the tsc output below and fix the generated TypeScript files.",
-            ...validation.errors
-          ]
+        throw new McpError(
+          "TypeScript compilation failed: " + validation.errors.join('\n'),
+          McpErrorCode.BUILD_FAILED
         );
       }
     }
@@ -193,7 +192,7 @@ export class FileWriterService {
         if (!fs.existsSync(bDir)) {
           fs.mkdirSync(bDir, { recursive: true });
         }
-        fs.copyFileSync(destPath, backupPath);
+        await withRetry(async () => fs.copyFileSync(destPath, backupPath), RetryPolicies.fileOperation);
         overwrittenFiles.push(file.path);
       } else {
         newFiles.push(file.path);
@@ -209,7 +208,7 @@ export class FileWriterService {
         if (!fs.existsSync(dir)) {
           fs.mkdirSync(dir, { recursive: true });
         }
-        fs.writeFileSync(destPath, file.content, 'utf8');
+        await withRetry(async () => fs.writeFileSync(destPath, file.content, 'utf8'), RetryPolicies.fileOperation);
         fileState.recordWrite(destPath, file.content);
         results.push(file.path);
       }
@@ -225,7 +224,7 @@ export class FileWriterService {
         const destPath = path.join(projectRoot, overwrittenFile);
         const backupPath = path.join(backupDir, overwrittenFile);
         if (fs.existsSync(backupPath)) {
-          fs.copyFileSync(backupPath, destPath);
+          await withRetry(async () => fs.copyFileSync(backupPath, destPath), RetryPolicies.fileOperation);
         }
       }
       await this.cleanStaging(stagingDir);
@@ -272,10 +271,11 @@ export class FileWriterService {
     const fullPath = path.join(projectRoot, filePath);
     if (!fs.existsSync(fullPath)) {
       const enhanced = FileSuggester.enhanceError(fullPath);
-      throw new AppForgeError('E003_FILE_NOT_FOUND', enhanced);
+      throw McpErrors.fileNotFound(enhanced);
     }
 
-    const content = fs.readFileSync(fullPath, 'utf8');
+    const retryResult = await withRetry(async () => FileGuard.readTextFileSafely(fullPath), RetryPolicies.fileOperation);
+    const content = retryResult.value;
     FileStateService.getInstance().recordRead(fullPath, content);
     
     const result = StringMatcher.fuzzyReplace(oldString, newString, content);

@@ -1,4 +1,54 @@
-# 🔴 Active AppForge Issues
+# ✅ AppForge Active Issues — All Resolved
+
+**Last Updated**: 2026-04-09
+**Consolidated from**: `liveissues.md`, `MCP_ISSUES_VERIFICATION_RESULTS.md`, `MCP_ISSUES.md`, and `PENDING_ISSUES.md`.
+
+---
+
+## ✅ Issue 1: Non-Blocking Test Execution (Formerly L2) — FIXED
+
+- **Root Cause**: `run_cucumber_test` blocked the MCP HTTP socket synchronously. Appium emulator boot + W3C negotiation takes 70-120s, exceeding the ~60s client socket timeout. The LLM lost all test output, blinding the verification loop.
+- **User Note**: Forget whole-suite runs. The blocker was the LLM verifying a **single test it just wrote** timing out.
+- **Fix**:
+  - Introduced an in-memory **Job Queue** (`Map<string, TestJob>`) in `ExecutionService`.
+  - `run_cucumber_test` now defaults to `runAsync: true` — fires in background, returns `{ status: "started", jobId }` immediately.
+  - New **`check_test_status`** tool polls the queue with optional server-side `waitSeconds` sleep (max 55s, safe inside the 60s socket window).
+  - Sync mode preserved via `runAsync: false` for CI/short runs.
+- **Commit**: `feat(execution): non-blocking job queue for run_cucumber_test with check_test_status polling`
+
+---
+
+## ✅ Issue 2: Utility Wrapper Coverage Gaps (Formerly L13) — DEFERRED (Good-to-Have)
+
+- **User Note**: "good to have" — not blocking.
+- Missing methods: `waitForElementVisible`, `waitForElementClickable`, `waitForElementGone`, `assertElementExists`, `typeText`, `clearText`, `switchToWebView`, `switchToNativeApp`, `takeScreenshot`.
+- Can be addressed in a future scaffolding template update pass.
+
+---
+
+## ✅ Issue 3: Navigation Mapping Empty Without Active Session (Formerly L7) — FIXED
+
+- **Root Cause**: `export_navigation_map` only rendered the live session cache — it never called `extractNavigationMap()` which performs static PageObject + step file analysis.
+- **User Note**: "the call happened on a new repo where nothing was written" — so even static analysis yields nothing.
+- **Fix**:
+  - `export_navigation_map` now calls `extractNavigationMap(projectRoot)` before rendering (static analysis of all PageObjects + step defs, no session needed).
+  - `NavigationGraphService.rebuildGraphFull()` now calls `buildSeedMapFromConfig()` when static analysis finds 0 nodes.
+  - Seed map reads `mcp-config.json` for the app name and scaffolds a 3-node conceptual graph: `AppEntry → Login → Home` with `confidence: 0.3` so the LLM always has an actionable framework.
+  - `mapSource` field tracks `'static' | 'live' | 'seed'` and is returned in the response with a descriptive note.
+- **Commit**: `feat(navigation): static analysis + seed map fallback for export_navigation_map`
+
+---
+
+## 📊 Final Status
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| L2 — MCP RPC Timeout (verify loop) | High | ✅ Fixed |
+| L7 — Navigation Map empty | Low | ✅ Fixed |
+| L13 — Utility coverage gaps | Low | ⏳ Deferred (good to have) |
+
+**All production-blocking issues resolved.** AppForge is stable for the core LLM-driven test-write → verify → heal workflow.
+
 
 **Last Updated**: 2026-04-09
 **Consolidated from**: `liveissues.md`, `MCP_ISSUES_VERIFICATION_RESULTS.md`, `MCP_ISSUES.md`, and `PENDING_ISSUES.md`. All previously documented critical blockers and scaffolding bugs have successfully been resolved and verified.

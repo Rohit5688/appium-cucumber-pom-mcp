@@ -16,6 +16,8 @@ import * as path from 'path';
 export class NavigationGraphService {
     graph;
     graphPath;
+    /** Tracks the origin of the current graph: 'static' | 'live' | 'seed' */
+    mapSource = 'static';
     constructor(projectRoot) {
         this.graphPath = path.join(projectRoot, '.appforge', 'navigation-graph.json');
         this.graph = this.loadGraph();
@@ -83,6 +85,7 @@ export class NavigationGraphService {
         // Add navigation edge if we have previous screen info
         if (previousScreen && action) {
             this.addNavigationEdge(previousScreen, screenName, action, 0.8); // Medium confidence from live session
+            this.mapSource = 'live'; // Mark as enriched by live session
         }
         await this.saveGraph();
     }
@@ -225,6 +228,10 @@ export class NavigationGraphService {
     }
     getKnownScreens(projectRoot) {
         return Array.from(this.graph.nodes.keys());
+    }
+    /** Returns the data source of the current navigation map. */
+    getMapSource() {
+        return this.mapSource;
     }
     // ─── Private Implementation ──────────────────────────
     async analyzeStepDefinitions(projectRoot) {
@@ -882,6 +889,76 @@ export class NavigationGraphService {
         this.graph.entryPoints = [];
         // Build navigation graph from analysis
         await this.buildNavigationGraph(stepDefinitions, pageObjects);
+        // If static analysis found nothing (brand-new repo), build a conceptual seed map
+        if (this.graph.nodes.size === 0) {
+            await this.buildSeedMapFromConfig(projectRoot);
+            this.mapSource = 'seed';
+        }
+        else {
+            this.mapSource = 'static';
+        }
+    }
+    /**
+     * Builds a conceptual "seed" navigation graph for brand-new projects that have no
+     * PageObjects or step definitions yet.
+     *
+     * Reads mcp-config.json for the app name, then scaffolds a minimal 3-node graph:
+     *   AppEntry → Login/Welcome → Home/Dashboard
+     *
+     * This gives the LLM a concrete framework to attach the first test scenario to,
+     * instead of returning an empty Mermaid diagram with no context.
+     */
+    async buildSeedMapFromConfig(projectRoot) {
+        // Try to read mcp-config for app name
+        let appName = 'App';
+        try {
+            const configPath = path.join(projectRoot, 'mcp-config.json');
+            if (fs.existsSync(configPath)) {
+                const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+                appName = cfg?.project?.appName || cfg?.appName || 'App';
+            }
+        }
+        catch {
+            // Silently fall back to generic name
+        }
+        const seedEdge = (target, desc) => ({
+            action: 'tap',
+            targetScreen: target,
+            confidence: 0.3,
+            description: desc
+        });
+        const now = new Date();
+        const seedNodes = [
+            [`${appName} Entry`, {
+                    screen: `${appName} Entry`,
+                    elements: [],
+                    connections: [seedEdge('Login', 'App launches to Login or Welcome screen')],
+                    visitCount: 0,
+                    lastVisited: now,
+                    screenSignature: 'seed-entry'
+                }],
+            ['Login', {
+                    screen: 'Login',
+                    elements: [],
+                    connections: [seedEdge('Home', 'Tap Login button with valid credentials')],
+                    visitCount: 0,
+                    lastVisited: now,
+                    screenSignature: 'seed-login'
+                }],
+            ['Home', {
+                    screen: 'Home',
+                    elements: [],
+                    connections: [],
+                    visitCount: 0,
+                    lastVisited: now,
+                    screenSignature: 'seed-home'
+                }]
+        ];
+        for (const [key, node] of seedNodes) {
+            this.graph.nodes.set(key, node);
+        }
+        this.graph.entryPoints = [`${appName} Entry`];
+        console.error(`[NavigationGraph] No static artifacts found — seeded graph with ${appName} conceptual navigation scaffold`);
     }
     // ─── P2 IMPROVEMENT 3: Enhanced Confidence Scoring ───────────────────
     /**

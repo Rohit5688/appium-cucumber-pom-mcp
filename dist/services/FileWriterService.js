@@ -8,6 +8,8 @@ import { AppForgeError } from '../utils/ErrorFactory.js';
 import { StringMatcher } from '../utils/StringMatcher.js';
 import { FileSuggester } from '../utils/FileSuggester.js';
 import { FileStateService } from './FileStateService.js';
+import { FileGuard } from '../utils/FileGuard.js';
+import { withRetry, RetryPolicies } from '../utils/RetryEngine.js';
 const execFileAsync = promisify(execFile);
 export class FileWriterService {
     /**
@@ -162,7 +164,7 @@ export class FileWriterService {
                 if (!fs.existsSync(bDir)) {
                     fs.mkdirSync(bDir, { recursive: true });
                 }
-                fs.copyFileSync(destPath, backupPath);
+                await withRetry(async () => fs.copyFileSync(destPath, backupPath), RetryPolicies.fileOperation);
                 overwrittenFiles.push(file.path);
             }
             else {
@@ -178,7 +180,7 @@ export class FileWriterService {
                 if (!fs.existsSync(dir)) {
                     fs.mkdirSync(dir, { recursive: true });
                 }
-                fs.writeFileSync(destPath, file.content, 'utf8');
+                await withRetry(async () => fs.writeFileSync(destPath, file.content, 'utf8'), RetryPolicies.fileOperation);
                 fileState.recordWrite(destPath, file.content);
                 results.push(file.path);
             }
@@ -195,7 +197,7 @@ export class FileWriterService {
                 const destPath = path.join(projectRoot, overwrittenFile);
                 const backupPath = path.join(backupDir, overwrittenFile);
                 if (fs.existsSync(backupPath)) {
-                    fs.copyFileSync(backupPath, destPath);
+                    await withRetry(async () => fs.copyFileSync(backupPath, destPath), RetryPolicies.fileOperation);
                 }
             }
             await this.cleanStaging(stagingDir);
@@ -232,7 +234,8 @@ export class FileWriterService {
             const enhanced = FileSuggester.enhanceError(fullPath);
             throw new AppForgeError('E003_FILE_NOT_FOUND', enhanced);
         }
-        const content = fs.readFileSync(fullPath, 'utf8');
+        const retryResult = await withRetry(async () => FileGuard.readTextFileSafely(fullPath), RetryPolicies.fileOperation);
+        const content = retryResult.value;
         FileStateService.getInstance().recordRead(fullPath, content);
         const result = StringMatcher.fuzzyReplace(oldString, newString, content);
         if (!result.modified) {

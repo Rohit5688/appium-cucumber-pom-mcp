@@ -107,7 +107,7 @@ export async function executeSandbox(script, apiRegistry, options = {}) {
     for (const [name, fn] of Object.entries(apiRegistry)) {
         apiBridge[name] = async (...args) => {
             try {
-                return await fn(args.length === 1 ? args[0] : args);
+                return await fn(...args);
             }
             catch (err) {
                 throw new Error(`forge.api.${name}() failed: ${err.message}`);
