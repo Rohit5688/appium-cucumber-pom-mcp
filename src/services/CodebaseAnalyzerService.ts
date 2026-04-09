@@ -2,6 +2,7 @@ import path from 'path';
 import { Project, Node, SyntaxKind } from 'ts-morph';
 import fs from 'fs/promises';
 import { ASTScrutinizer } from '../utils/ASTScrutinizer.js';
+import { FileGuard } from '../utils/FileGuard.js';
 
 // --- Summary Mode Types (Wave 1.1) ---
 export interface FileSummary {
@@ -491,6 +492,7 @@ export class CodebaseAnalyzerService {
     const tsFiles = await this.listFilesWithExtensions(projectRoot, ['.ts']);
     for (const f of tsFiles) {
       if (f.includes('node_modules') || f.includes('.d.ts')) continue;
+      if (FileGuard.isBinary(f).binary) continue;
       try {
         const content = await fs.readFile(f, 'utf8');
         if (

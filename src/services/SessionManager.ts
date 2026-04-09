@@ -1,6 +1,7 @@
 import { AppiumSessionService } from './AppiumSessionService.js';
 import { McpErrors } from '../types/ErrorSystem.js';
 import { Logger } from '../utils/Logger.js';
+import { withRetry, RetryPolicies } from '../utils/RetryEngine.js';
 
 export interface SessionRecord {
   service: AppiumSessionService;
@@ -248,46 +249,43 @@ export class SessionManager {
     projectRoot: string, 
     profileName?: string
   ): Promise<AppiumSessionService> {
-    let lastError: Error | null = null;
-    
-    for (let attempt = 1; attempt <= this.config.maxRetryAttempts; attempt++) {
-      try {
-        Logger.info(`Creating session for ${projectRoot} (attempt ${attempt}/${this.config.maxRetryAttempts})`);
-        
-        const service = new AppiumSessionService();
-        const sessionInfo = await service.startSession(projectRoot, profileName);
-        
-        const record: SessionRecord = {
-          service,
-          projectRoot,
-          createdAt: Date.now(),
-          lastUsedAt: Date.now(),
-          sessionId: sessionInfo.sessionId,
-          isActive: true
-        };
-        
-        this.sessions.set(projectRoot, record);
-        
-        Logger.info(`Session created successfully: ${sessionInfo.sessionId}`);
-        return service;
-        
-      } catch (error: any) {
-        lastError = error;
+    const policy = {
+      ...RetryPolicies.appiumSession,
+      maxAttempts: this.config.maxRetryAttempts,
+      onRetry: (error: Error, attempt: number, delayMs: number) => {
         Logger.error(`Session creation failed (attempt ${attempt})`, { error: error.message });
-        
         if (attempt < this.config.maxRetryAttempts) {
-          const delayMs = Math.pow(2, attempt - 1) * 1000; // Exponential backoff: 1s, 2s, 4s
           Logger.info(`Retrying in ${delayMs}ms...`);
-          await this.delay(delayMs);
         }
       }
-    }
+    };
 
-    // All retries failed
-    throw McpErrors.appiumNotReachable(
-      `session creation after ${this.config.maxRetryAttempts} attempts. Last error: ${lastError?.message}`,
-      'SessionManager'
-    );
+    try {
+      const result = await withRetry(async () => {
+        Logger.info(`Creating session for ${projectRoot}`);
+        const service = new AppiumSessionService();
+        const sessionInfo = await service.startSession(projectRoot, profileName);
+        return { service, sessionInfo };
+      }, policy);
+
+      const record: SessionRecord = {
+        service: result.value.service,
+        projectRoot,
+        createdAt: Date.now(),
+        lastUsedAt: Date.now(),
+        sessionId: result.value.sessionInfo.sessionId,
+        isActive: true
+      };
+      
+      this.sessions.set(projectRoot, record);
+      Logger.info(`Session created successfully: ${result.value.sessionInfo.sessionId}`);
+      return result.value.service;
+    } catch (error: any) {
+      throw McpErrors.appiumNotReachable(
+        `session creation after ${policy.maxAttempts} attempts. Last error: ${error.message}`,
+        'SessionManager'
+      );
+    }
   }
 
   private async isSessionHealthy(record: SessionRecord): Promise<boolean> {

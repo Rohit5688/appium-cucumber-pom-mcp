@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { AppForgeError } from "../utils/ErrorFactory.js";
+import { McpError } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerRequestUserClarification(
@@ -83,7 +83,7 @@ OUTPUT INSTRUCTIONS: Display the question as-is. Do not rephrase or add commenta
             }]
           };
         }
-        if (err instanceof AppForgeError) {
+        if (err instanceof McpError) {
           return {
             content: [{
               type: 'text',
@@ -91,7 +91,7 @@ OUTPUT INSTRUCTIONS: Display the question as-is. Do not rephrase or add commenta
                 action: 'ERROR',
                 code: err.code,
                 message: err.message,
-                remediation: err.details
+                remediation: err.message
               }, null, 2)
             }],
             isError: true

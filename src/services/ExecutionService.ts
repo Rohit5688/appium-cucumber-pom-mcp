@@ -36,6 +36,16 @@ export interface ExecutionResult {
   };
 }
 
+export type TestJobStatus = 'running' | 'completed' | 'failed';
+
+export interface TestJob {
+  jobId: string;
+  status: TestJobStatus;
+  startedAt: string;
+  completedAt?: string;
+  result?: ExecutionResult;
+}
+
 /**
  * Element structure returned by inspect_ui_hierarchy.
  * Issue #15 FIX: locatorStrategies now contains only VALID WebdriverIO selectors.
@@ -54,6 +64,19 @@ export interface ParsedElement {
 
 export class ExecutionService {
   private sessionManager: SessionManager | null = null;
+
+  /**
+   * In-memory job queue for async test execution.
+   * Key: jobId (UUID-like string). Value: TestJob.
+   * Jobs are held in memory for the life of the MCP server process.
+   * If the server restarts, jobs are lost — callers should treat jobIds as ephemeral.
+   */
+  private readonly jobs = new Map<string, TestJob>();
+
+  /** Generate a unique job ID. */
+  private newJobId(): string {
+    return `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
 
   /** Inject a live session manager for auto-fetch capabilities. */
   public setSessionManager(manager: SessionManager): void {
@@ -213,42 +236,6 @@ export class ExecutionService {
         if (tagExpression) {
           // Issue #17 FIX: Pass as separate arg (no shell quoting needed with execFile)
           args.push(`--cucumberOpts.tagExpression=${tagExpression}`);
-        }
-
-        // Issue #5 FIX: Inject capabilities from mcp-config.json if available
-        // This prevents "Missing capabilities" errors when wdio.conf.ts has incomplete/invalid capabilities
-        if (config?.mobile?.capabilitiesProfiles) {
-          const profiles = config.mobile.capabilitiesProfiles;
-          const profileNames = Object.keys(profiles);
-          
-          // Use first available profile or platform-specific profile
-          let selectedProfile = profileNames[0];
-          if (options?.platform && profileNames.includes(options.platform)) {
-            selectedProfile = options.platform;
-          }
-          
-          if (selectedProfile && profiles[selectedProfile]) {
-            const caps = profiles[selectedProfile];
-            
-            // Inject critical capabilities as CLI args to override wdio.conf.ts
-            if (caps.platformName) {
-              args.push(`--capabilities.platformName=${caps.platformName}`);
-            }
-            if (caps['appium:deviceName']) {
-              args.push(`--capabilities.appium:deviceName=${caps['appium:deviceName']}`);
-            }
-            if (caps['appium:automationName']) {
-              args.push(`--capabilities.appium:automationName=${caps['appium:automationName']}`);
-            }
-            if (caps['appium:app']) {
-              args.push(`--capabilities.appium:app=${caps['appium:app']}`);
-            }
-            if (caps['appium:udid']) {
-              args.push(`--capabilities.appium:udid=${caps['appium:udid']}`);
-            }
-            
-            Logger.info(`Injecting capabilities from profile "${selectedProfile}": ${caps.platformName} / ${caps['appium:deviceName']}`);
-          }
         }
 
         // Additional args (already validated)
@@ -705,5 +692,78 @@ export class ExecutionService {
     }
 
     return undefined;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Async Job Queue API
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Non-blocking variant of runTest.
+   *
+   * Immediately returns a jobId. The actual test execution runs in the background.
+   * Call getTestStatus(jobId) to poll for the result.
+   *
+   * This pattern was introduced to prevent MCP client RPC timeouts (typically 60s)
+   * from killing the connection before a test suite finishes booting (Appium emulator
+   * start + W3C negotiation often takes 70-120s for even a single scenario).
+   */
+  public runTestAsync(
+    projectRoot: string,
+    options?: Parameters<ExecutionService['runTest']>[1]
+  ): string {
+    const jobId = this.newJobId();
+    const job: TestJob = {
+      jobId,
+      status: 'running',
+      startedAt: new Date().toISOString()
+    };
+    this.jobs.set(jobId, job);
+
+    // Fire-and-forget: intentionally NOT awaited so the tool handler returns immediately
+    this.runTest(projectRoot, options)
+      .then((result) => {
+        job.status = result.success ? 'completed' : 'failed';
+        job.completedAt = new Date().toISOString();
+        job.result = result;
+        Logger.info(`[JobQueue] Job ${jobId} finished with status: ${job.status}`);
+      })
+      .catch((err) => {
+        job.status = 'failed';
+        job.completedAt = new Date().toISOString();
+        job.result = {
+          success: false,
+          output: '',
+          error: err instanceof Error ? err.message : String(err)
+        };
+        Logger.error(`[JobQueue] Job ${jobId} threw unexpectedly`, { error: String(err) });
+      });
+
+    return jobId;
+  }
+
+  /**
+   * Poll the status of a running/completed job.
+   *
+   * @param jobId     - ID returned by runTestAsync
+   * @param waitMs    - If the job is still running, sleep this many ms before
+   *                    returning. Allows the LLM to call "check in 20s" and get
+   *                    a single efficient blocking check rather than a rapid poll
+   *                    loop. Max 55s to stay safely within the 60s socket timeout.
+   */
+  public async getTestStatus(
+    jobId: string,
+    waitMs = 0
+  ): Promise<{ found: true; job: TestJob } | { found: false }> {
+    const job = this.jobs.get(jobId);
+    if (!job) return { found: false };
+
+    if (job.status === 'running' && waitMs > 0) {
+      const safeWait = Math.min(waitMs, 55_000); // never exceed 55s; keep inside 60s socket window
+      await new Promise<void>((resolve) => setTimeout(resolve, safeWait));
+    }
+
+    // Re-fetch in case the background promise resolved during our sleep
+    return { found: true, job: this.jobs.get(jobId)! };
   }
 }

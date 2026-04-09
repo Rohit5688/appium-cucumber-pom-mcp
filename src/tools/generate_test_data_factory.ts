@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { TestDataService } from "../services/TestDataService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { AppForgeError } from "../utils/ErrorFactory.js";
+import { McpError } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerGenerateTestDataFactory(
@@ -40,7 +40,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
             }]
           };
         }
-        if (err instanceof AppForgeError) {
+        if (err instanceof McpError) {
           return {
             content: [{
               type: 'text',
@@ -48,7 +48,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
                 action: 'ERROR',
                 code: err.code,
                 message: err.message,
-                remediation: err.details
+                remediation: err.message
               }, null, 2)
             }],
             isError: true

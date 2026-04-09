@@ -14,6 +14,17 @@ const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 export class ExecutionService {
     sessionManager = null;
+    /**
+     * In-memory job queue for async test execution.
+     * Key: jobId (UUID-like string). Value: TestJob.
+     * Jobs are held in memory for the life of the MCP server process.
+     * If the server restarts, jobs are lost — callers should treat jobIds as ephemeral.
+     */
+    jobs = new Map();
+    /** Generate a unique job ID. */
+    newJobId() {
+        return `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    }
     /** Inject a live session manager for auto-fetch capabilities. */
     setSessionManager(manager) {
         this.sessionManager = manager;
@@ -148,37 +159,6 @@ export class ExecutionService {
                 if (tagExpression) {
                     // Issue #17 FIX: Pass as separate arg (no shell quoting needed with execFile)
                     args.push(`--cucumberOpts.tagExpression=${tagExpression}`);
-                }
-                // Issue #5 FIX: Inject capabilities from mcp-config.json if available
-                // This prevents "Missing capabilities" errors when wdio.conf.ts has incomplete/invalid capabilities
-                if (config?.mobile?.capabilitiesProfiles) {
-                    const profiles = config.mobile.capabilitiesProfiles;
-                    const profileNames = Object.keys(profiles);
-                    // Use first available profile or platform-specific profile
-                    let selectedProfile = profileNames[0];
-                    if (options?.platform && profileNames.includes(options.platform)) {
-                        selectedProfile = options.platform;
-                    }
-                    if (selectedProfile && profiles[selectedProfile]) {
-                        const caps = profiles[selectedProfile];
-                        // Inject critical capabilities as CLI args to override wdio.conf.ts
-                        if (caps.platformName) {
-                            args.push(`--capabilities.platformName=${caps.platformName}`);
-                        }
-                        if (caps['appium:deviceName']) {
-                            args.push(`--capabilities.appium:deviceName=${caps['appium:deviceName']}`);
-                        }
-                        if (caps['appium:automationName']) {
-                            args.push(`--capabilities.appium:automationName=${caps['appium:automationName']}`);
-                        }
-                        if (caps['appium:app']) {
-                            args.push(`--capabilities.appium:app=${caps['appium:app']}`);
-                        }
-                        if (caps['appium:udid']) {
-                            args.push(`--capabilities.appium:udid=${caps['appium:udid']}`);
-                        }
-                        Logger.info(`Injecting capabilities from profile "${selectedProfile}": ${caps.platformName} / ${caps['appium:deviceName']}`);
-                    }
                 }
                 // Additional args (already validated)
                 if (options?.specificArgs) {
@@ -449,10 +429,10 @@ export class ExecutionService {
             if (typeof explicitTimeoutMs !== 'number' || explicitTimeoutMs <= 0) {
                 throw new Error(`Invalid timeoutMs: must be a positive number, got ${explicitTimeoutMs}`);
             }
-            // Cap at 2 hours for safety
-            const cappedTimeout = Math.min(explicitTimeoutMs, 7200000);
+            // Cap at 4 hours for large test suites (Issue L2 fix)
+            const cappedTimeout = Math.min(explicitTimeoutMs, 14400000);
             if (cappedTimeout !== explicitTimeoutMs) {
-                Logger.warn(`Timeout capped at 2 hours (7200000ms). Requested: ${explicitTimeoutMs}ms`);
+                Logger.warn(`Timeout capped at 4 hours (14400000ms). Requested: ${explicitTimeoutMs}ms`);
             }
             return { value: cappedTimeout, source: 'explicit' };
         }
@@ -460,7 +440,7 @@ export class ExecutionService {
         if (config?.execution?.timeoutMs) {
             const configTimeout = config.execution.timeoutMs;
             if (typeof configTimeout === 'number' && configTimeout > 0) {
-                const cappedTimeout = Math.min(configTimeout, 7200000);
+                const cappedTimeout = Math.min(configTimeout, 14400000);
                 return { value: cappedTimeout, source: 'mcp-config' };
             }
         }
@@ -469,8 +449,8 @@ export class ExecutionService {
         if (detectedTimeout) {
             return { value: detectedTimeout, source: 'detected(wdio.conf)' };
         }
-        // 4. Default: 30 minutes
-        return { value: 1800000, source: 'default' };
+        // 4. Default: 2 hours (increased for large test suites - Issue L2 fix)
+        return { value: 7200000, source: 'default' };
     }
     /**
      * Attempts to detect timeout from wdio.conf.ts/js.
@@ -572,5 +552,66 @@ export class ExecutionService {
             return 'DEVICE ERROR: No connected device or emulator found. Ensure a device is connected via USB with USB debugging enabled, or an emulator is running.';
         }
         return undefined;
+    }
+    // ---------------------------------------------------------------------------
+    // Async Job Queue API
+    // ---------------------------------------------------------------------------
+    /**
+     * Non-blocking variant of runTest.
+     *
+     * Immediately returns a jobId. The actual test execution runs in the background.
+     * Call getTestStatus(jobId) to poll for the result.
+     *
+     * This pattern was introduced to prevent MCP client RPC timeouts (typically 60s)
+     * from killing the connection before a test suite finishes booting (Appium emulator
+     * start + W3C negotiation often takes 70-120s for even a single scenario).
+     */
+    runTestAsync(projectRoot, options) {
+        const jobId = this.newJobId();
+        const job = {
+            jobId,
+            status: 'running',
+            startedAt: new Date().toISOString()
+        };
+        this.jobs.set(jobId, job);
+        // Fire-and-forget: intentionally NOT awaited so the tool handler returns immediately
+        this.runTest(projectRoot, options)
+            .then((result) => {
+            job.status = result.success ? 'completed' : 'failed';
+            job.completedAt = new Date().toISOString();
+            job.result = result;
+            Logger.info(`[JobQueue] Job ${jobId} finished with status: ${job.status}`);
+        })
+            .catch((err) => {
+            job.status = 'failed';
+            job.completedAt = new Date().toISOString();
+            job.result = {
+                success: false,
+                output: '',
+                error: err instanceof Error ? err.message : String(err)
+            };
+            Logger.error(`[JobQueue] Job ${jobId} threw unexpectedly`, { error: String(err) });
+        });
+        return jobId;
+    }
+    /**
+     * Poll the status of a running/completed job.
+     *
+     * @param jobId     - ID returned by runTestAsync
+     * @param waitMs    - If the job is still running, sleep this many ms before
+     *                    returning. Allows the LLM to call "check in 20s" and get
+     *                    a single efficient blocking check rather than a rapid poll
+     *                    loop. Max 55s to stay safely within the 60s socket timeout.
+     */
+    async getTestStatus(jobId, waitMs = 0) {
+        const job = this.jobs.get(jobId);
+        if (!job)
+            return { found: false };
+        if (job.status === 'running' && waitMs > 0) {
+            const safeWait = Math.min(waitMs, 55_000); // never exceed 55s; keep inside 60s socket window
+            await new Promise((resolve) => setTimeout(resolve, safeWait));
+        }
+        // Re-fetch in case the background promise resolved during our sleep
+        return { found: true, job: this.jobs.get(jobId) };
     }
 }

@@ -38,6 +38,7 @@ import { registerGenerateCucumberPom } from "./tools/generate_cucumber_pom.js";
 import { registerAuditUtils } from "./tools/audit_utils.js";
 import { registerValidateAndWrite } from "./tools/validate_and_write.js";
 import { registerRunCucumberTest } from "./tools/run_cucumber_test.js";
+import { registerCheckTestStatus } from "./tools/check_test_status.js";
 import { registerInspectUiHierarchy } from "./tools/inspect_ui_hierarchy.js";
 import { registerSelfHealTest } from "./tools/self_heal_test.js";
 import { registerSetCredentials } from "./tools/set_credentials.js";
@@ -160,6 +161,7 @@ class AppForgeServer {
         registerAuditUtils(this.server, this.utilAuditService);
         registerValidateAndWrite(this.server, this.fileWriterService);
         registerRunCucumberTest(this.server, this.executionService);
+        registerCheckTestStatus(this.server, this.executionService);
         registerInspectUiHierarchy(this.server, this.executionService);
         registerSelfHealTest(this.server, this.selfHealingService, this.configService, this.sessionManager);
         registerSetCredentials(this.server, this.credentialService);

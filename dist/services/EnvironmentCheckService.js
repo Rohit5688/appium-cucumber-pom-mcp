@@ -1,4 +1,4 @@
-import { execFile } from 'child_process';
+import { execFile, execSync } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
@@ -162,7 +162,6 @@ export class EnvironmentCheckService {
         }
         // If not in process env, try to detect from adb location (fallback for MCP server)
         try {
-            const { execSync } = require('child_process');
             const whichCmd = process.platform === 'win32' ? 'where' : 'which';
             const adbPath = execSync(`${whichCmd} adb`, { encoding: 'utf8' }).trim().split('\n')[0];
             if (adbPath && fs.existsSync(adbPath)) {

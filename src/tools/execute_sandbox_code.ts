@@ -6,6 +6,7 @@ import type { ExecutionService } from "../services/ExecutionService.js";
 import { executeSandbox } from "../services/SandboxEngine.js";
 import type { SandboxApiRegistry } from "../services/SandboxEngine.js";
 import { FileStateService } from "../services/FileStateService.js";
+import { FileGuard } from "../utils/FileGuard.js";
 import { textResult, truncate } from "./_helpers.js";
 
 export function registerExecuteSandboxCode(
@@ -72,7 +73,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
           if (!fs.default.existsSync(resolvedFile)) {
             throw new Error(`File not found: ${resolvedFile}`);
           }
-          const content = fs.default.readFileSync(resolvedFile, 'utf8');
+          const content = FileGuard.readTextFileSafely(resolvedFile);
           FileStateService.getInstance().recordRead(resolvedFile, content);
           return content;
         },

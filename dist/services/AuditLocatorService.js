@@ -91,7 +91,7 @@ export class AuditLocatorService {
                         recommendation = '❌ Replace XPath with accessibility-id (~) for stability';
                     }
                     else if (trimmed.startsWith('id=')) {
-                        strategy = 'id';
+                        strategy = 'resource-id';
                         severity = 'warning';
                         recommendation = '⚠️ id= selectors can break on app updates. Use accessibility-id where possible';
                     }

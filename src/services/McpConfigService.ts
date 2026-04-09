@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Logger } from '../utils/Logger.js';
-import { AppForgeError } from '../utils/ErrorFactory.js';
+import { McpErrors } from '../types/ErrorSystem.js';
 import { Questioner } from '../utils/Questioner.js';
 
 export interface CodegenConfig {
@@ -223,14 +223,14 @@ export class McpConfigService {
   public read(projectRoot: string): McpConfig {
     const configPath = path.join(projectRoot, this.configFileName);
     if (!fs.existsSync(configPath)) {
-      throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}. Please run setup_project first.`, ["Run setup_project"]);
+      throw McpErrors.fileNotFound(configPath, 'manage_config');
     }
 
     try {
       const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       return raw as McpConfig;
     } catch (error: any) {
-      throw new AppForgeError("E005_CONFIG_CORRUPT", `Failed to parse mcp-config.json: ${error.message}. Fix the JSON syntax error (trailing comma, missing brace, etc.) and retry.`, ["Fix the JSON syntax error in mcp-config.json", "Run: npx jsonlint mcp-config.json"]);
+      throw McpErrors.schemaValidationFailed(`Failed to parse mcp-config.json: ${error.message}. Fix the JSON syntax error.`, 'manage_config');
     }
   }
 
@@ -499,7 +499,7 @@ export class McpConfigService {
   public deleteJsonKey(projectRoot: string, jsonPath: string): boolean {
     const configPath = path.join(projectRoot, this.configFileName);
     if (!fs.existsSync(configPath)) {
-      throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+      throw McpErrors.fileNotFound(configPath, 'manage_config');
     }
 
     const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -528,7 +528,7 @@ export class McpConfigService {
   public upsertJsonPath(projectRoot: string, jsonPath: string, value: any): void {
     const configPath = path.join(projectRoot, this.configFileName);
     if (!fs.existsSync(configPath)) {
-      throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+      throw McpErrors.fileNotFound(configPath, 'manage_config');
     }
 
     const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -558,7 +558,7 @@ export class McpConfigService {
   public getJsonPath(projectRoot: string, jsonPath: string): any {
     const configPath = path.join(projectRoot, this.configFileName);
     if (!fs.existsSync(configPath)) {
-      throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+      throw McpErrors.fileNotFound(configPath, 'manage_config');
     }
 
     const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));

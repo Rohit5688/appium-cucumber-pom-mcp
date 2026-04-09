@@ -270,4 +270,75 @@ export class McpConfigService {
         }
         return undefined;
     }
+    /**
+     * JSON-aware edit: Delete a key by JSON path (e.g., 'mobile.capabilitiesProfiles.myDevice')
+     * Returns true if the key was found and deleted, false otherwise.
+     */
+    deleteJsonKey(projectRoot, jsonPath) {
+        const configPath = path.join(projectRoot, this.configFileName);
+        if (!fs.existsSync(configPath)) {
+            throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+        }
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        const pathParts = jsonPath.split('.');
+        // Navigate to parent object
+        let current = config;
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            if (!current[pathParts[i]])
+                return false;
+            current = current[pathParts[i]];
+        }
+        // Delete the final key
+        const lastKey = pathParts[pathParts.length - 1];
+        if (!(lastKey in current))
+            return false;
+        delete current[lastKey];
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+        return true;
+    }
+    /**
+     * JSON-aware edit: Upsert a value by JSON path (e.g., 'mobile.capabilitiesProfiles.pixel8')
+     * Creates intermediate objects if they don't exist.
+     */
+    upsertJsonPath(projectRoot, jsonPath, value) {
+        const configPath = path.join(projectRoot, this.configFileName);
+        if (!fs.existsSync(configPath)) {
+            throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+        }
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        const pathParts = jsonPath.split('.');
+        // Navigate to parent, creating objects as needed
+        let current = config;
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            const key = pathParts[i];
+            if (!current[key] || typeof current[key] !== 'object') {
+                current[key] = {};
+            }
+            current = current[key];
+        }
+        // Set the final value
+        const lastKey = pathParts[pathParts.length - 1];
+        current[lastKey] = value;
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    }
+    /**
+     * JSON-aware edit: Get a value by JSON path (e.g., 'mobile.defaultPlatform')
+     * Returns undefined if the path doesn't exist.
+     */
+    getJsonPath(projectRoot, jsonPath) {
+        const configPath = path.join(projectRoot, this.configFileName);
+        if (!fs.existsSync(configPath)) {
+            throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+        }
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        const pathParts = jsonPath.split('.');
+        let current = config;
+        for (const part of pathParts) {
+            if (!current || typeof current !== 'object' || !(part in current)) {
+                return undefined;
+            }
+            current = current[part];
+        }
+        return current;
+    }
 }
