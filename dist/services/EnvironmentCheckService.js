@@ -175,7 +175,7 @@ export class EnvironmentCheckService {
                     return {
                         name: 'Android SDK',
                         status: 'pass',
-                        message: `SDK detected via adb: ${sdkRoot} (ANDROID_HOME not in MCP env)`
+                        message: `SDK found at: ${sdkRoot} (detected via adb path, env var not set)`
                     };
                 }
             }
@@ -204,7 +204,7 @@ export class EnvironmentCheckService {
                 return {
                     name: 'Android SDK',
                     status: 'pass',
-                    message: `SDK detected at: ${sdkPath} (ANDROID_HOME not in MCP env)`
+                    message: `SDK found at: ${sdkPath} (detected via common path, env var not set)`
                 };
             }
         }

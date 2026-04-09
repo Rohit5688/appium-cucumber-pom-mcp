@@ -13,6 +13,8 @@ export function registerRunCucumberTest(
       title: "Run Cucumber Test",
       description: `RUN TESTS. Use when the user says 'run my tests / execute / run @smoke'. Executes the Appium Cucumber suite. Auto-detects execution command from mcp-config.json. Supports Cucumber tag expressions and platform filtering. Returns: { success, output, stats, reportPath }. If tests fail, pass the output to self_heal_test.
 
+⚠️ TIMEOUT FIX: If no explicit timeoutMs is provided, defaults to 2 hours (7200000ms) for large test suites. Max allowed: 4 hours.
+
 OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
@@ -20,17 +22,19 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         platform: z.enum(["android", "ios"]).optional(),
         specificArgs: z.string().optional(),
         overrideCommand: z.string().optional(),
-        timeoutMs: z.number().optional()
+        timeoutMs: z.number().optional().describe("Execution timeout in milliseconds. Default: 7200000 (2 hours). Max: 14400000 (4 hours).")
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },
     async (args) => {
+      // Issue L2 FIX: Set default timeout to 2 hours for test execution if not provided
+      const effectiveTimeout = args.timeoutMs ?? 7200000; // 2 hours default
       const result = await executionService.runTest(args.projectRoot, {
         tags: args.tags,
         platform: args.platform,
         specificArgs: args.specificArgs,
         overrideCommand: args.overrideCommand,
-        timeoutMs: args.timeoutMs
+        timeoutMs: effectiveTimeout
       });
       const hint = result.success
         ? "✅ All tests passed. Call summarize_suite to generate the final report."

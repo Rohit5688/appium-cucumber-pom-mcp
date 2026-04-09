@@ -68,10 +68,14 @@ MCP error -32001: Request timed out
 - Severity: Low
 - Observed: `check_environment` sometimes reports "SDK detected at: /path (ANDROID_HOME not in MCP env)" which is confusing.
 - Reproduce: Run `check_environment` in different states (before/after MCP restart) and note messaging.
-- Suggested fix:
-  - Make messages deterministic and explicit: e.g., "SDK found at X (via probe)" vs "ANDROID_HOME missing in MCP process env".
-- Status: Open
-- Notes: Minor UX improvement for clearer outputs.
+- **Status: FIXED 2026-04-09**
+- Fix implemented in `src/services/EnvironmentCheckService.ts` (checkAndroidSdk method):
+  - Changed message from `"(ANDROID_HOME not in MCP env)"` to clearer detection source indicators
+  - Via adb path: `"SDK found at: {path} (detected via adb path, env var not set)"`
+  - Via common path: `"SDK found at: {path} (detected via common path, env var not set)"`
+  - Messages now explicitly state the detection method and env var status
+- Impact: Minor UX improvement - clearer, more deterministic messaging
+- Notes: Users can now immediately understand how the SDK was detected and whether env vars need to be set
 
 ---
 
@@ -89,14 +93,16 @@ ERROR @wdio/cli:launcher: Missing capabilities, exiting with failure
 Spec Files: 0 passed, 0 total (0% completed)
 ```
 
-- Analysis: The MCP tool may not be properly passing capabilities from mcp-config.json to the WebDriverIO execution context, or there's a mismatch between the config format and what WebDriverIO expects.
-- Suggested fix:
-  - Verify capabilities mapping between mcp-config.json format and WebDriverIO config
-  - Add validation step before test execution to ensure capabilities are properly loaded
-  - Provide better error messaging indicating which specific capabilities are missing
-- Status: Open
-- Impact: Critical - prevents any test execution through MCP
-- Notes: This is a blocker for production use as tests cannot be executed via MCP tools.
+- Analysis: The MCP tool was not passing capabilities from mcp-config.json to the WebDriverIO execution context. The scaffolded wdio.conf.ts files had hardcoded capabilities that didn't match the actual device configuration.
+- **Status: FIXED 2026-04-09**
+- Fix implemented in `src/services/ExecutionService.ts` (runTest method):
+  - Added dynamic capability injection from `mcp-config.json` → `mobile.capabilitiesProfiles`
+  - Capabilities are now passed as CLI arguments to override hardcoded wdio.conf.ts values
+  - Supports profile selection: uses platform-specific profile (android/ios) or first available profile
+  - Injects critical capabilities: platformName, appium:deviceName, appium:automationName, appium:app, appium:udid
+  - Logs selected profile for debugging: `"Injecting capabilities from profile 'profileName': Android / Pixel_8"`
+- Impact: Critical blocker RESOLVED - tests can now execute via MCP with proper capabilities
+- Notes: WebDriverIO CLI supports `--capabilities.key=value` syntax which overrides config file values. This allows mcp-config.json to be the source of truth for device configuration while maintaining backward compatibility with existing wdio.conf.ts files.
 
 ---
 
@@ -190,15 +196,18 @@ require is not defined
 ## Issue 11 — self_heal_test blocked without XML / inspect tools failing
 
 - Severity: Low
-- Observed: `self_heal_test` returned HEAL_BLOCKED with message "No XML hierarchy available" when no active session or cached XML was present. Attempts to call inspect_ui_hierarchy failed earlier due to runtime errors (see Issue 8).
+- Observed: `self_heal_test` returned HEAL_BLOCKED with message "No XML hierarchy available" when no active session or cached XML was present.
 - Reproduce:
   1. Call `self_heal_test` with test output but without an active session or xmlDump.
   2. Observe HEAL_BLOCKED and guidance to start a session.
-- Suggested fix:
-  - Allow callers to pass xmlDump directly as fallback.
-  - Cache recent XML snapshots and expose them for healing requests.
-  - Improve error guidance to list required preconditions explicitly.
-- Status: Open
+- **Status: ALREADY FIXED (verified 2026-04-09)**
+- Implementation in `src/tools/self_heal_test.ts`:
+  - `xmlHierarchy` parameter is already **optional** (line 24: `z.string().optional()`)
+  - Fallback logic already implemented (lines 42-49): uses cached XML from last inspect_ui_hierarchy call
+  - Clear error guidance already provided (lines 51-57): HEAL_BLOCKED with actionable next steps
+  - Callers can pass xmlDump/xmlHierarchy directly to bypass session requirement
+- Impact: Low - feature already works as requested
+- Notes: Issue was resolved in an earlier implementation. The tool supports both live session XML and explicitly provided XML parameter.
 
 ## Issue 12 — run_cucumber_test: Appium connectivity and lifecycle issues
 
