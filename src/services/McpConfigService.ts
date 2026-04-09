@@ -364,6 +364,18 @@ export class McpConfigService {
   }
 
   /**
+   * Public wrapper to ensure the config schema file exists.
+   * Safe to call idempotently after creating or migrating mcp-config.json.
+   */
+  public ensureSchema(projectRoot: string): void {
+    try {
+      this.generateSchema(projectRoot);
+    } catch (err: any) {
+      Logger.warn(`[ensureSchema] failed to generate schema: ${err?.message}`);
+    }
+  }
+
+  /**
    * Recursively merges `source` into `target`.
    * Arrays are replaced (not concatenated) — this matches config update expectations.
    * Primitives in source always overwrite target.
