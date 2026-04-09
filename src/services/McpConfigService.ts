@@ -551,7 +551,7 @@ export class McpConfigService {
   public activateBuild(projectRoot: string, buildName: string): string {
     const config = this.read(projectRoot);
     if (!config.builds?.[buildName]) {
-      throw new Error(`Build profile "${buildName}" not found. Available: ${Object.keys(config.builds ?? {}).join(', ')}`);
+      throw McpErrors.invalidParameter('buildName', `Build profile "${buildName}" not found. Available: ${Object.keys(config.builds ?? {}).join(', ')}`, 'manage_config');
     }
     const profile = config.builds[buildName];
     config.activeBuild = buildName;
