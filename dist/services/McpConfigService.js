@@ -1,16 +1,23 @@
 import fs from 'fs';
 import path from 'path';
 import { Logger } from '../utils/Logger.js';
-import { AppForgeError } from '../utils/ErrorFactory.js';
-/** Returns safe default paths merged with config paths. */
+import { McpErrors } from '../types/ErrorSystem.js';
+/**
+ * Returns safe default paths merged with config paths.
+ * ALL paths are relative to PROJECT ROOT for consistency.
+ * Users can customize to any structure: 'src/features', 'test/e2e', 'features', etc.
+ */
 function resolvePaths(config) {
     return {
-        featuresRoot: config.paths?.featuresRoot ?? 'features',
-        pagesRoot: config.paths?.pagesRoot ?? 'pages',
-        stepsRoot: config.paths?.stepsRoot ?? 'step-definitions',
-        utilsRoot: config.paths?.utilsRoot ?? 'utils',
-        testDataRoot: config.paths?.testDataRoot ?? 'src/test-data',
-        reportsRoot: config.paths?.reportsRoot ?? 'reports'
+        featuresRoot: config.paths?.featuresRoot || 'src/features',
+        pagesRoot: config.paths?.pagesRoot || 'src/pages',
+        stepsRoot: config.paths?.stepsRoot || 'src/step-definitions',
+        utilsRoot: config.paths?.utilsRoot || 'src/utils',
+        locatorsRoot: config.paths?.locatorsRoot || 'src/locators',
+        testDataRoot: config.paths?.testDataRoot || 'src/test-data',
+        credentialsRoot: config.paths?.credentialsRoot || 'src/credentials',
+        reportsRoot: config.paths?.reportsRoot || 'reports',
+        configRoot: config.paths?.configRoot || 'src/config' // ADD THIS LINE
     };
 }
 export class McpConfigService {
@@ -19,14 +26,14 @@ export class McpConfigService {
     read(projectRoot) {
         const configPath = path.join(projectRoot, this.configFileName);
         if (!fs.existsSync(configPath)) {
-            throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}. Please run setup_project first.`, ["Run setup_project"]);
+            throw McpErrors.fileNotFound(configPath, 'manage_config');
         }
         try {
             const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
             return raw;
         }
         catch (error) {
-            throw new AppForgeError("E005_CONFIG_CORRUPT", `Failed to parse mcp-config.json: ${error.message}. Fix the JSON syntax error (trailing comma, missing brace, etc.) and retry.`, ["Fix the JSON syntax error in mcp-config.json", "Run: npx jsonlint mcp-config.json"]);
+            throw McpErrors.schemaValidationFailed(`Failed to parse mcp-config.json: ${error.message}. Fix the JSON syntax error.`, 'manage_config');
         }
     }
     /**
@@ -40,15 +47,67 @@ export class McpConfigService {
             return;
         try {
             const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            if (!raw.version || raw.version !== this.CURRENT_VERSION) {
-                raw.version = this.CURRENT_VERSION;
-                raw.$schema = './.AppForge/configSchema.json'; // Enables IDE autocompletion
-                fs.writeFileSync(configPath, JSON.stringify(raw, null, 2), 'utf8');
-                this.generateSchema(projectRoot);
+            // Idempotent skip: already migrated
+            if (raw.version === this.CURRENT_VERSION && raw.schemaVersion)
+                return;
+            // Ensure .AppForge exists for backups/logs
+            const appForgeDir = path.join(projectRoot, '.AppForge');
+            if (!fs.existsSync(appForgeDir))
+                fs.mkdirSync(appForgeDir, { recursive: true });
+            // Create backup before mutating
+            const ts = new Date().toISOString().replace(/[:.]/g, '-');
+            const backupName = `mcp-config.backup.${ts}.json`;
+            const backupPath = path.join(appForgeDir, backupName);
+            fs.writeFileSync(backupPath, JSON.stringify(raw, null, 2), 'utf8');
+            // -------------- Normalization & Defaults --------------
+            // Ensure paths object exists
+            raw.paths = raw.paths || {};
+            // 1) Normalize legacy bare paths: if user set e.g. "features": "features"
+            //    but project has src/<value>, prefer 'src/<value>' to preserve expectation.
+            const pathKeys = ['featuresRoot', 'pagesRoot', 'stepsRoot', 'utilsRoot', 'locatorsRoot', 'testDataRoot', 'credentialsRoot', 'reportsRoot', 'configRoot'];
+            for (const k of pathKeys) {
+                const v = raw.paths[k];
+                if (typeof v === 'string' && v.length > 0) {
+                    // if not absolute and doesn't already start with 'src/' check for src/<v>
+                    if (!path.isAbsolute(v) && !v.startsWith('src/')) {
+                        const candidate = path.join(projectRoot, 'src', v);
+                        try {
+                            if (fs.existsSync(candidate)) {
+                                // store relative form 'src/<v>' to keep config consistent
+                                raw.paths[k] = path.join('src', v).replace(/\\/g, '/');
+                            }
+                        }
+                        catch {
+                            // ignore fs errors; leave user value as-is
+                        }
+                    }
+                }
             }
+            // 2) Fill missing path keys with resolvePaths defaults (non-destructive)
+            const defaults = resolvePaths(raw);
+            for (const [key, defVal] of Object.entries(defaults)) {
+                if (!raw.paths[key]) {
+                    raw.paths[key] = defVal;
+                }
+            }
+            // 3) Update version/schema metadata and $schema pointer
+            raw.version = this.CURRENT_VERSION;
+            if (!raw.schemaVersion)
+                raw.schemaVersion = '1.0';
+            raw.$schema = './.AppForge/configSchema.json';
+            // Persist changes
+            fs.writeFileSync(configPath, JSON.stringify(raw, null, 2), 'utf8');
+            // Generate schema file to support IDE autocompletion (no-op if exists)
+            this.generateSchema(projectRoot);
+            // Append migration log
+            const logPath = path.join(appForgeDir, 'migration.log');
+            const logLine = `${new Date().toISOString()} Migrated mcp-config.json -> version=${raw.version} schemaVersion=${raw.schemaVersion} (backup: ${backupName})\n`;
+            fs.appendFileSync(logPath, logLine, 'utf8');
+            Logger.info(`[migrateIfNeeded] normalization applied; backup: ${backupName}`);
         }
         catch (error) {
-            // Ignored here if JSON is invalid, read() will throw properly
+            // If JSON is invalid, leave file untouched — read() will surface the error to the caller.
+            Logger.warn(`[migrateIfNeeded] skipped migration due to error parsing mcp-config.json: ${error?.message}`);
         }
     }
     /**
@@ -84,6 +143,18 @@ export class McpConfigService {
                 "required": ["project", "mobile"]
             };
             fs.writeFileSync(schemaPath, JSON.stringify(schema, null, 2));
+        }
+    }
+    /**
+     * Public wrapper to ensure the config schema file exists.
+     * Safe to call idempotently after creating or migrating mcp-config.json.
+     */
+    ensureSchema(projectRoot) {
+        try {
+            this.generateSchema(projectRoot);
+        }
+        catch (err) {
+            Logger.warn(`[ensureSchema] failed to generate schema: ${err?.message}`);
         }
     }
     /**
@@ -250,7 +321,7 @@ export class McpConfigService {
     activateBuild(projectRoot, buildName) {
         const config = this.read(projectRoot);
         if (!config.builds?.[buildName]) {
-            throw new Error(`Build profile "${buildName}" not found. Available: ${Object.keys(config.builds ?? {}).join(', ')}`);
+            throw McpErrors.invalidParameter('buildName', `Build profile "${buildName}" not found. Available: ${Object.keys(config.builds ?? {}).join(', ')}`, 'manage_config');
         }
         const profile = config.builds[buildName];
         config.activeBuild = buildName;
@@ -277,7 +348,7 @@ export class McpConfigService {
     deleteJsonKey(projectRoot, jsonPath) {
         const configPath = path.join(projectRoot, this.configFileName);
         if (!fs.existsSync(configPath)) {
-            throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+            throw McpErrors.fileNotFound(configPath, 'manage_config');
         }
         const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
         const pathParts = jsonPath.split('.');
@@ -303,7 +374,7 @@ export class McpConfigService {
     upsertJsonPath(projectRoot, jsonPath, value) {
         const configPath = path.join(projectRoot, this.configFileName);
         if (!fs.existsSync(configPath)) {
-            throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+            throw McpErrors.fileNotFound(configPath, 'manage_config');
         }
         const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
         const pathParts = jsonPath.split('.');
@@ -328,7 +399,7 @@ export class McpConfigService {
     getJsonPath(projectRoot, jsonPath) {
         const configPath = path.join(projectRoot, this.configFileName);
         if (!fs.existsSync(configPath)) {
-            throw new AppForgeError("E008_PRECONDITION_FAIL", `Configuration file not found at ${configPath}`, ["Run setup_project"]);
+            throw McpErrors.fileNotFound(configPath, 'manage_config');
         }
         const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
         const pathParts = jsonPath.split('.');

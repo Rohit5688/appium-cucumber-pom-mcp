@@ -4,6 +4,7 @@ import type { SelfHealingService } from "../services/SelfHealingService.js";
 import type { McpConfigService } from "../services/McpConfigService.js";
 import type { SessionManager } from "../services/SessionManager.js";
 import { textResult, getPlatformSkill } from "./_helpers.js";
+import { toMcpErrorResponse } from "../types/ErrorSystem.js";
 import { PreFlightService } from "../services/PreFlightService.js";
 
 export function registerSelfHealTest(
@@ -49,11 +50,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       }
 
       if (!xmlHierarchy) {
-        return textResult(JSON.stringify({
-          error: 'HEAL_BLOCKED',
-          message: 'No XML hierarchy available. No live session and no cached XML found.',
-          suggestion: 'Start a session, navigate to the broken screen, call inspect_ui_hierarchy once, then retry self_heal_test.'
-        }));
+        return toMcpErrorResponse(new Error('HEAL_BLOCKED: No XML hierarchy available. No live session and no cached XML found. Start a session, navigate to the broken screen, call inspect_ui_hierarchy once, then retry self_heal_test.'), 'self_heal_test');
       }
 
       // Pre-flight check
@@ -62,10 +59,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionInfo?.sessionId);
       
       if (!report.allPassed) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: preFlight.formatReport(report) }]
-        };
+        return toMcpErrorResponse(new Error(preFlight.formatReport(report)), 'self_heal_test');
       }
 
       let confidenceThreshold = 0.7;

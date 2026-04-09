@@ -1,6 +1,5 @@
 import { ScreenshotStorage } from '../utils/ScreenshotStorage.js';
-import { AppForgeError } from '../utils/ErrorFactory.js';
-import { McpErrors } from '../types/ErrorSystem.js';
+import { McpErrors, McpError, McpErrorCode } from '../types/ErrorSystem.js';
 import * as path from 'path';
 export class SelfHealingService {
     static instance;
@@ -234,7 +233,7 @@ ${screenshotPath ? `### 🖼️ VISION CONTEXT\nScreenshot saved at: ${screensho
      */
     async verifyHealedSelector(projectRoot, selector) {
         if (!this.sessionManager?.hasActiveSession(projectRoot)) {
-            throw new AppForgeError('SESSION_REQUIRED', 'No active Appium session available to verify selector.', ['Call start_appium_session first before invoking verify_selector.']);
+            throw new McpError('SESSION_REQUIRED: No active Appium session available to verify selector. Call start_appium_session first.', McpErrorCode.SESSION_NOT_FOUND, { toolName: 'verify_selector' });
         }
         const sessionService = await this.sessionManager.getSession(projectRoot);
         const result = await sessionService.verifySelector(selector);

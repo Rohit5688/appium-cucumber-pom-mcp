@@ -3,6 +3,7 @@ import { Project, Node, SyntaxKind } from 'ts-morph';
 import fs from 'fs/promises';
 import { ASTScrutinizer } from '../utils/ASTScrutinizer.js';
 import { FileGuard } from '../utils/FileGuard.js';
+import { McpConfigService } from './McpConfigService.js';
 
 // --- Summary Mode Types (Wave 1.1) ---
 export interface FileSummary {
@@ -187,6 +188,16 @@ export class CodebaseAnalyzerService {
     pagesRoot?: string;
     utilsRoot?: string;
   }, customWrapperPackage?: string, filters?: { type?: 'all'|'pages'|'steps'|'utils'|'features'; searchPattern?: string }): Promise<CodebaseAnalysisResult> {
+    // Resolve configured paths from MCP config (fallback to sensible defaults)
+    const mcpConfigService = new McpConfigService();
+    let resolvedPaths: ReturnType<McpConfigService['getPaths']>;
+    try {
+      const cfg = mcpConfigService.read(projectRoot);
+      resolvedPaths = mcpConfigService.getPaths(cfg);
+    } catch {
+      resolvedPaths = mcpConfigService.getPaths({} as any);
+    }
+
     const result: CodebaseAnalysisResult = {
       existingFeatures: [],
       existingStepDefinitions: [],
@@ -197,11 +208,11 @@ export class CodebaseAnalyzerService {
       yamlLocatorFiles: [],
       warnings: [],
       detectedPaths: {
-        featuresRoot: customPaths?.featuresRoot ?? 'features',
-        stepsRoot: customPaths?.stepsRoot ?? 'step-definitions',
-        pagesRoot: customPaths?.pagesRoot ?? 'pages',
-        utilsRoot: customPaths?.utilsRoot ?? 'utils',
-        locatorsRoot: 'locators'
+        featuresRoot: customPaths?.featuresRoot ?? resolvedPaths.featuresRoot ?? 'features',
+        stepsRoot: customPaths?.stepsRoot ?? resolvedPaths.stepsRoot ?? 'step-definitions',
+        pagesRoot: customPaths?.pagesRoot ?? resolvedPaths.pagesRoot ?? 'pages',
+        utilsRoot: customPaths?.utilsRoot ?? resolvedPaths.utilsRoot ?? 'utils',
+        locatorsRoot: resolvedPaths.locatorsRoot ?? 'locators'
       }
     };
 

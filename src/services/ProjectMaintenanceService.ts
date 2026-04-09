@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import { UtilAuditService } from './UtilAuditService.js';
 import { Questioner } from '../utils/Questioner.js';
 import { validateProjectRoot } from '../utils/SecurityUtils.js';
+import { McpErrors } from '../types/ErrorSystem.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -24,7 +25,7 @@ export class ProjectMaintenanceService {
     try {
       validateProjectRoot(projectRoot);
     } catch (error: any) {
-      throw new Error(`Invalid projectRoot: ${error.message}`);
+      throw McpErrors.projectValidationFailed(`Invalid projectRoot: ${error.message}`, 'ProjectMaintenanceService');
     }
 
     // New: config-aware upgrade is the primary flow
@@ -41,14 +42,14 @@ export class ProjectMaintenanceService {
     try {
       validateProjectRoot(projectRoot);
     } catch (error: any) {
-      throw new Error(`Invalid projectRoot: ${error.message}`);
+      throw McpErrors.projectValidationFailed(`Invalid projectRoot: ${error.message}`, 'ProjectMaintenanceService');
     }
 
     try {
       await this.projectSetupService.setup(projectRoot, platform, 'RepairedApp');
       return "✅ Project repair completed. Missing baseline files were regenerated.";
     } catch (error: any) {
-      throw new Error(`Failed to repair project: ${error.message}`);
+      throw McpErrors.projectValidationFailed(`Failed to repair project: ${error.message}`, 'ProjectMaintenanceService');
     }
   }
 }

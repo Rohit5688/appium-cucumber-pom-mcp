@@ -21,6 +21,7 @@
  * remain untouched and fully functional. This adds ONE new tool alongside them.
  */
 import * as vm from 'node:vm';
+import { McpErrors } from '../types/ErrorSystem.js';
 // --- Blocked patterns for static code validation ---
 const BLOCKED_PATTERNS = [
     /\beval\s*\(/,
@@ -110,7 +111,7 @@ export async function executeSandbox(script, apiRegistry, options = {}) {
                 return await fn(...args);
             }
             catch (err) {
-                throw new Error(`forge.api.${name}() failed: ${err.message}`);
+                throw McpErrors.sandboxApiFailed(`forge.api.${name}() failed: ${err.message}`, err, 'sandbox_engine');
             }
         };
     }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { MigrationService } from "../services/MigrationService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { McpError } from "../types/ErrorSystem.js";
+import { McpError, McpErrorCode, toMcpErrorResponse } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerMigrateTest(
@@ -30,43 +30,15 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         return await safeExecute(async () => textResult(migrationService.generateMigrationPrompt(args.sourceCode, args.sourceFileName, { sourceFramework: args.sourceFramework, sourceLanguage: args.sourceLanguage })));
       } catch (err: any) {
         if (err instanceof ClarificationRequired) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                action: 'CLARIFICATION_REQUIRED',
-                question: err.question,
-                context: err.context,
-                options: err.options ?? []
-              }, null, 2)
-            }]
+          const details = {
+            question: err.question,
+            context: err.context,
+            options: err.options ?? []
           };
+          const mcpErr = new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'migrate_test', cause: new Error(JSON.stringify(details)) });
+          return toMcpErrorResponse(mcpErr, 'migrate_test');
         }
-        if (err instanceof McpError) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                action: 'ERROR',
-                code: err.code,
-                message: err.message,
-                remediation: err.message
-              }, null, 2)
-            }],
-            isError: true
-          };
-        }
-        return {
-          content: [{
-            type: "text" as const, text: JSON.stringify({
-              action: 'ERROR',
-              code: 'UNHANDLED_ERROR',
-              message: err.message || String(err),
-              hint: 'Verify that projectRoot is an absolute path, mcp-config.json is valid JSON, and the Appium server is running (if using live session tools).'
-            }, null, 2)
-          }],
-          isError: true
-        };
+        return toMcpErrorResponse(err, 'migrate_test');
       }
     }
   );

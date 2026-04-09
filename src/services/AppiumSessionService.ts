@@ -2,7 +2,7 @@ import { remote, type Browser } from 'webdriverio';
 import { McpConfigService, type McpConfig } from './McpConfigService.js';
 import http from 'http';
 import { Questioner } from '../utils/Questioner.js';
-import { McpErrors } from '../types/ErrorSystem.js';
+import { McpErrors, isMcpError } from '../types/ErrorSystem.js';
 import { Logger } from '../utils/Logger.js';
 import type { AppiumCapabilitiesMap } from '../types/AppiumTypes.js';
 import { withRetry, RetryPolicies } from '../utils/RetryEngine.js';
@@ -101,7 +101,7 @@ export class AppiumSessionService {
             connectionRetryCount: 1,       // Single attempt per withRetry iteration
           });
           if (!d || !d.sessionId) {
-            throw new Error('Session created but missing sessionId');
+            throw McpErrors.appiumCommandFailed('Session created but missing sessionId', undefined, 'start_appium_session');
           }
           return d;
         },
@@ -148,6 +148,10 @@ export class AppiumSessionService {
       }
 
       const msg = error instanceof Error ? error.message : String(error);
+
+      if (isMcpError(error)) {
+        throw error;
+      }
 
       if (msg.includes('ECONNREFUSED')) {
         throw McpErrors.appiumNotReachable(serverUrl, 'start_appium_session');

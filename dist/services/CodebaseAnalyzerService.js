@@ -3,6 +3,7 @@ import { Project, Node, SyntaxKind } from 'ts-morph';
 import fs from 'fs/promises';
 import { ASTScrutinizer } from '../utils/ASTScrutinizer.js';
 import { FileGuard } from '../utils/FileGuard.js';
+import { McpConfigService } from './McpConfigService.js';
 export class CodebaseAnalyzerService {
     // --- Summary Mode Types (Wave 1.1) ---
     /**
@@ -88,6 +89,16 @@ export class CodebaseAnalyzerService {
      * Scans features/, step-definitions/, pages/, and utils/.
      */
     async analyze(projectRoot, customPaths, customWrapperPackage, filters) {
+        // Resolve configured paths from MCP config (fallback to sensible defaults)
+        const mcpConfigService = new McpConfigService();
+        let resolvedPaths;
+        try {
+            const cfg = mcpConfigService.read(projectRoot);
+            resolvedPaths = mcpConfigService.getPaths(cfg);
+        }
+        catch {
+            resolvedPaths = mcpConfigService.getPaths({});
+        }
         const result = {
             existingFeatures: [],
             existingStepDefinitions: [],
@@ -98,11 +109,11 @@ export class CodebaseAnalyzerService {
             yamlLocatorFiles: [],
             warnings: [],
             detectedPaths: {
-                featuresRoot: customPaths?.featuresRoot ?? 'features',
-                stepsRoot: customPaths?.stepsRoot ?? 'step-definitions',
-                pagesRoot: customPaths?.pagesRoot ?? 'pages',
-                utilsRoot: customPaths?.utilsRoot ?? 'utils',
-                locatorsRoot: 'locators'
+                featuresRoot: customPaths?.featuresRoot ?? resolvedPaths.featuresRoot ?? 'features',
+                stepsRoot: customPaths?.stepsRoot ?? resolvedPaths.stepsRoot ?? 'step-definitions',
+                pagesRoot: customPaths?.pagesRoot ?? resolvedPaths.pagesRoot ?? 'pages',
+                utilsRoot: customPaths?.utilsRoot ?? resolvedPaths.utilsRoot ?? 'utils',
+                locatorsRoot: resolvedPaths.locatorsRoot ?? 'locators'
             }
         };
         // 1. Discover Feature files anywhere in the workspace

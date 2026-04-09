@@ -57,10 +57,10 @@ export class SessionManager {
     };
 
     if (this.config.maxIdleTimeMs < 1000) {
-      throw new Error("maxIdleTimeMs must be >= 1000");
+      throw McpErrors.configValidationFailed(`maxIdleTimeMs must be >= 1000 (value: ${this.config.maxIdleTimeMs})`, 'SessionManager');
     }
     if (this.config.maxMemoryMB < 10) {
-      throw new Error("maxMemoryMB must be >= 10");
+      throw McpErrors.configValidationFailed(`maxMemoryMB must be >= 10 (value: ${this.config.maxMemoryMB})`, 'SessionManager');
     }
 
     this.startCleanupTimer();
@@ -82,11 +82,11 @@ export class SessionManager {
 
   public reconfigure(config: Partial<SessionManagerConfig>): void {
     if (config.maxIdleTimeMs !== undefined) {
-      if (config.maxIdleTimeMs < 1000) throw new Error("maxIdleTimeMs must be >= 1000");
+      if (config.maxIdleTimeMs < 1000) throw McpErrors.configValidationFailed(`maxIdleTimeMs must be >= 1000 (value: ${config.maxIdleTimeMs})`, 'SessionManager');
       this.config.maxIdleTimeMs = config.maxIdleTimeMs;
     }
     if (config.maxMemoryMB !== undefined) {
-      if (config.maxMemoryMB < 10) throw new Error("maxMemoryMB must be >= 10");
+      if (config.maxMemoryMB < 10) throw McpErrors.configValidationFailed(`maxMemoryMB must be >= 10 (value: ${config.maxMemoryMB})`, 'SessionManager');
       this.config.maxMemoryMB = config.maxMemoryMB;
     }
     if (config.cleanupIntervalMs !== undefined) {

@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { ExecutionService } from "../services/ExecutionService.js";
 import { textResult, truncate, getPlatformSkill } from "./_helpers.js";
+import { toMcpErrorResponse } from "../types/ErrorSystem.js";
 import { PreFlightService } from "../services/PreFlightService.js";
 import { SessionManager } from "../services/SessionManager.js";
 
@@ -33,20 +34,9 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         projectRoot = process.cwd();
       }
 
-      if (!projectRoot) {
-        return {
-          content: [{
-            type: "text" as const,
-            text: JSON.stringify({
-              action: 'ERROR',
-              code: 'MISSING_PROJECT_ROOT',
-              message: 'projectRoot is required when no active session exists',
-              hint: 'Either start a session with start_appium_session or provide projectRoot parameter'
-            }, null, 2)
-          }],
-          isError: true
-        };
-      }
+    if (!projectRoot) {
+      return toMcpErrorResponse(new Error('projectRoot is required when no active session exists. Start a session with start_appium_session or provide projectRoot.'), 'inspect_ui_hierarchy');
+    }
 
       // Pre-flight check
       const sessionManager = SessionManager.getInstance();
@@ -56,10 +46,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionId);
       
       if (!report.allPassed) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: preFlight.formatReport(report) }]
-        };
+        return toMcpErrorResponse(new Error(preFlight.formatReport(report)), 'inspect_ui_hierarchy');
       }
 
       const result = await executionService.inspectHierarchy(

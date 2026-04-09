@@ -3,7 +3,7 @@
     "target": "es2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "rootDir": "./src",
     "outDir": "./dist",
     "esModuleInterop": true,

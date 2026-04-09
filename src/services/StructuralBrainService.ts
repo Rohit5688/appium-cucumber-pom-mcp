@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { McpConfigService } from './McpConfigService.js';
 
 /**
  * Represents a high-connectivity "god node" file.
@@ -26,8 +27,15 @@ export class StructuralBrainService {
   private readonly GOD_NODE_THRESHOLD = 5;
   private readonly CRITICAL_THRESHOLD = 15;
 
-  /** Path to the cached brain file */
-  private readonly BRAIN_FILE = path.join(process.cwd(), '.AppForge', 'structural-brain.json');
+  /** Project root used for scans (set on scanProject) */
+  private projectRoot?: string;
+
+  private readonly mcpConfigService = new McpConfigService();
+
+  /** Dynamic brain file path (depends on projectRoot when set) */
+  private get brainFile(): string {
+    return path.join(this.projectRoot || process.cwd(), '.AppForge', 'structural-brain.json');
+  }
 
   private godNodes: GodNode[] = [];
   private lastScanTime: number = 0;
@@ -46,15 +54,16 @@ export class StructuralBrainService {
    *
    * Results are cached to disk for re-use across sessions.
    */
-  public async scanProject(srcDir?: string): Promise<GodNode[]> {
-    const targetDir = srcDir ?? path.join(process.cwd(), 'src');
+  public async scanProject(projectRoot?: string, srcDir?: string): Promise<GodNode[]> {
+    // Set project root for dynamic paths and brain file location
+    this.projectRoot = projectRoot || process.cwd();
 
     // Return cached result if fresh
     if (this.godNodes.length > 0 && (Date.now() - this.lastScanTime) < this.SCAN_CACHE_TTL_MS) {
       return this.godNodes;
     }
 
-    // Try loading from disk cache
+    // Try loading from disk cache (uses dynamic brainFile)
     const cached = this.loadFromDisk();
     if (cached && cached.length > 0) {
       this.godNodes = cached;
@@ -62,11 +71,33 @@ export class StructuralBrainService {
       return this.godNodes;
     }
 
-    // Full scan
-    const tsFiles = this.findTypeScriptFiles(targetDir);
-    const importGraph = this.buildImportGraph(tsFiles, targetDir);
+    // Determine candidate directories to scan using MCP config when available.
+    const candidateDirs: string[] = [];
+    try {
+      const cfg = this.mcpConfigService.read(this.projectRoot);
+      const paths = this.mcpConfigService.getPaths(cfg);
+      candidateDirs.push(path.join(this.projectRoot, 'src')); // default conventional location
+      if (paths.pagesRoot) candidateDirs.push(path.join(this.projectRoot, paths.pagesRoot));
+      if (paths.utilsRoot) candidateDirs.push(path.join(this.projectRoot, paths.utilsRoot));
+      if (paths.stepsRoot) candidateDirs.push(path.join(this.projectRoot, paths.stepsRoot));
+    } catch {
+      // If config can't be read, fall back to provided srcDir or conventional src/
+      candidateDirs.push(path.join(this.projectRoot, srcDir || 'src'));
+    }
 
-    this.godNodes = this.identifyGodNodes(importGraph, targetDir);
+    // Collect TypeScript files from existing candidate directories (de-duplicated)
+    const tsFilesSet = new Set<string>();
+    for (const d of candidateDirs) {
+      if (d && fs.existsSync(d)) {
+        const found = this.findTypeScriptFiles(d);
+        found.forEach(f => tsFilesSet.add(f));
+      }
+    }
+
+    const tsFiles = Array.from(tsFilesSet);
+    const importGraph = this.buildImportGraph(tsFiles, this.projectRoot);
+
+    this.godNodes = this.identifyGodNodes(importGraph, this.projectRoot);
     this.lastScanTime = Date.now();
 
     // Persist to disk
@@ -118,8 +149,8 @@ export class StructuralBrainService {
     this.godNodes = [];
     this.lastScanTime = 0;
     try {
-      if (fs.existsSync(this.BRAIN_FILE)) {
-        fs.unlinkSync(this.BRAIN_FILE);
+      if (fs.existsSync(this.brainFile)) {
+        fs.unlinkSync(this.brainFile);
       }
     } catch { /* non-fatal */ }
   }
@@ -226,8 +257,8 @@ export class StructuralBrainService {
 
   private loadFromDisk(): GodNode[] | null {
     try {
-      if (fs.existsSync(this.BRAIN_FILE)) {
-        const data = JSON.parse(fs.readFileSync(this.BRAIN_FILE, 'utf-8'));
+      if (fs.existsSync(this.brainFile)) {
+        const data = JSON.parse(fs.readFileSync(this.brainFile, 'utf-8'));
         if (Array.isArray(data?.godNodes)) return data.godNodes;
       }
     } catch { /* ignore */ }
@@ -235,10 +266,10 @@ export class StructuralBrainService {
   }
 
   private saveToDisk(godNodes: GodNode[]): void {
-    try {
-      const dir = path.dirname(this.BRAIN_FILE);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(this.BRAIN_FILE, JSON.stringify({ godNodes, scannedAt: new Date().toISOString() }, null, 2), 'utf-8');
-    } catch { /* non-fatal */ }
+      try {
+        const dir = path.dirname(this.brainFile);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(this.brainFile, JSON.stringify({ godNodes, scannedAt: new Date().toISOString() }, null, 2), 'utf-8');
+      } catch { /* non-fatal */ }
   }
 }

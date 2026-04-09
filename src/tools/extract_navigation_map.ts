@@ -3,7 +3,7 @@ import { z } from "zod";
 import { NavigationGraphService } from "../services/NavigationGraphService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { McpError } from "../types/ErrorSystem.js";
+import { McpError, McpErrorCode, toMcpErrorResponse } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerExtractNavigationMap(
@@ -37,43 +37,15 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         });
       } catch (err: any) {
         if (err instanceof ClarificationRequired) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                action: 'CLARIFICATION_REQUIRED',
-                question: err.question,
-                context: err.context,
-                options: err.options ?? []
-              }, null, 2)
-            }]
+          const details = {
+            question: err.question,
+            context: err.context,
+            options: err.options ?? []
           };
+          const mcpErr = new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'extract_navigation_map', cause: new Error(JSON.stringify(details)) });
+          return toMcpErrorResponse(mcpErr, 'extract_navigation_map');
         }
-        if (err instanceof McpError) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                action: 'ERROR',
-                code: err.code,
-                message: err.message,
-                remediation: err.message
-              }, null, 2)
-            }],
-            isError: true
-          };
-        }
-        return {
-          content: [{
-            type: "text" as const, text: JSON.stringify({
-              action: 'ERROR',
-              code: 'UNHANDLED_ERROR',
-              message: err.message || String(err),
-              hint: 'Verify that projectRoot is an absolute path, mcp-config.json is valid JSON, and the Appium server is running (if using live session tools).'
-            }, null, 2)
-          }],
-          isError: true
-        };
+        return toMcpErrorResponse(err, 'extract_navigation_map');
       }
     }
   );

@@ -4,7 +4,7 @@ import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { auditGeneratedCode, auditFeatureFile, validateProjectRoot, validateFilePath } from '../utils/SecurityUtils.js';
-import { AppForgeError } from '../utils/ErrorFactory.js';
+import { McpError, McpErrorCode, McpErrors } from '../types/ErrorSystem.js';
 import { StringMatcher } from '../utils/StringMatcher.js';
 import { FileSuggester } from '../utils/FileSuggester.js';
 import { FileStateService } from './FileStateService.js';
@@ -53,7 +53,7 @@ export class FileWriterService {
             const fullPath = path.join(projectRoot, file.path);
             const validation = fileState.validateWrite(fullPath);
             if (!validation.valid) {
-                throw new Error(`Cannot write file ${file.path}: ${validation.reason}`);
+                throw McpErrors.fileOperationFailed(`Cannot write file ${file.path}: ${validation.reason}`, undefined, 'FileWriterService');
             }
         }
         // Step 1: Write files to a temp staging area first
@@ -76,10 +76,7 @@ export class FileWriterService {
             if (!validation.valid) {
                 // Clean up staging
                 await this.cleanStaging(stagingDir);
-                throw new AppForgeError("E006_TS_COMPILE_FAIL", "TypeScript compilation failed during validation.", [
-                    "Review the tsc output below and fix the generated TypeScript files.",
-                    ...validation.errors
-                ]);
+                throw new McpError("TypeScript compilation failed: " + validation.errors.join('\n'), McpErrorCode.BUILD_FAILED);
             }
         }
         // Step 3: Validate .feature files (basic Gherkin syntax)
@@ -232,14 +229,14 @@ export class FileWriterService {
         const fullPath = path.join(projectRoot, filePath);
         if (!fs.existsSync(fullPath)) {
             const enhanced = FileSuggester.enhanceError(fullPath);
-            throw new AppForgeError('E003_FILE_NOT_FOUND', enhanced);
+            throw McpErrors.fileNotFound(enhanced);
         }
         const retryResult = await withRetry(async () => FileGuard.readTextFileSafely(fullPath), RetryPolicies.fileOperation);
         const content = retryResult.value;
         FileStateService.getInstance().recordRead(fullPath, content);
         const result = StringMatcher.fuzzyReplace(oldString, newString, content);
         if (!result.modified) {
-            throw new Error(`String not found in file: ${oldString.substring(0, 50)}...`);
+            throw McpErrors.stringNotFound(oldString.substring(0, 50) + '...', 'FileWriterService');
         }
         return this.validateAndWrite(projectRoot, [{ path: filePath, content: result.content }], maxRetries, dryRun);
     }

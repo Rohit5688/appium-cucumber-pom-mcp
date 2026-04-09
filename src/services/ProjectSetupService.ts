@@ -103,7 +103,17 @@ export class ProjectSetupService {
     const filesCreated: string[] = [];
     try {
       // 1. Create directory structure in staging
-      const dirs = ['src/features', 'src/step-definitions', 'src/pages', 'src/utils', 'src/test-data', 'src/config', 'src/credentials', 'reports'];
+      const paths = configService.getPaths(config);
+      const dirs = [
+        paths.featuresRoot,
+        paths.stepsRoot,
+        paths.pagesRoot,
+        paths.utilsRoot,
+        paths.testDataRoot,
+        paths.configRoot,
+        paths.credentialsRoot,
+        paths.reportsRoot
+      ];
       for (const dir of dirs) {
         fs.mkdirSync(path.join(stagingDir, dir), { recursive: true });
       }
@@ -113,17 +123,17 @@ export class ProjectSetupService {
       let envFilesScaffolded = 0;
       for (const env of environments) {
         if (typeof env === 'string' && env && !env.startsWith('CONFIGURE_ME')) {
-          const envPath = path.join(stagingDir, 'src', 'credentials', `users.${env}.json`);
+          const envPath = path.join(stagingDir, paths.credentialsRoot, `users.${env}.json`);
           // Default to an empty array so developers know where to map users
           fs.writeFileSync(envPath, '[\n  \n]\n', 'utf-8');
-          filesCreated.push(`src/credentials/users.${env}.json`);
+          filesCreated.push(`${paths.credentialsRoot}/users.${env}.json`);
           envFilesScaffolded++;
         }
       }
       if (environments.length > 0 && envFilesScaffolded === 0) {
         // Only CONFIGURE_ME present — scaffold a default 
-        fs.writeFileSync(path.join(stagingDir, 'src', 'credentials', `users.staging.json`), '[\n  \n]\n', 'utf-8');
-        filesCreated.push('src/credentials/users.staging.json');
+        fs.writeFileSync(path.join(stagingDir, paths.credentialsRoot, `users.staging.json`), '[\n  \n]\n', 'utf-8');
+        filesCreated.push(`${paths.credentialsRoot}/users.staging.json`);
       }
 
       // 2. package.json
@@ -139,52 +149,53 @@ export class ProjectSetupService {
       filesCreated.push('cucumber.js');
 
       // 5. BasePage.ts
-      this.scaffoldBasePage(stagingDir);
-      filesCreated.push('src/pages/BasePage.ts');
+      this.scaffoldBasePage(stagingDir, paths);
+      filesCreated.push(`${paths.pagesRoot}/BasePage.ts`);
 
       // 6. Utils Layer
-      this.scaffoldAppiumDriver(stagingDir);
+      this.scaffoldAppiumDriver(stagingDir, paths);
       this.scaffoldActionUtils(stagingDir, timeouts?.elementWait);
-      this.scaffoldGestureUtils(stagingDir);
-      this.scaffoldWaitUtils(stagingDir, timeouts?.elementWait);
+      this.scaffoldGestureUtils(stagingDir, paths);
+      this.scaffoldWaitUtils(stagingDir, timeouts?.elementWait, paths);
       this.scaffoldAssertionUtils(stagingDir);
-      this.scaffoldTestContext(stagingDir);
-      this.scaffoldDataUtils(stagingDir);
-      this.scaffoldLocatorUtils(stagingDir);
+      this.scaffoldTestContext(stagingDir, paths);
+      this.scaffoldDataUtils(stagingDir, paths);
+      this.scaffoldLocatorUtils(stagingDir, paths);
+
       // Keep old for back compat
-      this.scaffoldMobileGestures(stagingDir);
-      filesCreated.push('src/utils/ActionUtils.ts', 'src/utils/WaitUtils.ts', 'src/utils/MobileGestures.ts', 'src/utils/LocatorUtils.ts');
+      this.scaffoldMobileGestures(stagingDir, paths);
+      filesCreated.push(`${paths.utilsRoot}/ActionUtils.ts`, `${paths.utilsRoot}/WaitUtils.ts`, `${paths.utilsRoot}/MobileGestures.ts`, `${paths.utilsRoot}/LocatorUtils.ts`);
 
       // 7. MockServer.ts
-      this.scaffoldMockServer(stagingDir);
-      filesCreated.push('src/utils/MockServer.ts');
+      this.scaffoldMockServer(stagingDir, paths);
+      filesCreated.push(`${paths.utilsRoot}/MockServer.ts`);
 
       // 8. Before/After hooks
       this.scaffoldHooks(stagingDir, reporting.screenshotOn as 'failure' | 'always' | 'never', reporting);
-      filesCreated.push('src/step-definitions/hooks.ts');
+      filesCreated.push(`${paths.stepsRoot}/hooks.ts`);
 
       // 9. Sample feature
-      this.scaffoldSampleFeature(stagingDir);
-      filesCreated.push('src/features/sample.feature');
+      this.scaffoldSampleFeature(stagingDir, paths);
+      filesCreated.push(`${paths.featuresRoot}/sample.feature`);
 
       // 10. .gitignore
-      this.scaffoldGitignore(stagingDir);
+      this.scaffoldGitignore(stagingDir, paths);
       filesCreated.push('.gitignore');
 
       // 11. wdio.conf.ts — WebdriverIO + Appium connection config
       if (effectivePlatform === 'both') {
-        this.scaffoldWdioSharedConfig(stagingDir, timeouts, reporting);
+        this.scaffoldWdioSharedConfig(stagingDir, timeouts, reporting, paths);
         this.scaffoldWdioAndroidConfig(stagingDir);
         this.scaffoldWdioIosConfig(stagingDir);
         filesCreated.push('wdio.shared.conf.ts', 'wdio.android.conf.ts', 'wdio.ios.conf.ts');
       } else {
-        this.scaffoldWdioConfig(stagingDir, effectivePlatform, timeouts, reporting);
+        this.scaffoldWdioConfig(stagingDir, effectivePlatform, timeouts, reporting, paths);
         filesCreated.push('wdio.conf.ts');
       }
 
       // 12. Mock scenarios sample JSON
       this.scaffoldMockScenarios(stagingDir);
-      filesCreated.push('src/test-data/mock-scenarios.json');
+      filesCreated.push(`${paths.testDataRoot}/mock-scenarios.json`);
 
       // ── Commit: atomically copy staging dir to the real projectRoot ──
       this.copyDirRecursive(stagingDir, projectRoot);
@@ -248,14 +259,17 @@ export class ProjectSetupService {
         }
       },
       "paths": {
-        "_comment": "Change only if your project doesn't use the default folder names",
-        "featuresRoot": "features",
-        "pagesRoot": "pages",
-        "stepsRoot": "step-definitions",
-        "utilsRoot": "utils",
-        "testDataRoot": "src/test-data"
+        "_comment": "All paths are relative to project root. Customize if needed.",
+        "featuresRoot": "src/features",
+        "pagesRoot": "src/pages",
+        "stepsRoot": "src/step-definitions",
+        "utilsRoot": "src/utils",
+        "locatorsRoot": "src/locators",
+        "testDataRoot": "src/test-data",
+        "credentialsRoot": "src/credentials",
+        "configRoot": "src/config"
       },
-      "environments": ["CONFIGURE_ME: e.g. local, staging, prod"],
+      "environments": ["CONFIGURE_ME: e.g. local, integration, staging"],
       "currentEnvironment": "CONFIGURE_ME: which environment to test against now",
       "credentials": {
         "_comment": "Run manage_users to choose a strategy. Options: role-env-matrix, per-env-files, unified-key, custom",
@@ -338,21 +352,21 @@ export class ProjectSetupService {
   private scaffoldPackageJson(projectRoot: string, appName: string, platform: string) {
     const scripts: Record<string, string> = {};
     if (platform === 'both') {
-      scripts["test"]             = "npx wdio run wdio.shared.conf.ts";
-      scripts["test:android"]     = "npx wdio run wdio.android.conf.ts";
-      scripts["test:ios"]         = "npx wdio run wdio.ios.conf.ts";
-      scripts["test:smoke"]       = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@smoke'";
-      scripts["test:regression"]  = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@regression'";
-      scripts["test:e2e"]         = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@e2e'";
+      scripts["test"] = "npx wdio run wdio.shared.conf.ts";
+      scripts["test:android"] = "npx wdio run wdio.android.conf.ts";
+      scripts["test:ios"] = "npx wdio run wdio.ios.conf.ts";
+      scripts["test:smoke"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@smoke'";
+      scripts["test:regression"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@regression'";
+      scripts["test:e2e"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@e2e'";
       scripts["test:smoke:android"] = "npx wdio run wdio.android.conf.ts --cucumberOpts.tagExpression='@smoke'";
-      scripts["test:smoke:ios"]   = "npx wdio run wdio.ios.conf.ts --cucumberOpts.tagExpression='@smoke'";
+      scripts["test:smoke:ios"] = "npx wdio run wdio.ios.conf.ts --cucumberOpts.tagExpression='@smoke'";
     } else {
-      scripts["test"]             = "npx wdio run wdio.conf.ts";
-      scripts["test:smoke"]       = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@smoke'";
-      scripts["test:regression"]  = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@regression'";
-      scripts["test:e2e"]         = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@e2e'";
+      scripts["test"] = "npx wdio run wdio.conf.ts";
+      scripts["test:smoke"] = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@smoke'";
+      scripts["test:regression"] = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@regression'";
+      scripts["test:e2e"] = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@e2e'";
       if (platform === 'android') scripts["test:android"] = "npx wdio run wdio.conf.ts";
-      if (platform === 'ios')     scripts["test:ios"] = "npx wdio run wdio.conf.ts";
+      if (platform === 'ios') scripts["test:ios"] = "npx wdio run wdio.conf.ts";
     }
 
     const pkg = {
@@ -362,32 +376,32 @@ export class ProjectSetupService {
       scripts,
       dependencies: {
         // WebdriverIO core + Appium framework
-        "@wdio/cli":                 "8.29.1",
-        "@wdio/local-runner":        "8.29.1",
-        "@wdio/cucumber-framework":  "8.29.1",
-        "@wdio/appium-service":      "8.29.1",
-        "@wdio/spec-reporter":       "8.29.1",
-        "@wdio/allure-reporter":     "8.29.1",
-        "webdriverio":               "8.29.1",
+        "@wdio/cli": "8.29.1",
+        "@wdio/local-runner": "8.29.1",
+        "@wdio/cucumber-framework": "8.29.1",
+        "@wdio/appium-service": "8.29.1",
+        "@wdio/spec-reporter": "8.29.1",
+        "@wdio/allure-reporter": "8.29.1",
+        "webdriverio": "8.29.1",
         // Appium server — must be >= 2.5.4 for xcuitest-driver peer compat
-        "appium":                    "^2.14.0",
+        "appium": "^2.14.0",
         // Appium drivers — use unscoped package names (scoped @appium/* do NOT exist on npm)
         "appium-uiautomator2-driver": "^3.9.0",
-        "appium-xcuitest-driver":    "^7.25.0",
+        "appium-xcuitest-driver": "^7.25.0",
         // Cucumber runner — ^10.8.0 required by allure-cucumberjs@3.x peer dep
-        "@cucumber/cucumber":        "^10.8.0",
+        "@cucumber/cucumber": "^10.8.0",
         "@cucumber/pretty-formatter": "1.0.1",
         // TypeScript runtime
-        "ts-node":                   "10.9.2",
-        "typescript":                "5.4.5",
+        "ts-node": "10.9.2",
+        "typescript": "5.4.5",
         // Utilities
-        "express":                   "^4.18.0",
-        "yaml":                      "^2.4.1",
-        "allure-cucumberjs":         "^3.0.0"
+        "express": "^4.18.0",
+        "yaml": "^2.4.1",
+        "allure-cucumberjs": "^3.0.0"
       },
       devDependencies: {
-        "@types/node":               "^20.0.0",
-        "@types/express":            "^4.17.0"
+        "@types/node": "^20.0.0",
+        "@types/express": "^4.17.0"
       }
     };
     this.writeIfNotExists(path.join(projectRoot, 'package.json'), JSON.stringify(pkg, null, 2));
@@ -425,24 +439,27 @@ export class ProjectSetupService {
     fs.writeFileSync(tsConfigPath, JSON.stringify(tsConfig, null, 2));
   }
 
-  private scaffoldCucumberConfig(projectRoot: string) {
+  private scaffoldCucumberConfig(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
+    const stepsPattern = paths?.stepsRoot ? `${paths.stepsRoot}/**/*.ts` : 'src/step-definitions/**/*.ts';
+    const featuresPattern = paths?.featuresRoot ? `${paths.featuresRoot}/**/*.feature` : 'src/features/**/*.feature';
+    const reportsDir = paths?.reportsRoot ?? 'reports';
     const content = `// cucumber.js — Cucumber configuration
 export default {
   requireModule: ['ts-node/esm'],
-  require: ['src/step-definitions/**/*.ts'],
+  require: ['${stepsPattern}'],
   format: [
     'progress-bar',
-    'json:reports/cucumber-report.json',
-    'html:reports/cucumber-report.html'
+    'json:${reportsDir}/cucumber-report.json',
+    'html:${reportsDir}/cucumber-report.html'
   ],
-  paths: ['src/features/**/*.feature'],
+  paths: ['${featuresPattern}'],
   publishQuiet: true
 };
 `;
     this.writeIfNotExists(path.join(projectRoot, 'cucumber.js'), content);
   }
 
-  private scaffoldBasePage(projectRoot: string) {
+  private scaffoldBasePage(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `import { AppiumDriver } from '../utils/AppiumDriver.js';
 import { GestureUtils } from '../utils/GestureUtils.js';
 import { WaitUtils } from '../utils/WaitUtils.js';
@@ -462,10 +479,12 @@ export abstract class BasePage {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'pages', 'BasePage.ts'), content);
+    const targetPath = paths?.pagesRoot || 'src/pages';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'BasePage.ts'), content);
+
   }
 
-  private scaffoldMobileGestures(projectRoot: string) {
+  private scaffoldMobileGestures(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `import { browser } from '@wdio/globals';
 
 /**
@@ -563,10 +582,11 @@ export class MobileGestures {
   }
 }
 `;
-    fs.writeFileSync(path.join(projectRoot, 'src', 'utils', 'MobileGestures.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    fs.writeFileSync(path.join(projectRoot, targetPath, 'MobileGestures.ts'), content);
   }
 
-  private scaffoldMockServer(projectRoot: string) {
+  private scaffoldMockServer(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -664,11 +684,16 @@ export class MockServer {
   }
 }
 `;
-    fs.writeFileSync(path.join(projectRoot, 'src', 'utils', 'MockServer.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    fs.writeFileSync(path.join(projectRoot, targetPath, 'MockServer.ts'), content);
   }
 
-  private scaffoldLocatorUtils(projectRoot: string) {
-    const tsPath = path.join(projectRoot, 'src/utils/LocatorUtils.ts');
+  private scaffoldLocatorUtils(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
+    const utilsPath = paths?.utilsRoot || 'src/utils';
+    const tsPath = path.join(projectRoot, utilsPath, 'LocatorUtils.ts');
+
+    const locatorsRoot = paths?.locatorsRoot || 'src/locators';
+    // Generate LocatorUtils that reads YAML files from the configured locators root
     this.writeIfNotExists(tsPath, [
       'import fs from "fs";',
       'import path from "path";',
@@ -686,7 +711,7 @@ export class MockServer {
       '    const platformName = (caps?.platformName ?? \'\').toLowerCase();',
       '    const platform = platformName === \'ios\' ? \'ios\' : \'android\';',
       '',
-      '    const filePath = path.resolve(process.cwd(), "src/locators", `${yamlFileName}.yaml`);',
+      `    const filePath = path.resolve(process.cwd(), "${locatorsRoot}", \`\${yamlFileName}.yaml\`);`,
       '    if (!fs.existsSync(filePath)) {',
       '      throw new Error(`Locator file not found: ${filePath}`);',
       '    }',
@@ -708,7 +733,7 @@ export class MockServer {
       '}'
     ].join('\n'));
 
-    const locatorsDir = path.join(projectRoot, 'src/locators');
+    const locatorsDir = path.join(projectRoot, locatorsRoot);
     if (!fs.existsSync(locatorsDir)) {
       fs.mkdirSync(locatorsDir, { recursive: true });
     }
@@ -725,12 +750,12 @@ export class MockServer {
     ].join('\n'));
   }
 
-  private scaffoldHooks(projectRoot: string, screenshotOn: 'failure' | 'always' | 'never' = 'failure', reporting?: { outputDir?: string }) {
+  private scaffoldHooks(projectRoot: string, screenshotOn: 'failure' | 'always' | 'never' = 'failure', reporting?: { outputDir?: string }, paths?: ReturnType<McpConfigService['getPaths']>) {
     const shouldCapture = screenshotOn === 'always'
       ? 'true'
       : screenshotOn === 'failure'
-      ? "scenario.result?.status === Status.FAILED"
-      : 'false';
+        ? "scenario.result?.status === Status.FAILED"
+        : 'false';
 
     const content = `import { Before, After, BeforeAll, AfterAll, Status } from '@cucumber/cucumber';
 import { AppiumDriver } from '../utils/AppiumDriver.js';
@@ -773,10 +798,12 @@ AfterAll(async function () {
   console.log('[Hooks] Test suite complete. Reports: ${reporting?.outputDir ?? 'reports'}');
 });
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'step-definitions', 'hooks.ts'), content);
+    const targetPath = paths?.stepsRoot || 'src/step-definitions';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'hooks.ts'), content);
+
   }
 
-  private scaffoldSampleFeature(projectRoot: string) {
+  private scaffoldSampleFeature(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `@smoke
 Feature: Sample Login Flow
   As a user
@@ -790,10 +817,12 @@ Feature: Sample Login Flow
     And I tap the login button
     Then I should see the home screen
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'features', 'sample.feature'), content);
+    const targetPath = paths?.featuresRoot || 'src/features';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'sample.feature'), content);
   }
 
-  private scaffoldGitignore(projectRoot: string) {
+  private scaffoldGitignore(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
+    const credDir = (paths?.credentialsRoot || 'credentials').replace(/\/+$/, '');
     const content = `node_modules/
 dist/
 reports/
@@ -803,7 +832,7 @@ reports/
 .DS_Store
 
 # Credential files — never commit these
-credentials/
+${credDir}/
 `;
     this.writeIfNotExists(path.join(projectRoot, '.gitignore'), content);
   }
@@ -884,9 +913,12 @@ credentials/
     projectRoot: string,
     platform: string,
     timeouts?: { scenarioTimeout?: number; connectionRetry?: number; connectionRetryCount?: number; elementWait?: number },
-    reporting?: { format?: string; outputDir?: string }
+    reporting?: { format?: string; outputDir?: string },
+    paths?: ReturnType<McpConfigService['getPaths']>
   ) {
     // Issue #16 Fix: Generate platform-specific wdio.conf.ts that doesn't import from missing files
+    const specsPattern = paths?.featuresRoot ? `./${paths.featuresRoot}/**/*.feature` : './src/features/**/*.feature';
+    const stepsPattern = paths?.stepsRoot ? `./${paths.stepsRoot}/**/*.ts` : './src/step-definitions/**/*.ts';
     const content = `import type { Options } from '@wdio/types';
 
 /**
@@ -900,8 +932,8 @@ export const config: Options.Testrunner = {
   port: 4723,
   path: '/',
 
-  // Uses src/features/ to match the AppForge scaffolded project layout
-  specs: ['./src/features/**/*.feature'],
+  // Uses configured features path
+  specs: ['${specsPattern}'],
 
   maxInstances: 1,
 
@@ -916,7 +948,7 @@ export const config: Options.Testrunner = {
 
   framework: 'cucumber',
   cucumberOpts: {
-    require: ['./src/step-definitions/**/*.ts'],
+    require: ['${stepsPattern}'],
     backtrace: false,
     dryRun: false,
     failFast: false,
@@ -940,8 +972,11 @@ export const config: Options.Testrunner = {
   private scaffoldWdioSharedConfig(
     projectRoot: string,
     timeouts?: { scenarioTimeout?: number; connectionRetry?: number; connectionRetryCount?: number; elementWait?: number },
-    reporting?: { format?: string; outputDir?: string }
+    reporting?: { format?: string; outputDir?: string },
+    paths?: ReturnType<McpConfigService['getPaths']>
   ) {
+    const specsPattern = paths?.featuresRoot ? `./${paths.featuresRoot}/**/*.feature` : './src/features/**/*.feature';
+    const stepsPattern = paths?.stepsRoot ? `./${paths.stepsRoot}/**/*.ts` : './src/step-definitions/**/*.ts';
     const content = `import type { Options } from '@wdio/types';
 
 /**
@@ -954,13 +989,13 @@ export const config: Options.Testrunner = {
   port: 4723,
   path: '/',
 
-  // Uses src/features/ to match the AppForge scaffolded project layout
-  specs: ['./src/features/**/*.feature'],
+  // Uses configured features path
+  specs: ['${specsPattern}'],
   maxInstances: 1,
 
   framework: 'cucumber',
   cucumberOpts: {
-    require: ['./src/step-definitions/**/*.ts'],
+    require: ['${stepsPattern}'],
     backtrace: false,
     dryRun: false,
     failFast: false,
@@ -1017,7 +1052,7 @@ export const config = {
     this.writeIfNotExists(path.join(projectRoot, 'wdio.ios.conf.ts'), content);
   }
 
-  private scaffoldMockScenarios(projectRoot: string) {
+  private scaffoldMockScenarios(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = JSON.stringify({
       "login-success": {
         method: "post",
@@ -1041,10 +1076,11 @@ export const config = {
         body: { id: 1, name: "Test User", email: "test@example.com" }
       }
     }, null, 2);
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'test-data', 'mock-scenarios.json'), content);
+    const targetPath = paths?.testDataRoot || 'src/test-data';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'mock-scenarios.json'), content);
   }
 
-  private scaffoldAppiumDriver(projectRoot: string) {
+    private scaffoldAppiumDriver(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `import { browser, $ } from '@wdio/globals';
 
 export class AppiumDriver {
@@ -1082,10 +1118,11 @@ export class AppiumDriver {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'AppiumDriver.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'AppiumDriver.ts'), content);
   }
 
-  private scaffoldActionUtils(projectRoot: string, elementWait: number = 10000) {
+  private scaffoldActionUtils(projectRoot: string, elementWait: number = 10000, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `import { $, $$ } from '@wdio/globals';
 
 /**
@@ -1239,10 +1276,11 @@ export class ActionUtils {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'ActionUtils.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'ActionUtils.ts'), content);
   }
 
-  private scaffoldGestureUtils(projectRoot: string) {
+  private scaffoldGestureUtils(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `import { browser, $ } from '@wdio/globals';
 
 export class GestureUtils {
@@ -1254,10 +1292,11 @@ export class GestureUtils {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'GestureUtils.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'GestureUtils.ts'), content);
   }
 
-  private scaffoldWaitUtils(projectRoot: string, elementWait: number = 10000) {
+  private scaffoldWaitUtils(projectRoot: string, elementWait: number = 10000, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `import { browser, $ } from '@wdio/globals';
 
 export class WaitUtils {
@@ -1269,10 +1308,11 @@ export class WaitUtils {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'WaitUtils.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'WaitUtils.ts'), content);
   }
 
-  private scaffoldAssertionUtils(projectRoot: string) {
+  private scaffoldAssertionUtils(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `import { browser, $ } from '@wdio/globals';
 
 export class AssertionUtils {
@@ -1282,10 +1322,11 @@ export class AssertionUtils {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'AssertionUtils.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'AssertionUtils.ts'), content);
   }
 
-  private scaffoldTestContext(projectRoot: string) {
+  private scaffoldTestContext(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `export class TestContext {
   private static state: Map<string, any> = new Map();
   private static attachments: any[] = [];
@@ -1302,10 +1343,11 @@ export class AssertionUtils {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'TestContext.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'TestContext.ts'), content);
   }
 
-  private scaffoldDataUtils(projectRoot: string) {
+  private scaffoldDataUtils(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
     const content = `export class DataUtils {
   static getEnv(key: string, fallback?: string) { return process.env[key] || fallback; }
   static requireEnv(key: string) {
@@ -1314,7 +1356,8 @@ export class AssertionUtils {
   }
 }
 `;
-    this.writeIfNotExists(path.join(projectRoot, 'src', 'utils', 'DataUtils.ts'), content);
+    const targetPath = paths?.utilsRoot || 'src/utils';
+    this.writeIfNotExists(path.join(projectRoot, targetPath, 'DataUtils.ts'), content);
   }
 
   // ─── Helpers ───────────────────────────────────────────────
@@ -1365,6 +1408,8 @@ export class AssertionUtils {
       }, null, 2);
     }
 
+    const paths = this.mcpConfigService.getPaths(config);
+
     const applied: string[] = [];
     const skipped: string[] = [];
     const pending: string[] = [];
@@ -1377,19 +1422,20 @@ export class AssertionUtils {
 
     // ─── Credential Strategy ──────────────────────────────────────────────────
     if (config.credentials?.strategy && (config.credentials.strategy as string) !== 'CONFIGURE_ME') {
-      const credDir = path.join(projectRoot, 'credentials');
+      const credDir = path.join(projectRoot, paths.credentialsRoot || 'credentials');
       if (!fs.existsSync(credDir)) {
         fs.mkdirSync(credDir, { recursive: true });
-        applied.push('Created credentials/ directory');
+        applied.push(`Created ${paths.credentialsRoot || 'credentials'}/ directory`);
       }
 
       // Ensure .gitignore covers credentials/
       const gitignorePath = path.join(projectRoot, '.gitignore');
       if (fs.existsSync(gitignorePath)) {
         const gi = fs.readFileSync(gitignorePath, 'utf-8');
-        if (!gi.includes('credentials/')) {
-          fs.writeFileSync(gitignorePath, gi.trimEnd() + '\n\ncredentials/\n', 'utf-8');
-          applied.push('Added credentials/ to .gitignore');
+        const gitCredEntry = `${paths.credentialsRoot || 'credentials'}/`;
+        if (!gi.includes(gitCredEntry)) {
+          fs.writeFileSync(gitignorePath, gi.trimEnd() + '\n\n' + gitCredEntry + '\n', 'utf-8');
+          applied.push(`Added ${gitCredEntry} to .gitignore`);
         }
       }
 
@@ -1404,7 +1450,7 @@ export class AssertionUtils {
           { role: 'readonly', username: `viewer@${env}.com`, password: 'FILL_IN' }
         ];
         this.writeIfNotExists(credFile, JSON.stringify(sample, null, 2));
-        applied.push(`Scaffolded credentials/users.${env}.json (per-env-files strategy)`);
+        applied.push(`Scaffolded ${paths.credentialsRoot || 'credentials'}/users.${env}.json (per-env-files strategy)`);
       } else if (strategy === 'role-env-matrix' || strategy === 'unified-key') {
         credFile = config.credentials.file
           ? path.join(projectRoot, config.credentials.file)

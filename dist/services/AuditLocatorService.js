@@ -2,17 +2,81 @@ import path from 'path';
 import { Project } from 'ts-morph';
 import fs from 'fs/promises';
 import fsSync from 'fs';
+import { McpConfigService } from './McpConfigService.js';
 export class AuditLocatorService {
     /**
      * Scans all Page Objects in the project and audits their locator strategies.
      * Flags brittle XPaths and generates a Markdown report with recommendations.
      * Supports TypeScript, YAML, and mixed locator architectures.
      */
-    async audit(projectRoot, dirsToScan = ['pages', 'src/pages', 'locators', 'src/locators']) {
-        const arch = this.detectArchitecture(projectRoot, dirsToScan);
+    async audit(projectRoot, dirsToScan) {
+        // Resolve scan directories: prefer explicit dirsToScan, otherwise read MCP config and build sensible candidates
+        let scanDirs = [];
+        if (dirsToScan && dirsToScan.length > 0) {
+            scanDirs = Array.from(new Set(dirsToScan));
+        }
+        else {
+            try {
+                const cfgService = new McpConfigService();
+                const cfg = cfgService.read(projectRoot);
+                const paths = cfgService.getPaths(cfg);
+                const candidates = [
+                    paths.pagesRoot,
+                    paths.locatorsRoot,
+                    paths.testDataRoot,
+                    'locators',
+                    `src/${path.basename(paths.locatorsRoot || 'locators')}`
+                ].filter(Boolean);
+                // Keep only existing directories (relative to projectRoot) and de-duplicate
+                const existing = [];
+                for (const d of candidates) {
+                    try {
+                        if (fsSync.existsSync(path.join(projectRoot, d)))
+                            existing.push(d);
+                    }
+                    catch { }
+                }
+                scanDirs = Array.from(new Set(existing));
+            }
+            catch {
+                // Fallback to legacy defaults if config cannot be read
+                scanDirs = ['pages', 'src/pages', 'locators', 'src/locators'];
+            }
+        }
+        // Decide file extensions to parse for TypeScript-like page objects.
+        // Controlled by MCP config (cfg.analysis.includeJs) or auto-detected JS presence.
+        let exts = ['.ts'];
+        try {
+            const cfgServiceTmp = new McpConfigService();
+            const cfgTmp = cfgServiceTmp.read(projectRoot);
+            const includeJs = !!(cfgTmp?.analysis?.includeJs);
+            if (includeJs) {
+                exts = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts'];
+            }
+            else {
+                // Auto-detect presence of JS files in scanDirs and include JS extensions if found
+                const hasJs = scanDirs.some(d => {
+                    try {
+                        const full = path.join(projectRoot, d);
+                        if (!fsSync.existsSync(full))
+                            return false;
+                        return fsSync.readdirSync(full).some(f => f.endsWith('.js') || f.endsWith('.mjs') || f.endsWith('.cjs') || f.endsWith('.jsx'));
+                    }
+                    catch {
+                        return false;
+                    }
+                });
+                if (hasJs)
+                    exts.push('.js', '.jsx', '.mjs', '.cjs', '.mjs', '.cjs');
+            }
+        }
+        catch {
+            // ignore and keep defaults
+        }
+        const arch = this.detectArchitecture(projectRoot, scanDirs);
         let allEntries = [];
         if (arch === 'typescript' || arch === 'mixed') {
-            allEntries.push(...await this.parseTypeScriptLocators(projectRoot, dirsToScan));
+            allEntries.push(...await this.parseTypeScriptLocators(projectRoot, scanDirs, exts));
         }
         if (arch === 'yaml' || arch === 'mixed') {
             allEntries.push(...this.parseYamlLocators(projectRoot));
@@ -35,15 +99,52 @@ export class AuditLocatorService {
      * Detects whether the project uses TypeScript page objects, YAML locator files, or both.
      */
     detectArchitecture(projectRoot, tsDirs) {
-        const yamlSearchDirs = ['locators', 'src/locators', 'test/locators', 'resources'];
-        const hasYaml = yamlSearchDirs.some(d => {
+        // Prefer configured locators path from MCP config, fall back to conventional candidates.
+        // Deduplicate candidates and ignore noisy folders during checks.
+        let yamlCandidates = ['locators', 'src/locators', 'test/locators', 'resources', 'config/locators', 'test/fixtures/locators'];
+        try {
+            const cfgService = new McpConfigService();
+            const cfg = cfgService.read(projectRoot);
+            const paths = cfgService.getPaths(cfg);
+            yamlCandidates = [
+                paths.locatorsRoot,
+                'locators',
+                `src/${path.basename(paths.locatorsRoot || 'locators')}`,
+                'test/locators',
+                'resources',
+                'config/locators',
+                'test/fixtures/locators'
+            ].filter(Boolean);
+        }
+        catch {
+            // keep defaults
+        }
+        // Normalize and dedupe
+        const normalized = Array.from(new Set(yamlCandidates.map(d => d.replace(/\\/g, '/'))));
+        const noiseFolders = ['node_modules', '.venv', 'dist', 'coverage', '.cache', 'build'];
+        const hasYaml = normalized.some(d => {
             const full = path.join(projectRoot, d);
-            return fsSync.existsSync(full) &&
-                fsSync.readdirSync(full).some(f => f.endsWith('.yaml') || f.endsWith('.yml'));
+            try {
+                if (!fsSync.existsSync(full))
+                    return false;
+                const files = fsSync.readdirSync(full);
+                return files.some(f => (f.endsWith('.yaml') || f.endsWith('.yml')));
+            }
+            catch {
+                return false;
+            }
         });
         const hasTs = tsDirs.some(d => {
             const full = path.join(projectRoot, d);
-            return fsSync.existsSync(full) && fsSync.readdirSync(full).some(f => f.endsWith('.ts'));
+            try {
+                if (!fsSync.existsSync(full))
+                    return false;
+                const files = fsSync.readdirSync(full);
+                return files.some(f => f.endsWith('.ts') || f.endsWith('.tsx') || f.endsWith('.js') || f.endsWith('.jsx'));
+            }
+            catch {
+                return false;
+            }
         });
         if (hasYaml && hasTs)
             return 'mixed';
@@ -57,16 +158,39 @@ export class AuditLocatorService {
      */
     parseYamlLocators(projectRoot) {
         const entries = [];
-        const searchDirs = ['locators', 'src/locators', 'test/locators'];
-        for (const dir of searchDirs) {
+        // Build search dirs from MCP config if available, otherwise use sensible defaults
+        let searchDirs = ['locators', 'src/locators', 'test/locators', 'config/locators', 'test/fixtures/locators'];
+        try {
+            const cfgService = new McpConfigService();
+            const cfg = cfgService.read(projectRoot);
+            const paths = cfgService.getPaths(cfg);
+            searchDirs = [
+                paths.locatorsRoot,
+                'locators',
+                `src/${path.basename(paths.locatorsRoot || 'locators')}`,
+                'test/locators',
+                'config/locators',
+                'test/fixtures/locators'
+            ].filter(Boolean);
+        }
+        catch {
+            // keep defaults
+        }
+        // Normalize, dedupe and keep only existing directories
+        const normalized = Array.from(new Set(searchDirs.map(d => d.replace(/\\/g, '/'))));
+        const existingDirs = normalized.filter(d => {
+            try {
+                return fsSync.existsSync(path.join(projectRoot, d));
+            }
+            catch {
+                return false;
+            }
+        });
+        const noisePatterns = ['node_modules', '.venv', 'dist', 'coverage', '.cache', 'build', 'crew_ai'];
+        for (const dir of existingDirs) {
             const fullDir = path.join(projectRoot, dir);
-            if (!fsSync.existsSync(fullDir))
-                continue;
             const files = this.findFilesRecursive(fullDir, ['.yaml', '.yml'])
-                .filter(f => !f.includes('node_modules') &&
-                !f.includes('.venv') &&
-                !f.includes('crew_ai') &&
-                !f.includes('dist'));
+                .filter(f => !noisePatterns.some(n => f.includes(n)));
             for (const file of files) {
                 const lines = fsSync.readFileSync(file, 'utf8').split('\n');
                 for (const line of lines) {
@@ -134,11 +258,13 @@ export class AuditLocatorService {
     /**
      * Parses TypeScript page object files and returns audit entries (original logic).
      */
-    async parseTypeScriptLocators(projectRoot, dirsToScan) {
+    async parseTypeScriptLocators(projectRoot, dirsToScan, exts = ['.ts']) {
         const pageFiles = [];
+        if (!Array.isArray(dirsToScan) || dirsToScan.length === 0)
+            return [];
         for (const dirName of dirsToScan) {
             const dirPath = path.join(projectRoot, dirName);
-            pageFiles.push(...(await this.listFiles(dirPath, ['.ts'])));
+            pageFiles.push(...(await this.listFiles(dirPath, exts)));
         }
         const entries = [];
         if (pageFiles.length === 0)

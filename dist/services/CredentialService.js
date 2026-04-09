@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { McpConfigService } from './McpConfigService.js';
+import { McpErrors } from '../types/ErrorSystem.js';
 /**
  * Service to manage cloud credentials, environment variables, and multi-env test users.
  */
@@ -15,10 +16,10 @@ export class CredentialService {
         // Validate inputs to avoid newline breaks
         for (const [key, value] of Object.entries(data)) {
             if (/[\r\n]/.test(key)) {
-                throw new Error(`Invalid key containing newline: ${key}`);
+                throw McpErrors.invalidCredential(`Invalid key containing newline: ${key}`, 'CredentialService');
             }
             if (/[\r\n]/.test(value)) {
-                throw new Error(`Invalid value containing newline for key: ${key}`);
+                throw McpErrors.invalidCredential(`Invalid value containing newline for key: ${key}`, 'CredentialService');
             }
         }
         // Dynamically append .env to .gitignore before writing
@@ -69,6 +70,7 @@ export class CredentialService {
         catch {
             // Config not readable — show setup guidance
         }
+        const paths = this.mcpConfigService.getPaths(config);
         // STEP 1: If no credential strategy chosen yet, return selection prompt
         if (!strategy) {
             return JSON.stringify({
@@ -78,7 +80,7 @@ export class CredentialService {
                 options: {
                     'role-env-matrix': {
                         description: 'Single JSON file with credentials[role][env] structure. Best for most teams.',
-                        exampleFile: 'credentials/users.json',
+                        exampleFile: `${paths.credentialsRoot || 'credentials'}/users.json`,
                         exampleContent: {
                             admin: {
                                 staging: { username: 'admin@stage.com', password: 'FILL_IN' },
@@ -91,7 +93,7 @@ export class CredentialService {
                     },
                     'per-env-files': {
                         description: 'One JSON file per environment: credentials/users.{env}.json. Best for env-isolated secrets.',
-                        exampleFile: `credentials/users.${currentEnv}.json`,
+                        exampleFile: `${paths.credentialsRoot || 'credentials'}/users.${currentEnv}.json`,
                         exampleContent: [
                             { role: 'admin', username: `admin@${currentEnv}.com`, password: 'FILL_IN' },
                             { role: 'readonly', username: `viewer@${currentEnv}.com`, password: 'FILL_IN' }
@@ -99,7 +101,7 @@ export class CredentialService {
                     },
                     'unified-key': {
                         description: 'Single JSON file with credentials["{role}-{env}"] keys. Best for simple/small projects.',
-                        exampleFile: 'credentials/users.json',
+                        exampleFile: `${paths.credentialsRoot || 'credentials'}/users.json`,
                         exampleContent: {
                             [`admin-${currentEnv}`]: { username: `admin@${currentEnv}.com`, password: 'FILL_IN' },
                             [`readonly-${currentEnv}`]: { username: `viewer@${currentEnv}.com`, password: 'FILL_IN' }
@@ -113,7 +115,7 @@ export class CredentialService {
             }, null, 2);
         }
         // STEP 2: Resolve credential file path from strategy
-        const credentialsDir = path.join(projectRoot, 'credentials');
+        const credentialsDir = path.join(projectRoot, paths.credentialsRoot || 'credentials');
         let credentialsFile;
         if (strategy.strategy === 'per-env-files') {
             credentialsFile = strategy.file
@@ -125,15 +127,16 @@ export class CredentialService {
                 ? path.join(projectRoot, strategy.file)
                 : path.join(credentialsDir, 'users.json');
         }
-        // STEP 3: Ensure credentials/ directory exists and is gitignored
+        // STEP 3: Ensure credentials directory exists and is gitignored
         if (!fs.existsSync(credentialsDir)) {
             fs.mkdirSync(credentialsDir, { recursive: true });
         }
         const gitignorePath = path.join(projectRoot, '.gitignore');
         try {
             const gi = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : '';
-            if (!gi.includes('credentials/')) {
-                fs.writeFileSync(gitignorePath, gi.trimEnd() + '\n\n# Credential files — never commit\ncredentials/\n', 'utf8');
+            const gitCredEntry = `${paths.credentialsRoot || 'credentials'}/`;
+            if (!gi.includes(gitCredEntry)) {
+                fs.writeFileSync(gitignorePath, gi.trimEnd() + '\n\n# Credential files — never commit\n' + gitCredEntry + '\n', 'utf8');
             }
         }
         catch { /* non-fatal */ }

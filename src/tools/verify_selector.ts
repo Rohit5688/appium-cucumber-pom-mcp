@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { SelfHealingService } from "../services/SelfHealingService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { McpError } from "../types/ErrorSystem.js";
+import { toMcpErrorResponse } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 import { PreFlightService } from "../services/PreFlightService.js";
 import { SessionManager } from "../services/SessionManager.js";
@@ -38,10 +38,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
           const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionInfo?.sessionId);
           
           if (!report.allPassed) {
-            return {
-              isError: true,
-              content: [{ type: 'text', text: preFlight.formatReport(report) }]
-            };
+            return toMcpErrorResponse(new Error(preFlight.formatReport(report)), 'verify_selector');
           }
 
           const verification = await selfHealingService.verifyHealedSelector(projectRoot, args.selector);
@@ -72,31 +69,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
             }]
           };
         }
-        if (err instanceof McpError) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                action: 'ERROR',
-                code: err.code,
-                message: err.message,
-                remediation: err.message
-              }, null, 2)
-            }],
-            isError: true
-          };
-        }
-        return {
-          content: [{
-            type: "text" as const, text: JSON.stringify({
-              action: 'ERROR',
-              code: 'UNHANDLED_ERROR',
-              message: err.message || String(err),
-              hint: 'Verify that projectRoot is an absolute path, mcp-config.json is valid JSON, and the Appium server is running (if using live session tools).'
-            }, null, 2)
-          }],
-          isError: true
-        };
+        return toMcpErrorResponse(err, 'verify_selector');
       }
     }
   );

@@ -67,13 +67,13 @@ export class FileWriterService {
     const fileState = FileStateService.getInstance();
     
     // Validate file hasn't changed externally
-    for (const file of files) {
-      const fullPath = path.join(projectRoot, file.path);
-      const validation = fileState.validateWrite(fullPath);
-      if (!validation.valid) {
-        throw new Error(`Cannot write file ${file.path}: ${validation.reason}`);
+      for (const file of files) {
+        const fullPath = path.join(projectRoot, file.path);
+        const validation = fileState.validateWrite(fullPath);
+        if (!validation.valid) {
+          throw McpErrors.fileOperationFailed(`Cannot write file ${file.path}: ${validation.reason}`, undefined, 'FileWriterService');
+        }
       }
-    }
 
     // Step 1: Write files to a temp staging area first
     const stagingDir = path.join(projectRoot, '.mcp-staging');
@@ -280,7 +280,7 @@ export class FileWriterService {
     
     const result = StringMatcher.fuzzyReplace(oldString, newString, content);
     if (!result.modified) {
-      throw new Error(`String not found in file: ${oldString.substring(0, 50)}...`);
+      throw McpErrors.stringNotFound(oldString.substring(0, 50) + '...', 'FileWriterService');
     }
 
     return this.validateAndWrite(projectRoot, [{ path: filePath, content: result.content }], maxRetries, dryRun);
