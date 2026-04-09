@@ -1,5 +1,6 @@
 {
-  "version": "2.4.0",
+  "version": "1.1.0",
+  "schemaVersion": "1.0",
   "tags": [
     "@smoke",
     "@regression",
@@ -9,11 +10,16 @@
   "envKeys": {
     "baseUrl": "BASE_URL"
   },
-  "dirs": {
-    "features": "features",
-    "pages": "pages",
-    "stepDefinitions": "step-definitions",
-    "testData": "test-data"
+  "paths": {
+    "featuresRoot": "src/features",
+    "pagesRoot": "src/pages",
+    "stepsRoot": "src/step-definitions",
+    "utilsRoot": "src/utils",
+    "locatorsRoot": "src/locators",
+    "testDataRoot": "src/test-data",
+    "credentialsRoot": "src/credentials",
+    "reportsRoot": "reports",
+    "configRoot": "src/config"
   },
   "browsers": [
     "chromium"
@@ -37,5 +43,6 @@
     "wcag2aa"
   ],
   "a11yReportPath": "test-results/a11y-report.json",
-  "projectRoot": "c:\\Users\\Rohit\\mcp\\AppForge"
+  "projectRoot": "c:\\Users\\Rohit\\mcp\\AppForge",
+  "$schema": "./.AppForge/configSchema.json"
 }
