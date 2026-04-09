@@ -119,15 +119,15 @@ export class ExecutionService {
             // We only append specific arguments if we're dealing with a wdio execution command natively
             // Otherwise we just run the custom execution command as-is
             if (!command)
-                throw new Error("Missing execution command.");
+                throw McpErrors.configValidationFailed('No test execution command found. Set project.executionCommand or provide overrideCommand.', 'run_cucumber_test');
             // Issue #17 FIX: Parse command into executable + args, then build args array
             const parts = command.split(/\s+/).filter(p => p.length > 0);
             const exe = parts.shift(); // Get first part (e.g., 'npx')
             if (!exe)
-                throw new Error("Invalid execution command.");
+                throw McpErrors.invalidExecutable(command || '<empty>', 'run_cucumber_test');
             // Additional safety: validate executable name doesn't contain path traversal
             if (exe.includes('..') || exe.includes('/') && !exe.startsWith('/')) {
-                throw new Error("Invalid executable: must be a binary name or absolute path.");
+                throw McpErrors.invalidExecutable(exe, 'run_cucumber_test');
             }
             const args = parts;
             let configName = 'wdio.conf.ts';
@@ -427,7 +427,7 @@ export class ExecutionService {
         // 1. Explicit parameter
         if (explicitTimeoutMs !== undefined && explicitTimeoutMs !== null) {
             if (typeof explicitTimeoutMs !== 'number' || explicitTimeoutMs <= 0) {
-                throw new Error(`Invalid timeoutMs: must be a positive number, got ${explicitTimeoutMs}`);
+                throw McpErrors.invalidTimeout(explicitTimeoutMs, 'run_cucumber_test');
             }
             // Cap at 4 hours for large test suites (Issue L2 fix)
             const cappedTimeout = Math.min(explicitTimeoutMs, 14400000);

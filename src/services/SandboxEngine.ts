@@ -22,6 +22,7 @@
  */
 
 import * as vm from 'node:vm';
+import { McpErrors } from '../types/ErrorSystem.js';
 
 /**
  * Defines the shape of a service method that can be exposed to the sandbox.
@@ -156,13 +157,13 @@ export async function executeSandbox(
   // function so the sandbox can `await` it.
   const apiBridge: Record<string, (...args: any[]) => Promise<any>> = {};
   for (const [name, fn] of Object.entries(apiRegistry)) {
-    apiBridge[name] = async (...args: any[]) => {
-      try {
-        return await fn(...args);
-      } catch (err) {
-        throw new Error(`forge.api.${name}() failed: ${(err as Error).message}`);
-      }
-    };
+      apiBridge[name] = async (...args: any[]) => {
+        try {
+          return await fn(...args);
+        } catch (err) {
+          throw McpErrors.sandboxApiFailed(`forge.api.${name}() failed: ${(err as Error).message}`, err as Error, 'sandbox_engine');
+        }
+      };
   }
 
   // Freeze the API bridge to prevent modification

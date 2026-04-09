@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import path from 'path';
 import type { McpConfigService } from "../services/McpConfigService.js";
 import type { AuditLocatorService } from "../services/AuditLocatorService.js";
 import { textResult } from "./_helpers.js";
@@ -22,7 +23,16 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
     async (args) => {
       const config = configService.read(args.projectRoot);
       const paths = configService.getPaths(config);
-      const report = await auditLocatorService.audit(args.projectRoot, [paths.pagesRoot, 'locators', 'src/locators']);
+
+      // Build candidate locator dirs honoring configured paths with sensible fallbacks
+      const locatorsCandidates = [
+        paths.pagesRoot,
+        paths.locatorsRoot,
+        'locators',
+        path.join('src', path.basename(paths.locatorsRoot || 'locators'))
+      ].map(p => typeof p === 'string' ? p : '').filter(Boolean);
+
+      const report = await auditLocatorService.audit(args.projectRoot, locatorsCandidates);
       return textResult(report.markdownReport);
     }
   );

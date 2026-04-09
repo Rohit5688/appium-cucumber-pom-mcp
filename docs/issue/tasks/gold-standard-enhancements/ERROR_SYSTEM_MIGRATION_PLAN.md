@@ -50,6 +50,7 @@ Identify needed error codes and add to ErrorSystem:
    
 2. **SessionManager.ts** (HIGH) — 4 replacements
    - Replace config validation with `McpErrors.configValidationFailed()`
+   - Decision: keep the unused private helper `delay(ms)` in SessionManager for potential future async waits
 
 3. **FileWriterService.ts** (MEDIUM) — 2 replacements
    - Replace generic errors with `McpErrors.stringNotFound()`, `McpErrors.fileOperationFailed()`
@@ -58,14 +59,14 @@ Identify needed error codes and add to ErrorSystem:
    - Replace validation with `McpErrors.invalidCredential()`
 
 5. **SandboxEngine.ts** (MEDIUM) — 1 replacement
-   - Replace API error with `McpErrors.sandboxApiFailed()`
+  - [x] Replace API error with `McpErrors.sandboxApiFailed()`
 
 6. **ProjectMaintenanceService.ts** (LOW) — 3 replacements
    - Replace validation with `McpErrors.projectValidationFailed()`
 
 7. **ProjectSetupService.ts** (LOW) — 11 replacements in scaffolded strings
    - These are code templates for generated files, not runtime errors
-   - Either: (a) leave as-is (user code), or (b) update templates to generate McpError throws
+   - Decision: leave scaffold templates unchanged (user code)
 
 ### Phase 3: Tool Updates (1 hour)
 - [ ] Audit all tools in `src/tools/*.ts` to ensure they catch and serialize McpErrors

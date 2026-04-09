@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { McpConfigService } from './McpConfigService.js';
 /**
  * NavigationGraphService - Analyzes project step definitions to build navigation understanding
  *
@@ -18,8 +19,20 @@ export class NavigationGraphService {
     graphPath;
     /** Tracks the origin of the current graph: 'static' | 'live' | 'seed' */
     mapSource = 'static';
+    mcpConfigService;
+    paths;
+    fileToSignatures = {};
     constructor(projectRoot) {
-        this.graphPath = path.join(projectRoot, '.appforge', 'navigation-graph.json');
+        this.graphPath = path.join(projectRoot, '.AppForge', 'navigation-graph.json');
+        // Initialize config service and resolved paths (fallback to defaults on error)
+        this.mcpConfigService = new McpConfigService();
+        try {
+            const cfg = this.mcpConfigService.read(projectRoot);
+            this.paths = this.mcpConfigService.getPaths(cfg);
+        }
+        catch {
+            this.paths = this.mcpConfigService.getPaths({});
+        }
         this.graph = this.loadGraph();
     }
     /**
@@ -564,13 +577,22 @@ export class NavigationGraphService {
     }
     findStepDefinitionFiles(projectRoot) {
         const files = [];
-        const searchDirs = [
-            path.join(projectRoot, 'src', 'step-definitions'),
-            path.join(projectRoot, 'src', 'steps'),
+        const stepsRoot = this.paths?.stepsRoot ?? 'src/step-definitions';
+        const locatorsRoot = this.paths?.locatorsRoot ?? 'src/locators';
+        const utilsRoot = this.paths?.utilsRoot ?? 'src/utils';
+        const configRoot = this.paths?.configRoot ?? 'src/config';
+        const candidates = [
+            path.join(projectRoot, stepsRoot),
+            path.join(projectRoot, 'src', path.basename(stepsRoot)),
+            path.join(projectRoot, stepsRoot.replace(/^src[\/\\]/, '')),
             path.join(projectRoot, 'step-definitions'),
-            path.join(projectRoot, 'steps')
+            path.join(projectRoot, 'steps'),
+            // Also consider utility and config folders which may contain helper step wrappers
+            path.join(projectRoot, utilsRoot),
+            path.join(projectRoot, locatorsRoot),
+            path.join(projectRoot, configRoot)
         ];
-        for (const dir of searchDirs) {
+        for (const dir of candidates) {
             if (fs.existsSync(dir)) {
                 const dirFiles = fs.readdirSync(dir)
                     .filter(file => file.endsWith('.ts') || file.endsWith('.js'))
@@ -578,17 +600,27 @@ export class NavigationGraphService {
                 files.push(...dirFiles);
             }
         }
-        return files;
+        // De-duplicate
+        return Array.from(new Set(files));
     }
     findPageObjectFiles(projectRoot) {
         const files = [];
-        const searchDirs = [
-            path.join(projectRoot, 'src', 'pages'),
-            path.join(projectRoot, 'src', 'page-objects'),
+        const pagesRoot = this.paths?.pagesRoot ?? 'src/pages';
+        const locatorsRoot = this.paths?.locatorsRoot ?? 'src/locators';
+        const utilsRoot = this.paths?.utilsRoot ?? 'src/utils';
+        const configRoot = this.paths?.configRoot ?? 'src/config';
+        const candidates = [
+            path.join(projectRoot, pagesRoot),
+            path.join(projectRoot, 'src', path.basename(pagesRoot)),
+            path.join(projectRoot, pagesRoot.replace(/^src[\/\\]/, '')),
             path.join(projectRoot, 'pages'),
-            path.join(projectRoot, 'page-objects')
+            path.join(projectRoot, 'page-objects'),
+            // Also inspect utils and locators for Page Object style modules
+            path.join(projectRoot, utilsRoot),
+            path.join(projectRoot, locatorsRoot),
+            path.join(projectRoot, configRoot)
         ];
-        for (const dir of searchDirs) {
+        for (const dir of candidates) {
             if (fs.existsSync(dir)) {
                 const dirFiles = fs.readdirSync(dir)
                     .filter(file => file.endsWith('.ts') || file.endsWith('.js'))
@@ -596,7 +628,8 @@ export class NavigationGraphService {
                 files.push(...dirFiles);
             }
         }
-        return files;
+        // De-duplicate
+        return Array.from(new Set(files));
     }
     getLineNumber(text, index) {
         return text.substring(0, index).split('\n').length - 1;
@@ -683,15 +716,27 @@ export class NavigationGraphService {
             try {
                 const data = fs.readFileSync(this.graphPath, 'utf-8');
                 const parsed = JSON.parse(data);
-                // Convert plain object to Map
+                // Rebuild Map<string, NavigationNode> and restore Date objects
                 const nodes = new Map();
-                for (const [key, value] of Object.entries(parsed.nodes || {})) {
-                    nodes.set(key, value);
+                const rawNodes = parsed.nodes || {};
+                for (const [key, rawNode] of Object.entries(rawNodes)) {
+                    const rn = rawNode;
+                    // Ensure arrays exist
+                    const node = {
+                        screen: rn.screen,
+                        elements: (rn.elements || []),
+                        connections: (rn.connections || []),
+                        visitCount: rn.visitCount || 0,
+                        lastVisited: rn.lastVisited ? new Date(rn.lastVisited) : new Date(),
+                        screenSignature: rn.screenSignature || ''
+                    };
+                    nodes.set(key, node);
                 }
+                this.fileToSignatures = parsed.fileToSignatures || {};
                 return {
                     nodes,
                     entryPoints: parsed.entryPoints || [],
-                    lastUpdated: new Date(parsed.lastUpdated || Date.now())
+                    lastUpdated: parsed.lastUpdated ? new Date(parsed.lastUpdated) : new Date()
                 };
             }
             catch (error) {
@@ -710,11 +755,20 @@ export class NavigationGraphService {
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
             }
-            // Convert Map to plain object for JSON serialization
+            // Serialize Map to plain object and convert Dates to ISO strings
+            const nodesObj = {};
+            for (const [key, node] of this.graph.nodes) {
+                nodesObj[key] = {
+                    ...node,
+                    // Serialize nested Date
+                    lastVisited: node.lastVisited ? node.lastVisited.toISOString() : new Date().toISOString()
+                };
+            }
             const serializable = {
-                nodes: Object.fromEntries(this.graph.nodes),
+                nodes: nodesObj,
                 entryPoints: this.graph.entryPoints,
-                lastUpdated: new Date().toISOString() // Update timestamp
+                lastUpdated: new Date().toISOString(), // Update timestamp
+                fileToSignatures: this.fileToSignatures
             };
             fs.writeFileSync(this.graphPath, JSON.stringify(serializable, null, 2));
             // P2 IMPROVEMENT 2: Save file hashes for change detection
@@ -831,48 +885,66 @@ export class NavigationGraphService {
      * Update graph incrementally for a small number of changed files
      */
     async updateGraphIncremental(projectRoot, changedFiles) {
-        // Remove connections from nodes affected by changed files
-        const affectedScreens = new Set();
-        for (const file of changedFiles) {
-            // Identify which screens are affected by this file
-            for (const [screenName, node] of this.graph.nodes) {
-                // Check if any connections reference this file
-                for (const edge of node.connections) {
-                    if (edge.stepCode && file.includes(path.basename(file))) {
-                        affectedScreens.add(screenName);
-                        break;
-                    }
-                }
-            }
-        }
-        // Re-analyze only the changed files
-        const patterns = [];
+        // Build a mapping of file -> signatures extracted from that file
+        const signaturesByFile = {};
+        // First, re-analyze each changed file individually and collect patterns
         for (const file of changedFiles) {
             try {
                 const content = fs.readFileSync(file, 'utf-8');
+                let filePatterns = [];
                 if (file.includes('step-definition') || file.includes('steps')) {
-                    patterns.push(...this.extractNavigationPatterns(content, file));
+                    filePatterns = this.extractNavigationPatterns(content, file);
                 }
-                else if (file.includes('page')) {
-                    patterns.push(...this.extractPageObjectNavigationMethods(content, file));
+                else {
+                    // Treat as page object by default if not clearly a step file
+                    filePatterns = this.extractPageObjectNavigationMethods(content, file);
                 }
+                // Collect signatures (use stepText or methodName as the signature)
+                const sigs = filePatterns.map(p => (p.stepText || p.methodName || p.methodName || '').toString()).filter(Boolean);
+                signaturesByFile[file] = sigs;
             }
             catch (error) {
                 console.error(`[NavigationGraph] Error analyzing ${file}:`, error);
+                signaturesByFile[file] = [];
             }
         }
-        // Remove old connections from affected screens
-        for (const screenName of affectedScreens) {
-            const node = this.graph.nodes.get(screenName);
-            if (node) {
-                node.connections = node.connections.filter(edge => !changedFiles.some(f => edge.stepCode && f.includes(path.basename(f))));
-            }
+        // Remove connections produced by these files using explicit signatures
+        for (const [screenName, node] of this.graph.nodes) {
+            node.connections = node.connections.filter(edge => {
+                if (!edge.stepCode)
+                    return true; // keep edges without provenance
+                // If any changed file produced a signature that matches this edge, remove it
+                for (const file of Object.keys(signaturesByFile)) {
+                    const sigs = signaturesByFile[file] || [];
+                    if (sigs.includes(edge.stepCode)) {
+                        return false; // drop this edge
+                    }
+                }
+                return true;
+            });
         }
-        // Add new patterns
-        for (const pattern of patterns) {
-            const screenInfo = this.inferScreenConnection(pattern);
-            if (screenInfo) {
-                this.addGraphNode(screenInfo.fromScreen, screenInfo.toScreen, screenInfo.action);
+        // Re-add patterns from changed files
+        for (const file of Object.keys(signaturesByFile)) {
+            try {
+                const content = fs.readFileSync(file, 'utf-8');
+                let filePatterns = [];
+                if (file.includes('step-definition') || file.includes('steps')) {
+                    filePatterns = this.extractNavigationPatterns(content, file);
+                }
+                else {
+                    filePatterns = this.extractPageObjectNavigationMethods(content, file);
+                }
+                for (const pattern of filePatterns) {
+                    const screenInfo = this.inferScreenConnection(pattern);
+                    if (screenInfo) {
+                        this.addGraphNode(screenInfo.fromScreen, screenInfo.toScreen, screenInfo.action);
+                    }
+                }
+                // Update mapping for this file to the latest signatures
+                this.fileToSignatures[file] = (filePatterns.map(p => (p.stepText || p.methodName || '').toString()).filter(Boolean));
+            }
+            catch (error) {
+                console.error(`[NavigationGraph] Error re-processing ${file}:`, error);
             }
         }
         // Re-identify entry points

@@ -138,7 +138,9 @@ Generate: .feature file + step definitions + Page Object class.
       featuresRoot: 'features',
       pagesRoot: 'pages',
       stepsRoot: 'step-definitions',
-      utilsRoot: 'utils'
+      utilsRoot: 'utils',
+      locatorsRoot: 'locators',
+      credentialsRoot: 'credentials'
     };
     paths.pagesRoot = path.relative(projectRoot, this.resolvePagesDir(projectRoot, paths.pagesRoot));
 
@@ -176,13 +178,15 @@ Generate: .feature file + step definitions + Page Object class.
     const credStrategy = config.credentials?.strategy ?? 'None configured';
     const schemaHint = config.credentials?.schemaHint ?? '';
 
+    const credentialsDir = ((paths as any)?.credentialsRoot) || 'credentials';
+
     const credentialsInstruction = config.credentials
       ? `\n## CREDENTIALS & ENVIRONMENTS
 - Environments: ${environments}
 - Current Active: ${currentEnvironment}
 - Credential Strategy: ${credStrategy}
 ${schemaHint ? `- Schema Hint: ${schemaHint}` : ''}
-⚠️ If this test requires user credentials, YOU MUST generate a simple TypeScript reader function/utility that reads the JSON file based on the credential pattern: ${credStrategy}. Do NOT hardcode credentials. Store/read credentials from the \`credentials/\` directory.`
+⚠️ If this test requires user credentials, YOU MUST generate a simple TypeScript reader function/utility that reads the JSON file based on the credential pattern: ${credStrategy}. Do NOT hardcode credentials. Store/read credentials from the \`${credentialsDir}/\` directory.`
       : '';
 
     // Decide output file type based on architecture

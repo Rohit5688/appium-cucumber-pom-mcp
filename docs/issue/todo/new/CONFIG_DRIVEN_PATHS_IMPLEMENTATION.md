@@ -92,7 +92,8 @@ NavigationGraphService received a focused set of improvements to fully honor con
 - [x] Scan `src/tools/` for hardcoded paths; updated `_helpers.getSkillPath` and `audit_mobile_locators` to prefer configured paths
 - [x] AuditLocatorService.ts — made audit() read MCP config and build scan dirs from `paths.pagesRoot`, `paths.locatorsRoot`, `paths.testDataRoot`, `locators`, and fallback `src/<basename(paths.locatorsRoot)>`; detectArchitecture and parseYamlLocators now use config-driven candidates, dedupe, and exclude noise folders; TypeScript parsing expanded to include JS/TSM extensions controlled by config or auto-detection
 - [ ] Update tests to assert files using resolved config paths rather than hardcoded `src/...` when appropriate
-- [ ] Add migration logic in `migrateIfNeeded()` to upgrade older configs that used different path formats
+- [x] Add migration logic in `migrateIfNeeded()` to upgrade older configs that used different path formats
+- [x] Ensure schema generation after scaffold (`ensureSchema()` added and called from setup_project)
 - [ ] Add unit/integration tests:
   - default resolution
   - partial config overrides

@@ -20,15 +20,19 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Helper to reliably find skills directory whether running from src/ or dist/
-function getSkillPath(skillFileName: string) {
-  // First try relative to __dirname
-  const dirPath = path.join(__dirname, '../skills', skillFileName);
-  if (fs.existsSync(dirPath)) return dirPath;
-  
-  // Fallback
-  return path.join(process.cwd(), 'src/skills', skillFileName);
-}
+ // Helper to reliably find skills directory whether running from src/ or dist/
+ function getSkillPath(skillFileName: string) {
+   // First try relative to __dirname (bundled / dist scenario)
+   const dirPath = path.join(__dirname, '../skills', skillFileName);
+   if (fs.existsSync(dirPath)) return dirPath;
+ 
+   // Then try workspace-level 'skills' (preferred for repo root)
+   const rootSkill = path.join(process.cwd(), 'skills', skillFileName);
+   if (fs.existsSync(rootSkill)) return rootSkill;
+ 
+   // Finally fall back to legacy src/skills for dev setups
+   return path.join(process.cwd(), 'src', 'skills', skillFileName);
+ }
 
 const ANDROID_SKILL = fs.existsSync(getSkillPath('android.md')) 
   ? fs.readFileSync(getSkillPath('android.md'), 'utf-8') 

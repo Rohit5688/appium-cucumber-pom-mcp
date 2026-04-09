@@ -204,11 +204,29 @@ export function isRetryableError(err: unknown): boolean {
 }
 
 /** Convert any error to a safe MCP response */
-export function toMcpErrorResponse(err: unknown, toolName?: string): { isError: true; content: Array<{ type: 'text'; text: string }> } {
-  if (isMcpError(err)) {
-    return err.toMcpResponse();
-  }
-  const message = err instanceof Error ? err.message : String(err);
-  const wrappedError = new McpError(message, -32000 as McpErrorCode, { toolName });
-  return wrappedError.toMcpResponse();
+export function toMcpErrorResponse(err: unknown, toolName?: string): { isError: true; content: Array<{ type: 'text'; text: string }>; rpcError: { code: number; message: string; data?: any } } {
+  // Ensure we always return an MCP-friendly payload while also including
+  // a JSON-RPC compatible error object under `rpcError` for external clients.
+  const mcpErr: McpError = isMcpError(err)
+    ? err
+    : new McpError(err instanceof Error ? err.message : String(err), -32000 as McpErrorCode, { toolName });
+
+  const base = mcpErr.toMcpResponse();
+
+  const rpcError = {
+    code: mcpErr.code,
+    message: mcpErr.message,
+    data: {
+      toolName: mcpErr.toolName,
+      retryable: mcpErr.retryable,
+      cause: mcpErr.cause ? String(mcpErr.cause.message) : undefined,
+      timestamp: mcpErr.timestamp
+    }
+  };
+
+  return {
+    isError: true,
+    content: base.content,
+    rpcError
+  };
 }

@@ -8,6 +8,7 @@ import type { SandboxApiRegistry } from "../services/SandboxEngine.js";
 import { FileStateService } from "../services/FileStateService.js";
 import { FileGuard } from "../utils/FileGuard.js";
 import { textResult, truncate } from "./_helpers.js";
+import { toMcpErrorResponse } from "../types/ErrorSystem.js";
 
 export function registerExecuteSandboxCode(
   server: McpServer,
@@ -31,18 +32,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
     async (args) => {
       // Inline validation for required 'script' field
       if (!args.script || args.script === '') {
-        return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              code: 'VALIDATION_ERROR',
-              message: 'Missing required argument(s): script',
-              invalidFields: ['script'],
-              hint: 'Provide all required fields and retry.'
-            }, null, 2)
-          }],
-          isError: true as const
-        };
+        return toMcpErrorResponse(new Error('Missing required argument(s): script'), 'execute_sandbox_code');
       }
 
       const apiRegistry: SandboxApiRegistry = {
@@ -102,10 +92,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         const joined = parts.join('\n\n');
         return textResult(truncate(joined, "narrow your script's return value to reduce output"));
       } else {
-        return {
-          content: [{ type: "text" as const, text: `❌ SANDBOX ERROR:\n${sandboxResult.error}\n\nLogs:\n${sandboxResult.logs.join('\n')}\n\n⏱️ Failed after ${sandboxResult.durationMs}ms` }],
-          isError: true
-        };
+        return toMcpErrorResponse(new Error(`SANDBOX ERROR: ${sandboxResult.error}`), 'execute_sandbox_code');
       }
     }
   );

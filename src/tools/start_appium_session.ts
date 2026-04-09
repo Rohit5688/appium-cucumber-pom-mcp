@@ -5,6 +5,7 @@ import { ContextManager } from '../services/ContextManager.js';
 import { textResult } from "./_helpers.js";
 import { SelfHealingService } from '../services/SelfHealingService.js';
 import { TokenBudgetService } from '../services/TokenBudgetService.js';
+import { toMcpErrorResponse } from '../types/ErrorSystem.js';
 
 export function registerStartAppiumSession(
   server: McpServer,
@@ -68,18 +69,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         };
         return textResult(JSON.stringify(data, null, 2), data);
       } catch (error: any) {
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              action: 'ERROR',
-              code: 'SESSION_START_FAILED',
-              message: error.message || String(error),
-              hint: 'Verify Appium server is running (npx appium), device/emulator is connected, and mcp-config.json has valid capabilities.'
-            }, null, 2)
-          }],
-          isError: true
-        };
+        return toMcpErrorResponse(error, 'start_appium_session');
       }
     }
   );

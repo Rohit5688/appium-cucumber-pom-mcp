@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { McpError } from "../types/ErrorSystem.js";
+import { McpError, McpErrorCode, toMcpErrorResponse } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerRequestUserClarification(
@@ -71,43 +71,18 @@ OUTPUT INSTRUCTIONS: Display the question as-is. Do not rephrase or add commenta
         return await safeExecute(async () => textResult(output));
       } catch (err: any) {
         if (err instanceof ClarificationRequired) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                action: 'CLARIFICATION_REQUIRED',
-                question: err.question,
-                context: err.context,
-                options: err.options ?? []
-              }, null, 2)
-            }]
+          const details = {
+            question: err.question,
+            context: err.context,
+            options: err.options ?? []
           };
+          const mcpErr = new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'request_user_clarification', cause: new Error(JSON.stringify(details)) });
+          return toMcpErrorResponse(mcpErr, 'request_user_clarification');
         }
         if (err instanceof McpError) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                action: 'ERROR',
-                code: err.code,
-                message: err.message,
-                remediation: err.message
-              }, null, 2)
-            }],
-            isError: true
-          };
+          return toMcpErrorResponse(err, 'request_user_clarification');
         }
-        return {
-          content: [{
-            type: "text" as const, text: JSON.stringify({
-              action: 'ERROR',
-              code: 'UNHANDLED_ERROR',
-              message: err.message || String(err),
-              hint: 'Verify that projectRoot is an absolute path, mcp-config.json is valid JSON, and the Appium server is running (if using live session tools).'
-            }, null, 2)
-          }],
-          isError: true
-        };
+        return toMcpErrorResponse(err, 'request_user_clarification');
       }
     }
   );

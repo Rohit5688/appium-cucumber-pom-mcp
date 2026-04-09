@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { TestDataService } from "../services/TestDataService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { McpError } from "../types/ErrorSystem.js";
+import { McpError, toMcpErrorResponse } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerGenerateTestDataFactory(
@@ -41,18 +41,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
           };
         }
         if (err instanceof McpError) {
-          return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({
-                action: 'ERROR',
-                code: err.code,
-                message: err.message,
-                remediation: err.message
-              }, null, 2)
-            }],
-            isError: true
-          };
+          return toMcpErrorResponse(err, 'generate_test_data_factory');
         }
         return {
           content: [{
