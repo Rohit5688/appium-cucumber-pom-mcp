@@ -53,6 +53,7 @@ export const McpErrorCode = {
   SANDBOX_API_FAILED:       -32075,
   PROJECT_VALIDATION_FAILED:-32076,
   STRING_NOT_FOUND:         -32077,
+  FILE_OPERATION_FAILED:    -32078,
 } as const;
 
 export type McpErrorCode = typeof McpErrorCode[keyof typeof McpErrorCode];
@@ -178,6 +179,9 @@ export const McpErrors = {
 
   projectValidationFailed: (details: string, toolName?: string) =>
     new McpError(`Project validation failed: ${details}`, McpErrorCode.PROJECT_VALIDATION_FAILED, { toolName }),
+
+  fileOperationFailed: (details: string, cause?: Error, toolName?: string) =>
+    new McpError(`File operation failed: ${details}`, McpErrorCode.FILE_OPERATION_FAILED, { cause, toolName }),
 
   stringNotFound: (snippet: string, toolName?: string) =>
     new McpError(`String not found: ${snippet}`, McpErrorCode.STRING_NOT_FOUND, { toolName }),
