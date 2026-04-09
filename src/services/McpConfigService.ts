@@ -86,6 +86,7 @@ export interface ReportingConfig {
 export interface McpConfig {
   $schema?: string;
   version?: string;
+  schemaVersion?: string;
   project: {
     language: string;
     testFramework: string;
@@ -106,8 +107,11 @@ export interface McpConfig {
     pagesRoot?: string;
     stepsRoot?: string;
     utilsRoot?: string;
+    locatorsRoot?: string;
     testDataRoot?: string;
+    credentialsRoot?: string;
     reportsRoot?: string;
+    configRoot?: string; 
   };
   execution?: {
     timeoutMs?: number;
@@ -182,14 +186,14 @@ export interface McpConfig {
    */
   credentials?: {
     /**
-     * 'role-env-matrix' — credentials[role][env] in single file
-     * 'per-env-files'   — credentials/users.{env}.json per environment  
-     * 'unified-key'     — credentials['{role}-{env}'] in single file
+     * 'role-env-matrix' — credentials[role][env] in single file (see paths.credentialsRoot/users.json)
+     * 'per-env-files'   — <paths.credentialsRoot>/users.{env}.json per environment
+     * 'unified-key'     — credentials['{role}-{env}'] in single file (see paths.credentialsRoot/users.json)
      * 'custom'          — user-defined; schemaHint describes the format
      */
     strategy: 'role-env-matrix' | 'per-env-files' | 'unified-key' | 'custom';
 
-    /** Path to the credential file (relative to projectRoot). Default: 'credentials/users.json' */
+    /** Path to the credential file (relative to projectRoot). Default: 'src/credentials/users.json' (override with paths.credentialsRoot) */
     file?: string;
 
     /** For strategy='custom': plain-English description of the JSON structure, used in LLM prompts */
@@ -204,17 +208,25 @@ export interface BuildProfile {
   env?: string;
 }
 
-/** Returns safe default paths merged with config paths. */
+/**
+ * Returns safe default paths merged with config paths.
+ * ALL paths are relative to PROJECT ROOT for consistency.
+ * Users can customize to any structure: 'src/features', 'test/e2e', 'features', etc.
+ */
 function resolvePaths(config: McpConfig) {
   return {
-    featuresRoot: config.paths?.featuresRoot ?? 'features',
-    pagesRoot: config.paths?.pagesRoot ?? 'pages',
-    stepsRoot: config.paths?.stepsRoot ?? 'step-definitions',
-    utilsRoot: config.paths?.utilsRoot ?? 'utils',
-    testDataRoot: config.paths?.testDataRoot ?? 'src/test-data',
-    reportsRoot: config.paths?.reportsRoot ?? 'reports'
+    featuresRoot: config.paths?.featuresRoot || 'src/features',
+    pagesRoot: config.paths?.pagesRoot || 'src/pages',
+    stepsRoot: config.paths?.stepsRoot || 'src/step-definitions',
+    utilsRoot: config.paths?.utilsRoot || 'src/utils',
+    locatorsRoot: config.paths?.locatorsRoot || 'src/locators',
+    testDataRoot: config.paths?.testDataRoot || 'src/test-data',
+    credentialsRoot: config.paths?.credentialsRoot || 'src/credentials',
+    reportsRoot: config.paths?.reportsRoot || 'reports',
+    configRoot: config.paths?.configRoot || 'src/config'  // ADD THIS LINE
   };
 }
+
 
 export class McpConfigService {
   private readonly configFileName = 'mcp-config.json';
@@ -245,14 +257,73 @@ export class McpConfigService {
 
     try {
       const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      if (!raw.version || raw.version !== this.CURRENT_VERSION) {
-        raw.version = this.CURRENT_VERSION;
-        raw.$schema = './.AppForge/configSchema.json'; // Enables IDE autocompletion
-        fs.writeFileSync(configPath, JSON.stringify(raw, null, 2), 'utf8');
-        this.generateSchema(projectRoot);
+
+      // Idempotent skip: already migrated
+      if (raw.version === this.CURRENT_VERSION && raw.schemaVersion) return;
+
+      // Ensure .AppForge exists for backups/logs
+      const appForgeDir = path.join(projectRoot, '.AppForge');
+      if (!fs.existsSync(appForgeDir)) fs.mkdirSync(appForgeDir, { recursive: true });
+
+      // Create backup before mutating
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupName = `mcp-config.backup.${ts}.json`;
+      const backupPath = path.join(appForgeDir, backupName);
+      fs.writeFileSync(backupPath, JSON.stringify(raw, null, 2), 'utf8');
+
+      // -------------- Normalization & Defaults --------------
+      // Ensure paths object exists
+      raw.paths = raw.paths || {};
+
+      // 1) Normalize legacy bare paths: if user set e.g. "features": "features"
+      //    but project has src/<value>, prefer 'src/<value>' to preserve expectation.
+      const pathKeys = ['featuresRoot','pagesRoot','stepsRoot','utilsRoot','locatorsRoot','testDataRoot','credentialsRoot','reportsRoot','configRoot'];
+      for (const k of pathKeys) {
+        const v = raw.paths[k];
+        if (typeof v === 'string' && v.length > 0) {
+          // if not absolute and doesn't already start with 'src/' check for src/<v>
+          if (!path.isAbsolute(v) && !v.startsWith('src/')) {
+            const candidate = path.join(projectRoot, 'src', v);
+            try {
+              if (fs.existsSync(candidate)) {
+                // store relative form 'src/<v>' to keep config consistent
+                raw.paths[k] = path.join('src', v).replace(/\\/g, '/');
+              }
+            } catch {
+              // ignore fs errors; leave user value as-is
+            }
+          }
+        }
       }
-    } catch (error) {
-      // Ignored here if JSON is invalid, read() will throw properly
+
+      // 2) Fill missing path keys with resolvePaths defaults (non-destructive)
+      const defaults = resolvePaths(raw as McpConfig);
+      for (const [key, defVal] of Object.entries(defaults)) {
+        if (!raw.paths[key]) {
+          raw.paths[key] = defVal;
+        }
+      }
+
+      // 3) Update version/schema metadata and $schema pointer
+      raw.version = this.CURRENT_VERSION;
+      if (!raw.schemaVersion) raw.schemaVersion = '1.0';
+      raw.$schema = './.AppForge/configSchema.json';
+
+      // Persist changes
+      fs.writeFileSync(configPath, JSON.stringify(raw, null, 2), 'utf8');
+
+      // Generate schema file to support IDE autocompletion (no-op if exists)
+      this.generateSchema(projectRoot);
+
+      // Append migration log
+      const logPath = path.join(appForgeDir, 'migration.log');
+      const logLine = `${new Date().toISOString()} Migrated mcp-config.json -> version=${raw.version} schemaVersion=${raw.schemaVersion} (backup: ${backupName})\n`;
+      fs.appendFileSync(logPath, logLine, 'utf8');
+      Logger.info(`[migrateIfNeeded] normalization applied; backup: ${backupName}`);
+
+    } catch (error: any) {
+      // If JSON is invalid, leave file untouched — read() will surface the error to the caller.
+      Logger.warn(`[migrateIfNeeded] skipped migration due to error parsing mcp-config.json: ${error?.message}`);
     }
   }
 
