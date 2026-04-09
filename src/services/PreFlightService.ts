@@ -1,4 +1,6 @@
 import * as http from 'http';
+import * as path from 'path';
+import * as fs from 'fs';
 import { PreFlightCheck, PreFlightReport } from '../types/PermissionResult.js';
 
 /**
@@ -172,8 +174,8 @@ export class PreFlightService {
   }
 
   private checkConfigFile(): PreFlightCheck {
-    const configPath = require('path').join(process.cwd(), 'mcp-config.json');
-    const exists = require('fs').existsSync(configPath);
+    const configPath = path.join(process.cwd(), 'mcp-config.json');
+    const exists = fs.existsSync(configPath);
 
     return {
       name: 'config_file',

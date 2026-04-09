@@ -90,10 +90,25 @@ export class AuditLocatorService {
                         severity = 'critical';
                         recommendation = '❌ Replace XPath with accessibility-id (~) for stability';
                     }
+                    else if (trimmed.startsWith('id=')) {
+                        strategy = 'id';
+                        severity = 'warning';
+                        recommendation = '⚠️ id= selectors can break on app updates. Use accessibility-id where possible';
+                    }
                     else if (trimmed.includes(':id/')) {
                         strategy = 'resource-id';
                         severity = 'warning';
                         recommendation = '⚠️ Resource-id can break on app updates. Use accessibility-id where possible';
+                    }
+                    else if (trimmed.startsWith('.')) {
+                        strategy = 'css-class';
+                        severity = 'critical';
+                        recommendation = '❌ CSS class selectors are brittle. Use accessibility-id (~) instead';
+                    }
+                    else if (trimmed.startsWith('#')) {
+                        strategy = 'css-id';
+                        severity = 'critical';
+                        recommendation = '❌ CSS ID selectors are brittle. Use accessibility-id (~) instead';
                     }
                     else if (trimmed.startsWith('-ios') || trimmed.startsWith('-android')) {
                         strategy = 'mobile-selector';

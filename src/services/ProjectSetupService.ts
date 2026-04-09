@@ -1062,7 +1062,7 @@ export class AppiumDriver {
   static async getPageSource() { return await browser.getPageSource(); }
   static async takeScreenshot(filePath?: string) {
     const base64 = await browser.takeScreenshot();
-    if (filePath) require('fs').writeFileSync(filePath, base64, 'base64');
+    if (filePath) fs.writeFileSync(filePath, base64, 'base64');
     return base64;
   }
   static async openDeepLink(url: string) {

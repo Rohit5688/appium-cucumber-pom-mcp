@@ -215,6 +215,42 @@ export class ExecutionService {
           args.push(`--cucumberOpts.tagExpression=${tagExpression}`);
         }
 
+        // Issue #5 FIX: Inject capabilities from mcp-config.json if available
+        // This prevents "Missing capabilities" errors when wdio.conf.ts has incomplete/invalid capabilities
+        if (config?.mobile?.capabilitiesProfiles) {
+          const profiles = config.mobile.capabilitiesProfiles;
+          const profileNames = Object.keys(profiles);
+          
+          // Use first available profile or platform-specific profile
+          let selectedProfile = profileNames[0];
+          if (options?.platform && profileNames.includes(options.platform)) {
+            selectedProfile = options.platform;
+          }
+          
+          if (selectedProfile && profiles[selectedProfile]) {
+            const caps = profiles[selectedProfile];
+            
+            // Inject critical capabilities as CLI args to override wdio.conf.ts
+            if (caps.platformName) {
+              args.push(`--capabilities.platformName=${caps.platformName}`);
+            }
+            if (caps['appium:deviceName']) {
+              args.push(`--capabilities.appium:deviceName=${caps['appium:deviceName']}`);
+            }
+            if (caps['appium:automationName']) {
+              args.push(`--capabilities.appium:automationName=${caps['appium:automationName']}`);
+            }
+            if (caps['appium:app']) {
+              args.push(`--capabilities.appium:app=${caps['appium:app']}`);
+            }
+            if (caps['appium:udid']) {
+              args.push(`--capabilities.appium:udid=${caps['appium:udid']}`);
+            }
+            
+            Logger.info(`Injecting capabilities from profile "${selectedProfile}": ${caps.platformName} / ${caps['appium:deviceName']}`);
+          }
+        }
+
         // Additional args (already validated)
         if (options?.specificArgs) {
           // Split on spaces if multiple args were provided, filter empty strings
@@ -533,10 +569,10 @@ export class ExecutionService {
       if (typeof explicitTimeoutMs !== 'number' || explicitTimeoutMs <= 0) {
         throw new Error(`Invalid timeoutMs: must be a positive number, got ${explicitTimeoutMs}`);
       }
-      // Cap at 2 hours for safety
-      const cappedTimeout = Math.min(explicitTimeoutMs, 7200000);
+      // Cap at 4 hours for large test suites (Issue L2 fix)
+      const cappedTimeout = Math.min(explicitTimeoutMs, 14400000);
       if (cappedTimeout !== explicitTimeoutMs) {
-        Logger.warn(`Timeout capped at 2 hours (7200000ms). Requested: ${explicitTimeoutMs}ms`);
+        Logger.warn(`Timeout capped at 4 hours (14400000ms). Requested: ${explicitTimeoutMs}ms`);
       }
       return { value: cappedTimeout, source: 'explicit' };
     }
@@ -545,7 +581,7 @@ export class ExecutionService {
     if (config?.execution?.timeoutMs) {
       const configTimeout = config.execution.timeoutMs;
       if (typeof configTimeout === 'number' && configTimeout > 0) {
-        const cappedTimeout = Math.min(configTimeout, 7200000);
+        const cappedTimeout = Math.min(configTimeout, 14400000);
         return { value: cappedTimeout, source: 'mcp-config' };
       }
     }
@@ -556,8 +592,8 @@ export class ExecutionService {
       return { value: detectedTimeout, source: 'detected(wdio.conf)' };
     }
 
-    // 4. Default: 30 minutes
-    return { value: 1800000, source: 'default' };
+    // 4. Default: 2 hours (increased for large test suites - Issue L2 fix)
+    return { value: 7200000, source: 'default' };
   }
 
   /**

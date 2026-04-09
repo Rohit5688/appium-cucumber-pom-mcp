@@ -1,4 +1,4 @@
-import { exec, execFile } from 'child_process';
+import { exec, execFile, execSync } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
@@ -189,7 +189,6 @@ export class EnvironmentCheckService {
 
     // If not in process env, try to detect from adb location (fallback for MCP server)
     try {
-      const { execSync } = require('child_process');
       const whichCmd = process.platform === 'win32' ? 'where' : 'which';
       const adbPath = execSync(`${whichCmd} adb`, { encoding: 'utf8' }).trim().split('\n')[0];
       
@@ -204,7 +203,7 @@ export class EnvironmentCheckService {
           return { 
             name: 'Android SDK', 
             status: 'pass', 
-            message: `SDK detected via adb: ${sdkRoot} (ANDROID_HOME not in MCP env)` 
+            message: `SDK found at: ${sdkRoot} (detected via adb path, env var not set)` 
           };
         }
       }
@@ -234,7 +233,7 @@ export class EnvironmentCheckService {
         return { 
           name: 'Android SDK', 
           status: 'pass', 
-          message: `SDK detected at: ${sdkPath} (ANDROID_HOME not in MCP env)` 
+          message: `SDK found at: ${sdkPath} (detected via common path, env var not set)` 
         };
       }
     }
