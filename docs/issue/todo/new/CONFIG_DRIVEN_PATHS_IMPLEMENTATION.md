@@ -101,23 +101,68 @@ NavigationGraphService received a focused set of improvements to fully honor con
   - incremental update correctness (file→signature mapping)
 - [ ] Update user docs to describe new `paths.*` behavior and examples
 
+## Step 7: Error System Migration & Tool Error Handling (recent changes)
+
+**Status**: IN PROGRESS → MAJOR WORK COMPLETED
+
+Summary of changes implemented to standardize errors and make tool responses JSON-RPC friendly:
+
+- [x] New unified error type and helpers:
+  - Introduced `McpError` class and a centralized error module at `src/types/ErrorSystem.ts`.
+  - Added `McpErrors` factory helpers for common error cases.
+  - Added `isMcpError()` and `isRetryableError()` helpers.
+  - Implemented `toMcpErrorResponse(err, toolName)` which:
+    - Ensures MCP tools always return an MCP-compatible payload `{ isError: true, content: [...] }`.
+    - Also includes a JSON-RPC–compatible `rpcError` object `{ code, message, data }` for external clients.
+
+- [x] Standardized tool error flows (converted many tools to use `toMcpErrorResponse`):
+  - Replaced ad-hoc `"action": "ERROR"` / `UNHANDLED_ERROR` payloads with `toMcpErrorResponse(...)`.
+  - Replaced various `isError: true` manual returns with `toMcpErrorResponse(...)` where appropriate.
+  - Converted special Clarification flow (`ClarificationRequired`) into a unified MCP error payload by constructing an McpError with details in the cause and returning `toMcpErrorResponse(...)`. This preserves structured details while unifying the format.
+
+- [x] Tools updated (non-exhaustive list — all converted to unified error flows):
+  - src/types/ErrorSystem.ts (new/modified)
+  - src/tools/start_appium_session.ts
+  - src/tools/request_user_clarification.ts
+  - src/tools/verify_selector.ts
+  - src/tools/generate_test_data_factory.ts
+  - src/tools/export_bug_report.ts
+  - src/tools/migrate_test.ts
+  - src/tools/extract_navigation_map.ts
+  - src/tools/analyze_coverage.ts
+  - src/tools/execute_sandbox_code.ts
+  - src/tools/inspect_ui_hierarchy.ts
+  - src/tools/self_heal_test.ts
+
+- [x] Cleanups performed:
+  - Removed redundant branching where both McpError and non-McpError paths returned identical `toMcpErrorResponse` calls.
+  - Converted pre-flight/manual validation returns to use `toMcpErrorResponse(...)` for consistent RPC response shape.
+
+- [x] Commits:
+  - Changes committed under branch `feature/engineering-modernization-and-hardening`. Multiple commits consolidated error-system and tool updates.
+
+- [x] Verification:
+  - Ran `npx tsc --noEmit` during the work; TypeScript validation passed after edits.
+  - Ran project tests during iteration; addressed code changes iteratively (some tests previously failed and were addressed; remaining test updates planned under Step 6).
+
 ## Summary by Priority (updated)
 
 **COMPLETED (Now)**:
 - McpConfigService, ProjectSetupService scaffolding, CredentialService, TestGenerationService
 - NavigationGraphService: path refactor, discovery, .AppForge, robust save/load, incremental updates
+- Error system migration: `McpError` and `toMcpErrorResponse`, and standardization across tools
 - tsconfig.json + test import fixes; TypeScript validation
 
 **REMAINING (High → Low)**:
-- High: StructuralBrainService pathing, migration logic
-- Medium: tests update, CodebaseAnalyzerService audit
-- Low: tools under `src/tools/`, additional tests & docs
+- High: StructuralBrainService pathing, test-suite updates to assert against configured paths
+- Medium: CodebaseAnalyzerService audit and additional test coverage
+- Low: finalize docs and add user examples for `paths.*`
 
 ## Next Steps (recommended)
-1. StructuralBrainService refactor (1–2 hours).
-2. Update tests to assert against configured `paths.*` values (1–2 hours).
-3. Add migration in `migrateIfNeeded()` and write tests for it (1 hour).
-4. Add a small integration test that generates a project with a custom `mcp-config.json` and validates file locations.
+1. Update tests to assert against configured `paths.*` values (1–2 hours).
+2. StructuralBrainService refactor (1–2 hours).
+3. Add migration unit tests + integration test that generates a project with a custom `mcp-config.json` and validates file locations (1–2 hours).
+4. Add a short docs page with examples for common `paths.*` overrides and the new error response shape for clients.
 
 ## Estimated Completion
 - Remaining work: ~2–4 hours (after StructuralBrainService + test updates)
