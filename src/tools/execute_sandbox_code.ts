@@ -18,9 +18,9 @@ export function registerExecuteSandboxCode(
     "execute_sandbox_code",
     {
       title: "Execute Sandbox Code",
-      description: `🚀 TURBO MODE — USE FOR ALL PROJECT ANALYSIS. Runs a JavaScript snippet in a secure V8 sandbox without reading entire files. Always prefer this over analyze_codebase for real projects. Available APIs: forge.api.analyzeCodebase(projectRoot), forge.api.runTests(projectRoot), forge.api.readFile({ filePath, projectRoot }), forge.api.getConfig(projectRoot). Use \`return <value>\` in your script.
+      description: `🚀 TURBO MODE — USE FOR ALL PROJECT ANALYSIS. Runs a JavaScript snippet in a secure V8 sandbox without reading entire files. Always prefer this over analyze_codebase for real projects. Available APIs: forge.api.analyzeCodebase(projectRoot, { type?: 'all'|'pages'|'steps'|'utils', searchPattern?: string }), forge.api.runTests(projectRoot), forge.api.readFile({ filePath, projectRoot }), forge.api.getConfig(projectRoot). Use \`return <value>\` in your script.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words). Avoid returning full AST dumps; use Javascript array.slice() or map() on large arrays, or pass filters into analyzeCodebase to avoid truncations matching the 25k char limit.`,
       inputSchema: z.object({
         script: z.string(),
         timeoutMs: z.number().optional()
@@ -45,7 +45,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       }
 
       const apiRegistry: SandboxApiRegistry = {
-        analyzeCodebase: async (projectRoot: string) => {
+        analyzeCodebase: async (projectRoot: string, filters?: { type?: 'all'|'pages'|'steps'|'utils'|'features'; searchPattern?: string }) => {
           const config = configService.read(projectRoot);
           const paths = configService.getPaths(config);
           let customWrapperPackage: string | undefined;
@@ -55,7 +55,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
               customWrapperPackage = codegen.customWrapperPackage;
             }
           } catch { /* config unreadable — proceed without package */ }
-          return analyzerService.analyze(projectRoot, paths, customWrapperPackage);
+          return analyzerService.analyze(projectRoot, paths, customWrapperPackage, filters);
         },
         runTests: async (projectRoot: string) => {
           return executionService.runTest(projectRoot, {});

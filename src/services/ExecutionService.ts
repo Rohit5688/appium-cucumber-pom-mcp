@@ -276,11 +276,17 @@ export class ExecutionService {
         }
       }
 
+      // Issue #3 / #12 FIX: Classify well-known wdio failure patterns so callers get
+      // structured diagnostics instead of raw stderr walls of text.
+      const rawOutput = (error.stdout || '') + (error.stderr || '');
+      const diagnosis = ExecutionService.classifyWdioError(rawOutput);
+
       return {
         success: false,
         // Include timeout prefix in failure output so callers can always see resolution source
         output: `[Timeout: ${timeout.value}ms (source: ${timeout.source})]\n\n${error.stdout || ''}`,
         error: error.stderr || error.message,
+        ...(diagnosis && { diagnosis }),
         stats,
         failureContext
       };
@@ -634,5 +640,34 @@ export class ExecutionService {
     } catch {
       return undefined;
     }
+  }
+
+  /**
+   * Parses wdio output for well-known failure modes and returns a structured diagnosis.
+   */
+  public static classifyWdioError(output: string): string | undefined {
+    if (!output) return undefined;
+
+    if (output.includes('Missing capabilities')) {
+      return 'WDIO ERROR: Missing capabilities. Your mcp-config.json capabilities do not match what the test runner requires, or you are running an Android test with iOS capabilities.';
+    }
+
+    if (output.includes('ECONNREFUSED')) {
+      return 'APPIUM ERROR: Connection refused. Appium server is not running or is not reachable at the specified port (4723). Run start_appium_session or manually start Appium.';
+    }
+
+    if (output.includes('ETIMEDOUT') || output.includes('timeout')) {
+      return 'TIMEOUT ERROR: The test execution exceeded the maximum allowed time. The app might be hanging, or Appium is overloaded.';
+    }
+
+    if (output.includes('An unknown server-side error occurred')) {
+      return 'APPIUM ERROR: Unknown server-side error. This usually happens when the app crashes, the UI Automator server dies, or invalid locators are used natively.';
+    }
+
+    if (output.includes('Could not find a connected Android device') || output.includes('No device connected')) {
+      return 'DEVICE ERROR: No connected device or emulator found. Ensure a device is connected via USB with USB debugging enabled, or an emulator is running.';
+    }
+
+    return undefined;
   }
 }

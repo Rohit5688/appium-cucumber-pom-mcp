@@ -253,4 +253,29 @@ After completing these groupings, consider starting a fresh conversation:
 
 ---
 
+## 🖥️ WINDOWS-SPECIFIC TIPS
+
+### 1. PowerShell CLI Syntax
+```powershell
+// ❌ NEVER DO THIS (Fails in Windows PowerShell)
+node -v && java -version
+
+// ✅ ALWAYS DO THIS (Valid statement separator)
+node -v; java -version
+```
+
+**Note**: The token `&&` is not a valid statement separator in many versions of PowerShell. Always use `;` for sequential commands when working on a Windows host.
+
+### 2. Running TypeScript Files
+```powershell
+// ❌ NEVER DO THIS (Fails or is unreliable)
+ts-node src/tests/mytest.ts
+
+// ✅ ALWAYS DO THIS (Works for ESM/TS projects)
+node --import tsx src/tests/mytest.ts
+```
+
+---
+
 *Update this file as you discover new project-specific optimization patterns.*
+```

@@ -60,17 +60,34 @@ export class ProjectSetupService {
       }, null, 2);
     }
 
-    // Warn about required fields still set to CONFIGURE_ME
+    // Warn about required fields still set to CONFIGURE_ME — collect JSON paths for each
     const requiredUnfilled = unfilledFields.filter(f =>
       ['defaultPlatform', 'platformName', 'automationName', 'deviceName', 'appium:app'].includes(f)
     );
     if (requiredUnfilled.length > 0) {
+      // Find which capability profiles still carry CONFIGURE_ME values
+      const profiles = config?.mobile?.capabilitiesProfiles ?? {};
+      const offendingPaths: string[] = [];
+      for (const [profileName, caps] of Object.entries(profiles) as [string, any][]) {
+        for (const [capKey, capVal] of Object.entries(caps ?? {})) {
+          if (typeof capVal === 'string' && capVal.startsWith('CONFIGURE_ME')) {
+            offendingPaths.push(`mobile.capabilitiesProfiles.${profileName}.${capKey}`);
+          }
+        }
+      }
+      if (typeof (config?.mobile?.defaultPlatform) === 'string' && (config.mobile.defaultPlatform as string).startsWith('CONFIGURE_ME')) {
+        offendingPaths.unshift('mobile.defaultPlatform');
+      }
       return JSON.stringify({
         phase: 2,
         status: 'REQUIRED_FIELDS_MISSING',
         message: 'The following required fields still have CONFIGURE_ME values. Fill these in mcp-config.json first:',
         requiredFields: requiredUnfilled,
-        hint: 'Recommended fields can be left as CONFIGURE_ME — they will use defaults until you set them.'
+        offendingJsonPaths: offendingPaths,
+        fix: offendingPaths.length > 0
+          ? `Open mcp-config.json and update: ${offendingPaths.slice(0, 3).join(', ')}`
+          : 'Search mcp-config.json for CONFIGURE_ME and replace with real values.',
+        hint: 'Tip: If you added new capability profiles, delete the placeholder "myDevice" profile — it still triggers this check.'
       }, null, 2);
     }
 
@@ -86,9 +103,27 @@ export class ProjectSetupService {
     const filesCreated: string[] = [];
     try {
       // 1. Create directory structure in staging
-      const dirs = ['src/features', 'src/step-definitions', 'src/pages', 'src/utils', 'src/test-data', 'src/config', 'reports'];
+      const dirs = ['src/features', 'src/step-definitions', 'src/pages', 'src/utils', 'src/test-data', 'src/config', 'src/credentials', 'reports'];
       for (const dir of dirs) {
         fs.mkdirSync(path.join(stagingDir, dir), { recursive: true });
+      }
+
+      // MCP #7: Scaffold env-specific files if environments are defined
+      const environments = Array.isArray(config?.environments) ? config.environments : [];
+      let envFilesScaffolded = 0;
+      for (const env of environments) {
+        if (typeof env === 'string' && env && !env.startsWith('CONFIGURE_ME')) {
+          const envPath = path.join(stagingDir, 'src', 'credentials', `users.${env}.json`);
+          // Default to an empty array so developers know where to map users
+          fs.writeFileSync(envPath, '[\n  \n]\n', 'utf-8');
+          filesCreated.push(`src/credentials/users.${env}.json`);
+          envFilesScaffolded++;
+        }
+      }
+      if (environments.length > 0 && envFilesScaffolded === 0) {
+        // Only CONFIGURE_ME present — scaffold a default 
+        fs.writeFileSync(path.join(stagingDir, 'src', 'credentials', `users.staging.json`), '[\n  \n]\n', 'utf-8');
+        filesCreated.push('src/credentials/users.staging.json');
       }
 
       // 2. package.json
@@ -170,6 +205,8 @@ export class ProjectSetupService {
         ? `Project scaffolded. ${unfilledFields.length} optional field(s) still have CONFIGURE_ME values. Fill them and run upgrade_project to apply.`
         : 'Project fully scaffolded from your mcp-config.json.',
       nextSteps: [
+        // MCP #8: npm install MUST be run before any test or AppForge commands
+        '⚡ FIRST: Run `npm install` in the project root to install all dependencies',
         'Run check_environment to verify your Appium setup',
         'Run start_appium_session to connect to your device',
         unfilledFields.length > 0 ? `Fill: ${unfilledFields.join(', ')} in mcp-config.json` : null
@@ -199,7 +236,7 @@ export class ProjectSetupService {
         "executionCommand": "npx wdio run wdio.conf.ts"
       },
       "mobile": {
-        "defaultPlatform": "CONFIGURE_ME: android or ios",
+        "defaultPlatform": "CONFIGURE_ME: android, ios, or both",
         "capabilitiesProfiles": {
           "myDevice": {
             "_comment": "Rename 'myDevice' to your device name (e.g. pixel8, iphone14)",
@@ -332,13 +369,13 @@ export class ProjectSetupService {
         "@wdio/spec-reporter":       "8.29.1",
         "@wdio/allure-reporter":     "8.29.1",
         "webdriverio":               "8.29.1",
-        // Appium server (local usage)
-        "appium":                    "2.5.1",
-        // Appium drivers — install both for cross-platform support
-        "@appium/uiautomator2-driver": "^3.7.0",
-        "@appium/xcuitest-driver":   "^7.22.0",
-        // Cucumber runner
-        "@cucumber/cucumber":        "10.3.2",
+        // Appium server — must be >= 2.5.4 for xcuitest-driver peer compat
+        "appium":                    "^2.14.0",
+        // Appium drivers — use unscoped package names (scoped @appium/* do NOT exist on npm)
+        "appium-uiautomator2-driver": "^3.9.0",
+        "appium-xcuitest-driver":    "^7.25.0",
+        // Cucumber runner — ^10.8.0 required by allure-cucumberjs@3.x peer dep
+        "@cucumber/cucumber":        "^10.8.0",
         "@cucumber/pretty-formatter": "1.0.1",
         // TypeScript runtime
         "ts-node":                   "10.9.2",
@@ -863,7 +900,8 @@ export const config: Options.Testrunner = {
   port: 4723,
   path: '/',
 
-  specs: ['./features/**/*.feature'],
+  // Uses src/features/ to match the AppForge scaffolded project layout
+  specs: ['./src/features/**/*.feature'],
 
   maxInstances: 1,
 
@@ -878,7 +916,7 @@ export const config: Options.Testrunner = {
 
   framework: 'cucumber',
   cucumberOpts: {
-    require: ['./step-definitions/**/*.ts'],
+    require: ['./src/step-definitions/**/*.ts'],
     backtrace: false,
     dryRun: false,
     failFast: false,
@@ -916,12 +954,13 @@ export const config: Options.Testrunner = {
   port: 4723,
   path: '/',
 
-  specs: ['./features/**/*.feature'],
+  // Uses src/features/ to match the AppForge scaffolded project layout
+  specs: ['./src/features/**/*.feature'],
   maxInstances: 1,
 
   framework: 'cucumber',
   cucumberOpts: {
-    require: ['./step-definitions/**/*.ts'],
+    require: ['./src/step-definitions/**/*.ts'],
     backtrace: false,
     dryRun: false,
     failFast: false,

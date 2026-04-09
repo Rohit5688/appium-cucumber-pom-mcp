@@ -328,6 +328,36 @@ export class McpConfigService {
       existingConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     }
     const newConfig = McpConfigService.deepMerge(existingConfig, config);
+
+    // Auto-purge placeholder profiles: if user wrote real capability profiles,
+    // remove any profile entry where ALL capability values still start with "CONFIGURE_ME".
+    // This prevents the default "myDevice" placeholder from blocking setup_project phase 2.
+    const profiles = newConfig?.mobile?.capabilitiesProfiles;
+    if (profiles && typeof profiles === 'object') {
+      const profileKeys = Object.keys(profiles);
+      const realProfileCount = profileKeys.filter(k => {
+        const caps = profiles[k];
+        return caps && typeof caps === 'object' &&
+          Object.values(caps).some((v: any) => typeof v !== 'string' || !v.startsWith('CONFIGURE_ME'));
+      }).length;
+
+      if (realProfileCount > 0) {
+        // Remove any profiles where every string value is a CONFIGURE_ME placeholder
+        for (const key of profileKeys) {
+          const caps = profiles[key];
+          if (!caps || typeof caps !== 'object') continue;
+          const nonCommentEntries = Object.entries(caps).filter(([k]) => !k.startsWith('_'));
+          const allPlaceholders = nonCommentEntries.every(([, v]) =>
+            typeof v === 'string' && v.startsWith('CONFIGURE_ME')
+          );
+          if (allPlaceholders && nonCommentEntries.length > 0) {
+            Logger.info(`[manage_config] Auto-removing placeholder profile "${key}" (all values are CONFIGURE_ME)`);
+            delete profiles[key];
+          }
+        }
+      }
+    }
+
     fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf-8');
   }
 
