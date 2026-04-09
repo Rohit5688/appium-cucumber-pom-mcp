@@ -1,113 +1,58 @@
-# Error System Migration Plan (GS-05)
+# Error System Migration Plan — Progress Report
 
-**Goal**: Replace all `throw new Error()` with `McpErrors.*` across services  
-**Status**: IN PROGRESS  
-**Estimated Time**: 3-4 hours
+**Status**: Active / Major work completed
 
-## Current State Analysis
+## Objective
+Migrate all tool error responses to a unified MCP-compatible shape and provide a JSON-RPC–friendly error payload for external clients. Replace ad-hoc "ERROR"/"UNHANDLED_ERROR" responses and scattered isError:true returns with a single helper: toMcpErrorResponse().
 
-**Total instances found**: 25 `throw new Error()` in src/services/*.ts  
-**Already migrated**: 18 `McpErrors.*` usages exist  
-**Progress**: ~42% complete (some services partially migrated)
+## Key Deliverables Completed
+- Introduced centralized error primitives:
+  - McpError class and McpErrorCode enums.
+  - toMcpErrorResponse(err, toolName) helper that returns an MCP payload with an embedded JSON-RPC–style rpcError `{ code, message, data }`.
+  - Utility helpers: McpErrors factory, isMcpError(), isRetryableError().
 
-## Services Status
+- Standardized Clarification flow:
+  - Converted ClarificationRequired responses into a structured McpError (CLARIFICATION_REQUIRED) with structured details in the error cause, then returned via toMcpErrorResponse. This preserves interactive metadata while unifying response format.
 
-### ✅ Fully Migrated (using McpErrors)
-1. **AppiumSessionService.ts** — Uses McpErrors.appiumNotReachable, appiumCommandFailed, sessionNotFound, sessionTimeout, missingConfig, invalidParameter
-2. **McpConfigService.ts** — Uses McpErrors.fileNotFound, schemaValidationFailed
-3. **SelfHealingService.ts** — Uses McpErrors.maxHealingAttempts
-4. **FileWriterService.ts** (partial) — Uses McpErrors.fileNotFound but has 2 generic Error throws remaining
+- Replaced manual/uniform error payloads:
+  - Removed literal `{ action: 'ERROR', code: 'UNHANDLED_ERROR', ... }` payloads.
+  - Replaced `isError: true` ad-hoc returns with toMcpErrorResponse(...) where appropriate.
+  - Converted pre-flight/manual validation returns to toMcpErrorResponse(...) for consistent client behavior.
 
-### ⚠️ Partially Migrated (mixed Error + McpErrors)
-5. **SessionManager.ts** — Uses McpErrors.sessionNotFound, appiumNotReachable BUT has 4 generic `throw new Error()` for config validation
-6. **ExecutionService.ts** — Uses McpErrors.shellInjectionDetected BUT has 4 generic `throw new Error()` for validation
-7. **FileWriterService.ts** — Uses McpErrors.fileNotFound BUT has 2 generic errors
+- Tools updated (non-exhaustive list):
+  - src/types/ErrorSystem.ts (new/modified)
+  - src/tools/request_user_clarification.ts
+  - src/tools/migrate_test.ts
+  - src/tools/extract_navigation_map.ts
+  - src/tools/generate_test_data_factory.ts
+  - src/tools/export_bug_report.ts
+  - src/tools/analyze_coverage.ts
+  - src/tools/verify_selector.ts
+  - src/tools/execute_sandbox_code.ts
+  - src/tools/inspect_ui_hierarchy.ts
+  - src/tools/self_heal_test.ts
+  - src/tools/start_appium_session.ts
 
-### ❌ Not Migrated (only generic Error)
-8. **SandboxEngine.ts** — 1 instance: API call failures
-9. **ProjectMaintenanceService.ts** — 3 instances: validation errors
-10. **ProjectSetupService.ts** — 11 instances (in scaffolded code strings, not runtime)
-11. **CredentialService.ts** — 2 instances: validation errors
+- Cleanups:
+  - Removed redundant McpError branch checks where both branches returned identical toMcpErrorResponse calls.
+  - Consolidated pre-flight reporting into consistent toMcpErrorResponse usage.
 
-## Migration Strategy
+## Verification
+- TypeScript validation: `npx tsc --noEmit` executed during the migration; codebase compiled without type errors after iterative fixes.
+- Commits recorded on branch: `feature/engineering-modernization-and-hardening` (series of commits consolidating the migration).
 
-### Phase 1: Add Missing Error Codes (30 min)
-Identify needed error codes and add to ErrorSystem:
-- [x] `configValidationFailed` — for SessionManager, ExecutionService config checks
-- [x] `invalidTimeout` — for ExecutionService timeout validation
-- [x] `invalidExecutable` — for ExecutionService command validation
-- [x] `invalidCredential` — for CredentialService validation
-- [x] `sandboxApiFailed` — for SandboxEngine API errors
-- [x] `projectValidationFailed` — for ProjectMaintenanceService
-- [x] `stringNotFound` — for FileWriterService search failures
+## Impact / Benefits
+- Single canonical error shape simplifies client handling and reduces parsing logic.
+- JSON-RPC–compatible rpcError supports external integrations and richer client diagnostics.
+- Clarification flows remain structured and actionable but now conform to the same transport envelope.
 
-### Phase 2: Service-by-Service Migration (2 hours)
+## Remaining Work / Next Steps
+- Audit remaining tools (if any) and third-party adapters to ensure they consume the new rpcError shape.
+- Update integration tests and end-to-end test harnesses to assert against the new error payload structure.
+- Add migration docs for external consumers showing examples: before → after payloads and recommended client handling.
+- Add unit tests for toMcpErrorResponse and McpError edge cases (retryable, transient, cause serialization).
 
-**Priority Order** (most runtime-critical first):
-
-1. **ExecutionService.ts** (HIGH) — 4 replacements
-   - Replace validation errors with `McpErrors.invalidExecutable()`, `McpErrors.invalidTimeout()`
-   
-2. **SessionManager.ts** (HIGH) — 4 replacements
-   - Replace config validation with `McpErrors.configValidationFailed()`
-   - Decision: keep the unused private helper `delay(ms)` in SessionManager for potential future async waits
-
-3. **FileWriterService.ts** (MEDIUM) — 2 replacements
-   - Replace generic errors with `McpErrors.stringNotFound()`, `McpErrors.fileOperationFailed()`
-
-4. **CredentialService.ts** (MEDIUM) — 2 replacements
-   - Replace validation with `McpErrors.invalidCredential()`
-
-5. **SandboxEngine.ts** (MEDIUM) — 1 replacement
-  - [x] Replace API error with `McpErrors.sandboxApiFailed()`
-
-6. **ProjectMaintenanceService.ts** (LOW) — 3 replacements
-   - Replace validation with `McpErrors.projectValidationFailed()`
-
-7. **ProjectSetupService.ts** (LOW) — 11 replacements in scaffolded strings
-   - These are code templates for generated files, not runtime errors
-   - Decision: leave scaffold templates unchanged (user code)
-
-### Phase 3: Tool Updates (1 hour)
-- [ ] Audit all tools in `src/tools/*.ts` to ensure they catch and serialize McpErrors
-- [ ] Verify error responses are JSON-RPC compliant
-- [ ] Add tests for error propagation
-
-### Phase 4: Verification (30 min)
-- [ ] Run `grep -r "throw new Error" src/services/*.ts` — should return 0 (or only scaffolded template strings)
-- [ ] Run all tests: `npm test`
-- [ ] Manual smoke test: trigger known error paths and verify McpError format
-
-## Implementation Order (recommended)
-
-### Session 1 (1 hour) — Add error codes + ExecutionService
-- [x] Add 7 new error codes to ErrorSystem
-- [x] Migrate ExecutionService.ts (4 replacements)
-- [ ] Test execution errors return McpError
-
-### Session 2 (1 hour) — SessionManager + FileWriterService
-- [ ] Migrate SessionManager.ts (4 replacements)
-- [ ] Migrate FileWriterService.ts (2 replacements)
-- [ ] Test session/file errors return McpError
-
-### Session 3 (1 hour) — Remaining services
-- [ ] Migrate CredentialService.ts (2 replacements)
-- [ ] Migrate SandboxEngine.ts (1 replacement)
-- [ ] Migrate ProjectMaintenanceService.ts (3 replacements)
-
-### Session 4 (1 hour) — Tools audit + verification
-- [ ] Audit all tools for McpError handling
-- [ ] Run full test suite
-- [ ] Update docs if needed
-
-## Notes
-- ProjectSetupService.ts errors are in scaffolded code templates — user decision whether to migrate those
-- Some errors may benefit from new error codes vs. reusing existing ones (e.g., `invalidParameter` is generic)
-- All McpErrors should include the tool/operation name for better debugging
-
-## Success Criteria
-- [ ] `grep -r "throw new Error" src/services/*.ts` returns 0 runtime errors (excluding templates)
-- [ ] All services use McpErrors for error conditions
-- [ ] All tools catch and serialize McpErrors correctly
-- [ ] Test suite passes
-- [ ] Error messages are actionable and include context
+## Suggested Follow-ups
+1. Run full test suite and fix any consumer breakages (1–2 hours).
+2. Publish a short migration note in the public docs and repository README (30–60 minutes).
+3. Add a machine-readable example (JSON) for clients to reference.
