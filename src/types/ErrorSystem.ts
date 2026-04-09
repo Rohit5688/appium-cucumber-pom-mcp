@@ -44,6 +44,15 @@ export const McpErrorCode = {
   // Agent limits (-32061 to -32070)
   MAX_HEALING_ATTEMPTS:   -32061,
   TOKEN_BUDGET_EXCEEDED:  -32062,
+
+  // Additional application-specific errors (-32071 to -32080)
+  CONFIG_VALIDATION_FAILED: -32071,
+  INVALID_TIMEOUT:          -32072,
+  INVALID_EXECUTABLE:       -32073,
+  INVALID_CREDENTIAL:       -32074,
+  SANDBOX_API_FAILED:       -32075,
+  PROJECT_VALIDATION_FAILED:-32076,
+  STRING_NOT_FOUND:         -32077,
 } as const;
 
 export type McpErrorCode = typeof McpErrorCode[keyof typeof McpErrorCode];
@@ -150,6 +159,28 @@ export const McpErrors = {
 
   shellInjectionDetected: (pattern: string, toolName?: string) =>
     new McpError(`Shell injection pattern detected: '${pattern}'. Command blocked.`, McpErrorCode.SHELL_INJECTION_DETECTED, { toolName }),
+
+  // New error factories
+  configValidationFailed: (details: string, toolName?: string) =>
+    new McpError(`Configuration validation failed: ${details}`, McpErrorCode.CONFIG_VALIDATION_FAILED, { toolName }),
+
+  invalidTimeout: (value: any, toolName?: string) =>
+    new McpError(`Invalid timeout value: ${value}`, McpErrorCode.INVALID_TIMEOUT, { toolName }),
+
+  invalidExecutable: (exe: string, toolName?: string) =>
+    new McpError(`Invalid executable: ${exe}`, McpErrorCode.INVALID_EXECUTABLE, { toolName }),
+
+  invalidCredential: (reason: string, toolName?: string) =>
+    new McpError(`Invalid credential: ${reason}`, McpErrorCode.INVALID_CREDENTIAL, { toolName }),
+
+  sandboxApiFailed: (details: string, cause?: Error, toolName?: string) =>
+    new McpError(`Sandbox API failed: ${details}`, McpErrorCode.SANDBOX_API_FAILED, { cause, toolName }),
+
+  projectValidationFailed: (details: string, toolName?: string) =>
+    new McpError(`Project validation failed: ${details}`, McpErrorCode.PROJECT_VALIDATION_FAILED, { toolName }),
+
+  stringNotFound: (snippet: string, toolName?: string) =>
+    new McpError(`String not found: ${snippet}`, McpErrorCode.STRING_NOT_FOUND, { toolName }),
 };
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
