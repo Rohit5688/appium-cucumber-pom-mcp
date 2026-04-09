@@ -325,3 +325,111 @@ Based on liveissues.md analysis, the following MCP tools have runtime errors:
 **IMMEDIATE ACTION**: Execute Phase 1 (Fix test infrastructure)
 
 Once Phase 1 complete, assess actual test failure count and update this plan if needed.
+
+
+## Definitive Re-verification: LLM Testing Errors vs Real MCP Issues
+
+### Summary of Findings
+
+After systematic re-testing with MCP server restart, I can now distinguish between my testing mistakes and actual MCP bugs:
+
+---
+
+## ✅ CONFIRMED MCP ISSUES (Real Bugs)
+
+### 1. **Issue 6 – `analyzeCodebase` filter parameter crashes** ⚠️ REAL MCP BUG
+- **Test sequence:**
+  ```javascript
+  // Works:
+  await forge.api.analyzeCodebase(projectRoot);  // ✅ Returns { existingSteps: [], existingPageObjects: [9], existingUtils: [34] }
+  
+  // Crashes:
+  await forge.api.analyzeCodebase(projectRoot, { type: 'steps' });  // ❌ "path must be string, got Array"
+  ```
+- **Conclusion:** The documented filter fix (`{ type: 'steps'|'pages'|'utils', searchPattern: string }`) is **broken**. When the second argument (filters object) is passed, `analyzeCodebase` internally receives an Array instead of a string for the path parameter.
+- **Impact:** Cannot use filters to avoid truncation; must analyze entire codebase at once.
+- **Note:** `analyzeCodebase()` without filters returns 0 steps for this project, which may indicate the step analyzer is also not working correctly OR this project's step definitions don't match the expected pattern.
+
+### 2. **Issue 5/12 – `run_cucumber_test` WDIO capability mapping error** ⚠️ REAL MCP BUG
+- **Error:**
+  ```
+  TypeError: Cannot read properties of undefined (reading 'alwaysMatch')
+      at mapCapabilities (.../node_modules/@wdio/utils/build/node.js:437:17)
+  ```
+- **Root cause analysis:**
+  - `wdio.conf.ts` has `capabilities: []` (empty array, valid base config)
+  - `wdio.android.conf.ts` has `capabilities: [{ ... }]` (proper Android capabilities)
+  - MCP's documented fix injects capabilities via CLI args: `--capabilities.platformName=Android --capabilities.appium:deviceName=...`
+  - WDIO's `mapCapabilities` function expects W3C format but receives `undefined` for `w3cCaps`
+- **Conclusion:** MCP's capability injection via CLI arguments is **incompatible** with this project's WDIO setup. The CLI overrides are creating a malformed capabilities structure that WDIO cannot parse.
+- **Impact:** `run_cucumber_test` is completely blocked; cannot execute any tests via MCP.
+
+### 3. **Issue 7 – Navigation mapping returns 0 screens** ✅ CONFIRMED REAL LIMITATION
+- `export_navigation_map` returns empty even for a project with 9 page objects and many features.
+- This is working as documented: navigation mapping requires active session exploration, not static analysis.
+- **Status:** Not a bug, but a documented limitation.
+
+---
+
+## ✅ CONFIRMED FIXED ISSUES
+
+### 4. **Issue 4 – Environment detection messaging** ✅ FIXED
+- After MCP restart, `check_environment` now says:
+  - `Android SDK: SDK found at: /Users/... (detected via common path, env var not set)`
+- This matches the documented fix exactly. Previous observation was from a stale MCP process.
+
+### 5. **Issue 9 – `generate_cucumber_pom` crash** ✅ FIXED
+- Returns valid generation prompt with no TypeError.
+
+### 6. **Issue 11 – `self_heal_test` without XML** ✅ FIXED
+- Returns structured `HEAL_BLOCKED` response with clear guidance.
+
+---
+
+## ❌ LLM TESTING ERRORS (My Mistakes)
+
+### 1. **Issue 6 – Misunderstanding of `analyzeCodebase` API**
+- **My error:** I initially passed filters as the second parameter correctly, but then blamed the wrong thing when it crashed.
+- **Reality:** The filter parameter IS broken (real MCP bug), but the base `analyzeCodebase()` call DOES work.
+- **Correction:** Issue 6 is a real MCP regression in filter handling, not a testing error.
+
+### 2. **Issue 3/12 – `diagnosis` field expectation**
+- **My observation:** `run_cucumber_test` returns rich `output` and `error` but no `diagnosis` JSON field.
+- **Reality:** The `diagnosis` field may be:
+  - Only added for specific error patterns (not this WDIO crash)
+  - Embedded in a different part of the response structure
+  - Not exposed to the MCP client layer
+- **Correction:** Cannot confirm if this is an MCP bug or architectural difference without seeing the server code.
+
+---
+
+## 🔍 UNABLE TO VERIFY (Blocked by Other Issues)
+
+### 1. **Issue 2 – MCP RPC timeout**
+- Cannot test long-running scenarios because `run_cucumber_test` crashes immediately with WDIO capability error.
+
+### 2. **Issue 8 – "require is not defined"**
+- Did not reproduce in any tool tested. May be specific to certain runtime conditions not encountered in this session.
+
+---
+
+## FINAL ASSESSMENT
+
+### Real MCP Bugs Found:
+1. ⚠️ **`analyzeCodebase(projectRoot, { type: 'X' })` crashes** with path/Array type error
+2. ⚠️ **`run_cucumber_test` capability injection** produces malformed W3C caps that crash WDIO
+
+### LLM Testing Mistakes:
+- None significant; initial observations were mostly accurate
+
+### Status vs `liveissues.md`:
+- **Issue 4:** ✅ Fixed and verified
+- **Issue 5/12:** ❌ Still broken (different error: WDIO capability mapping crash)
+- **Issue 6:** ❌ Regression in filter handling (base call works, filtered call crashes)
+- **Issue 7:** ⚠️ Works as designed (needs active session)
+- **Issue 9:** ✅ Fixed
+- **Issue 11:** ✅ Fixed
+
+The two critical blockers for production use are:
+1. `run_cucumber_test` cannot execute due to capability injection bug
+2. `analyzeCodebase` filter parameter is broken, limiting codebase analysis utility
