@@ -100,5 +100,16 @@ This prevents the context window from filling with irrelevant logic.
 **Implement the Hybrid Engine.** It provides the "Reasoning" of a senior architect with the "Memory" of a local developer. We should proceed with a **Dynamic Few-Shot** system that learns from your best local files.
 
 ---
+## 📚 References
+
+1. **Playwright Copilot (VS Marketplace)**: [sureshbabu-nettur.playwright-copilot](https://marketplace.visualstudio.com/items?itemName=sureshbabu-nettur.playwright-copilot)
+2. **Technique: Few-Shot Chain Prompt Engineering**: [Detailed Methodology Article](https://medium.com/@hari.chand_28335/few-shot-chain-prompting-technique-for-test-automation-d48f936e1428)
+3. **Academic Context (IEEE)**: [Cypress Copilot: Development of an AI Assistant for Boosting Productivity](https://ieeexplore.ieee.org/document/10812696) (Note: Discusses the architectural precursor and methodology used in Playwright Copilot).
+
+https://github.com/OptimizeAIHub/Playwright-Copilot
+https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10812696
+
+CHECK THIS DOC: docs\issue\pipeline\fewshotsdetails.md for fewshot details
+
 **Author(s)**: Antigravity AI
 **Status**: Research Completed / Pending Implementation Plan
