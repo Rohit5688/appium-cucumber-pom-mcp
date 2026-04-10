@@ -370,3 +370,28 @@ execute_sandbox_code_v2(script, options)
 ---
 
 **Conclusion**: AppForge's tools are **functionally complete** but **architecturally scattered**. The path forward is **consolidation**, **orchestration**, and **sandbox liberation** — not adding more tools. The strategic docs identified the right problems; my analysis reveals the **structural causes** those problems persist.
+
+## 💡 Antigravity Review Comments
+
+**Date**: 2026-04-10
+
+> [!IMPORTANT]
+> This analysis is remarkably sharp and aligns perfectly with the "Street-Smart" protocol. The concept of "API Surface Obesity" is the primary bottleneck for LLM efficiency.
+
+### 🚀 1. Sandbox "Turbo Mode" Priority
+The "Sandbox First" mandate (Tier 1) is the highest-leverage change. By exposing `forge.api.exec()` and `forge.api.listFiles()`, we can effectively deprecate 12+ legacy tools. 
+- **Recommendation**: Prioritize the `SandboxEngine.ts` expansion before merging nano-tools.
+
+### 🧩 2. Orchestration Layer (Tier 0)
+The "Missing Middle Layer" (Point 3) is critical for reliability. Manual orchestration by LLMs (Generate -> Think -> Write) is error-prone.
+- **Action**: We should implement `BaseOrchestrator` that tools can inherit from to handle multi-step flows atomically.
+
+### 🧹 3. Nano-Tool Consolidation Strategy
+Merging `inject_app_build` and `set_credentials` into `manage_config` (Point 2) is a "quick win" for token efficiency.
+- **Note**: Ensure `manage_config` schema remains simple enough while supporting these operations.
+
+### 📡 4. Incremental Streaming (Tier 2)
+For `run_cucumber_test`, we should implement a `ServerSideEvent` or similar mechanism if the MCP client supports it, or use a "Polled Progress" pattern via `check_test_status`.
+
+### ✅ 5. Validation Logic
+The `toMcpErrorResponse` helper (recently added in `ErrorSystem.ts`) addresses Point 5 (Silent Failures) perfectly. We should ensure it's adopted by 100% of tools.

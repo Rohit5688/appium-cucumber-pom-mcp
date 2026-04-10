@@ -167,3 +167,31 @@ Summary of changes implemented to standardize errors and make tool responses JSO
 ## Estimated Completion
 - Remaining work: ~2–4 hours (after StructuralBrainService + test updates)
 - Critical path: StructuralBrainService → Test updates → Migration
+
+## 💡 Antigravity Review Comments
+
+**Date**: 2026-04-10
+
+> [!NOTE]
+> Overall, the migration to config-driven paths is systematically documented and executed. The alignment between `McpConfigService` and `ProjectSetupService` is excellent.
+
+### 🟡 1. StructuralBrainService Completeness
+While Step 6 is marked as completed for `StructuralBrainService.ts`, current implementation (lines 79-82) only scans `pagesRoot`, `utilsRoot`, and `stepsRoot`. 
+- **Improvement**: Sync this with `NavigationGraphService` discovery logic to include `locatorsRoot` and `testDataRoot` (or any TypeScript file in the project excluding noise folders).
+
+### 🔴 2. Plan Inconsistency (StructuralBrainService)
+There is a slight conflict in the doc:
+- Step 6 shows `[x] StructuralBrainService.ts — accept projectRoot...`
+- Summary shows `High: StructuralBrainService pathing` as remaining.
+- Next Steps shows `2. StructuralBrainService refactor (1–2 hours)` as a future task.
+- **Action**: Fix these markers to reflect the true status (likely "Partially Completed" or "In Progress").
+
+### 🟢 3. The "Missing Middle Layer" (Link to Tool Analysis)
+The `INDEPENDENT_TOOL_ANALYSIS.md` identifies a need for "Workflow Orchestrators" (Tier 0). 
+- **Suggestion**: Ensure that as paths are standardized, we prepare `_helpers.ts` or a new `WorkflowService` to support atomic operations like `create_test_atomically()` which will rely on these configured paths.
+
+### 🟡 4. Dry-Run (Preview) Expansion
+The plan correctly notes `validate_and_write` has `dryRun`, but following the analysis doc, we should probably add `preview: boolean` to other mutating tools (e.g., `setup_project`, `repair_project`, `manage_config` write) in Step 6.
+
+### ✅ 5. Missing Path Key: `configRoot`
+I noticed `resolvePaths` added `configRoot` recently (line 226 of McpConfigService.ts). This should be explicitly added to the scaffolding checklist in Step 2c to ensure it's used when creating `src/config`.
