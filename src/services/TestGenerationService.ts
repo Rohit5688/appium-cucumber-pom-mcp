@@ -4,6 +4,7 @@ import { McpConfigService, type McpConfig } from './McpConfigService.js';
 import type { CodebaseAnalysisResult } from './CodebaseAnalyzerService.js';
 import { NavigationGraphService } from './NavigationGraphService.js';
 import { Logger } from '../utils/Logger.js';
+import { HybridPromptEngine } from './HybridPromptEngine.js';
 
 export interface GenerationOutput {
   reusePlan: string;
@@ -12,6 +13,7 @@ export interface GenerationOutput {
 }
 
 export class TestGenerationService {
+  private readonly hybridEngine = new HybridPromptEngine();
   /**
    * Generates a structured system prompt for the LLM.
    * Adapts to the project's detected architecture pattern (POM vs YAML vs Facade).
@@ -165,6 +167,9 @@ Generate: .feature file + step definitions + Page Object class.
       analysis
     );
 
+    // Nanotools: build the 3-layer hybrid block (CoT + champion snippet + anti-patterns)
+    const hybridBlock = this.hybridEngine.buildHybridBlock(analysis);
+
     const conflictsWarning = analysis.conflicts.length > 0
       ? `\n## ⚠️ STEP CONFLICTS DETECTED\nThe following step patterns are duplicated across files. DO NOT create any of these:\n${analysis.conflicts.map(c => `- \`${c.pattern}\` (in: ${c.files.join(', ')})`).join('\n')}\n`
       : '';
@@ -240,6 +245,8 @@ ${existingPagesSummary}
 ${existingUtilsSummary}
 
 ${navigationContext}
+
+${hybridBlock}
 
 ${this.getArchitectureRules(analysis, platform)}
 

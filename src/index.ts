@@ -23,6 +23,7 @@ import { ProjectMaintenanceService } from "./services/ProjectMaintenanceService.
 import { CoverageAnalysisService } from "./services/CoverageAnalysisService.js";
 import { MigrationService } from "./services/MigrationService.js";
 import { NavigationGraphService } from "./services/NavigationGraphService.js";
+import { FileStateService } from "./services/FileStateService.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import { APPFORGE_VERSION } from "./version.js";
@@ -120,6 +121,11 @@ class AppForgeServer {
   // MEMORY LEAK FIX: Instance pooling for NavigationGraphService to prevent creating new instances per tool call
   private navigationGraphServices = new Map<string, NavigationGraphService>();
   
+  // Nanotools: Lazy Context Pulse — tracks last tool activity per server process lifetime
+  // Used to prevent plan myopia in automated exploration sessions
+  private readonly activityTimestamps = new Map<string, number>();
+  private static readonly IDLE_PULSE_MS = 600_000; // 10 minutes
+  
   // Orchestration service for atomic multi-step operations
   private orchestrationService = new OrchestrationService(
     this.generationService,
@@ -143,6 +149,10 @@ class AppForgeServer {
       const wrappedHandler = async (args: any, extraOptions?: any) => {
         const startTime = Date.now();
         const traceId = obs.toolStart(name, args ?? {}, undefined);
+        
+        // Update activity pulse
+        this.activityTimestamps.set(name, startTime);
+        const lastPulse = Array.from(this.activityTimestamps.values()).sort((a, b) => b - a)[0];
         
         try {
           const result = await handler(args, extraOptions);

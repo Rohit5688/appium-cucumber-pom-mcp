@@ -1,4 +1,4 @@
-import { Given, When, Then } from '@cucumber/cucumber';
+import { Given, When, Then } from '@wdio/cucumber-framework';
 import { MobileLoginPage, MobileHomeScreen } from '../pages/MobileLoginPage.js';
 
 Given('the app is launched', async function () {

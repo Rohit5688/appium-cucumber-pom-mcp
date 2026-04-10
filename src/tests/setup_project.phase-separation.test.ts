@@ -1,4 +1,5 @@
-/* jest globals provided by @types/jest */
+import { describe, it, beforeEach, afterEach } from 'node:test';
+import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -18,7 +19,11 @@ describe('setup_project Phase Separation Fix', () => {
 
   afterEach(() => {
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (e) {
+        // Ignore EBUSY/EPERM on windows during cleanup if some file is still handle-locked
+      }
     }
   });
 
@@ -28,25 +33,25 @@ describe('setup_project Phase Separation Fix', () => {
     const parsed = JSON.parse(result);
 
     // Verify Phase 1 response
-    expect(parsed.phase).toBe(1);
-    expect(parsed.status).toBe('CONFIG_TEMPLATE_CREATED');
-    expect(parsed.message).toContain('STEP 1 of 2');
-    expect(parsed.message).toContain('Open mcp-config.json and fill in');
-    expect(parsed.nextStep).toBe('Call setup_project again after filling mcp-config.json');
+    assert.strictEqual(parsed.phase, 1);
+    assert.strictEqual(parsed.status, 'CONFIG_TEMPLATE_CREATED');
+    assert.ok(parsed.message.includes('STEP 1 of 2'));
+    assert.ok(parsed.message.includes('Open mcp-config.json and fill in'));
+    assert.strictEqual(parsed.nextStep, 'Call setup_project again after filling mcp-config.json');
 
     // Verify config file exists with CONFIGURE_ME placeholders
     const configPath = path.join(tempDir, 'mcp-config.json');
-    expect(fs.existsSync(configPath)).toBe(true);
+    assert.strictEqual(fs.existsSync(configPath), true);
 
     const configContent = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    expect(configContent.mobile.defaultPlatform).toContain('CONFIGURE_ME');
+    assert.ok(JSON.stringify(configContent.mobile.defaultPlatform).includes('CONFIGURE_ME'));
 
     // Verify NO other files were created (only config template)
     const files = fs.readdirSync(tempDir);
-    expect(files).toContain('mcp-config.json');
-    expect(files).toContain('.AppForge'); // Schema directory
-    expect(files).not.toContain('package.json');
-    expect(files).not.toContain('src');
+    assert.ok(files.includes('mcp-config.json'));
+    assert.ok(files.includes('.AppForge')); // Schema directory
+    assert.ok(!files.includes('package.json'));
+    assert.ok(!files.includes('src'));
   });
 
   it('Phase 2: should fail if required fields still have CONFIGURE_ME', async () => {
@@ -58,11 +63,11 @@ describe('setup_project Phase Separation Fix', () => {
     const parsed2 = JSON.parse(result2);
 
     // Should fail with required fields missing
-    expect(parsed2.phase).toBe(2);
-    expect(parsed2.status).toBe('REQUIRED_FIELDS_MISSING');
-    expect(parsed2.message).toContain('required fields still have CONFIGURE_ME');
-    expect(parsed2.offendingJsonPaths).toBeDefined();
-    expect(parsed2.offendingJsonPaths.length).toBeGreaterThan(0);
+    assert.strictEqual(parsed2.phase, 2);
+    assert.strictEqual(parsed2.status, 'REQUIRED_FIELDS_MISSING');
+    assert.ok(parsed2.message.includes('required fields still have CONFIGURE_ME'));
+    assert.ok(parsed2.offendingJsonPaths !== undefined);
+    assert.ok(parsed2.offendingJsonPaths.length > 0);
   });
 
   it('Phase 2: should scaffold full project after user fills config', async () => {
@@ -93,18 +98,18 @@ describe('setup_project Phase Separation Fix', () => {
     const parsed2 = JSON.parse(result2);
 
     // Verify Phase 2 success
-    expect(parsed2.phase).toBe(2);
-    expect(parsed2.status).toBe('SETUP_COMPLETE');
-    expect(parsed2.filesCreated).toBeDefined();
-    expect(parsed2.filesCreated.length).toBeGreaterThan(0);
+    assert.strictEqual(parsed2.phase, 2);
+    assert.strictEqual(parsed2.status, 'SETUP_COMPLETE');
+    assert.ok(parsed2.filesCreated !== undefined);
+    assert.ok(parsed2.filesCreated.length > 0);
 
     // Verify project structure was created
-    expect(fs.existsSync(path.join(tempDir, 'package.json'))).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, 'tsconfig.json'))).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, 'cucumber.js'))).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, 'wdio.conf.ts'))).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, 'src', 'pages', 'BasePage.ts'))).toBe(true);
-    expect(fs.existsSync(path.join(tempDir, 'src', 'features', 'sample.feature'))).toBe(true);
+    assert.strictEqual(fs.existsSync(path.join(tempDir, 'package.json')), true);
+    assert.strictEqual(fs.existsSync(path.join(tempDir, 'tsconfig.json')), true);
+    assert.strictEqual(fs.existsSync(path.join(tempDir, 'cucumber.js')), true);
+    assert.strictEqual(fs.existsSync(path.join(tempDir, 'wdio.conf.ts')), true);
+    assert.strictEqual(fs.existsSync(path.join(tempDir, 'src', 'pages', 'BasePage.ts')), true);
+    assert.strictEqual(fs.existsSync(path.join(tempDir, 'src', 'features', 'sample.feature')), true);
   });
 
   it('migrateIfNeeded should only run after Phase 2 success', async () => {
@@ -114,7 +119,7 @@ describe('setup_project Phase Separation Fix', () => {
     // Config should NOT have been migrated yet (version still has descriptive text)
     const configPath = path.join(tempDir, 'mcp-config.json');
     let config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    expect(config.version).toBe('1.1.0');
+    assert.strictEqual(config.version, '1.1.0');
     
     // Fill config for Phase 2
     config.mobile.defaultPlatform = 'android';
@@ -139,7 +144,7 @@ describe('setup_project Phase Separation Fix', () => {
     
     // Verify schema was generated
     const schemaPath = path.join(tempDir, '.AppForge', 'configSchema.json');
-    expect(fs.existsSync(schemaPath)).toBe(true);
+    assert.strictEqual(fs.existsSync(schemaPath), true);
   });
 
   it('should handle the exact scenario from the bug report', async () => {
@@ -148,8 +153,8 @@ describe('setup_project Phase Separation Fix', () => {
     const phase1 = JSON.parse(phase1Result);
 
     // Phase 1 should create template and tell user to fill it
-    expect(phase1.phase).toBe(1);
-    expect(phase1.status).toBe('CONFIG_TEMPLATE_CREATED');
+    assert.strictEqual(phase1.phase, 1);
+    assert.strictEqual(phase1.status, 'CONFIG_TEMPLATE_CREATED');
 
     // At this point, the tool should STOP and NOT call manage_config
     // The fix ensures that:
@@ -159,7 +164,7 @@ describe('setup_project Phase Separation Fix', () => {
 
     // Verify no files created except config
     const files = fs.readdirSync(tempDir);
-    expect(files).not.toContain('package.json');
+    assert.ok(!files.includes('package.json'));
 
     // User manually edits config (simulated)
     const configPath = path.join(tempDir, 'mcp-config.json');
@@ -183,11 +188,11 @@ describe('setup_project Phase Separation Fix', () => {
     const phase2 = JSON.parse(phase2Result);
 
     // Phase 2 should scaffold everything
-    expect(phase2.phase).toBe(2);
-    expect(phase2.status).toBe('SETUP_COMPLETE');
-    expect(phase2.filesCreated.length).toBeGreaterThan(5);
+    assert.strictEqual(phase2.phase, 2);
+    assert.strictEqual(phase2.status, 'SETUP_COMPLETE');
+    assert.ok(phase2.filesCreated.length > 5);
 
     // Now the full project exists
-    expect(fs.existsSync(path.join(tempDir, 'package.json'))).toBe(true);
+    assert.strictEqual(fs.existsSync(path.join(tempDir, 'package.json')), true);
   });
 });

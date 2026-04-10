@@ -7,6 +7,7 @@ import { auditGeneratedCode, auditFeatureFile, validateProjectRoot, validateFile
 import { McpError, McpErrorCode, McpErrors } from '../types/ErrorSystem.js';
 import { StringMatcher } from '../utils/StringMatcher.js';
 import { FileSuggester } from '../utils/FileSuggester.js';
+import { ASTScrutinizer } from '../utils/ASTScrutinizer.js';
 import { FileStateService } from './FileStateService.js';
 import { FileGuard } from '../utils/FileGuard.js';
 import { withRetry, RetryPolicies } from '../utils/RetryEngine.js';
@@ -90,7 +91,26 @@ export class FileWriterService {
       fs.writeFileSync(fullPath, file.content, 'utf8');
     }
 
-    // Step 2: Validate .ts files with tsc --noEmit
+    // Step 2: Stub Hunter — hard-reject files with incomplete implementations (Nanotools)
+    // This gate runs BEFORE tsc so the LLM gets a clear, actionable error even if env is not perfect.
+    for (const file of files) {
+      if (file.path.endsWith('.ts')) {
+        try {
+          ASTScrutinizer.scrutinize(file.content, file.path);
+        } catch (stubError: any) {
+          await this.cleanStaging(stagingDir);
+          return JSON.stringify({
+            success: false,
+            phase: 'stub-hunter',
+            error: stubError.message,
+            file: file.path,
+            hint: 'The code is incomplete. You generated a stub or TODO. Implement all methods fully.'
+          }, null, 2);
+        }
+      }
+    }
+
+    // Step 3: Validate .ts files with tsc --noEmit
     const tsFiles = files.filter(f => f.path.endsWith('.ts'));
     if (tsFiles.length > 0) {
       const validation = await this.validateTypeScript(projectRoot, stagingDir, tsFiles);

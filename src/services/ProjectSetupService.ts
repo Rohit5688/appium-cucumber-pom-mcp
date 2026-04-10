@@ -799,22 +799,22 @@ import { TestContext } from '../utils/TestContext.js';
  * WDIO v9: Hooks are imported from @wdio/cucumber-framework
  */
 
-Before(async function (world, context) {
-  console.log(\`[Hooks] Starting scenario: \${context.pickle.name}\`);
+Before(async function (this: any) {
+  console.log(\`[Hooks] Starting scenario: \${this.pickle?.name}\`);
 });
 
-After(async function (world, context) {
+After(async function (this: any) {
   if (${shouldCapture}) {
     try {
       const screenshot = await AppiumDriver.takeScreenshot();
       if (screenshot) {
         TestContext.addAttachment('screenshot', Buffer.from(screenshot, 'base64'), 'image/png');
-        await world.attach(Buffer.from(screenshot, 'base64'), 'image/png');
+        await this.attach(Buffer.from(screenshot, 'base64'), 'image/png');
       }
       const pageSource = await AppiumDriver.getPageSource();
       if (pageSource) {
         TestContext.addAttachment('page-source', pageSource, 'text/xml');
-        await world.attach(pageSource, 'text/xml');
+        await this.attach(pageSource, 'text/xml');
       }
       console.log('[Hooks] Captured screenshot and page source for scenario');
     } catch (err) {
@@ -848,7 +848,7 @@ Feature: Sample Login Flow
   }
 
   private scaffoldSampleSteps(projectRoot: string, paths?: ReturnType<McpConfigService['getPaths']>) {
-    const content = `import { Given, When, Then } from '@cucumber/cucumber';
+    const content = `import { Given, When, Then } from '@wdio/cucumber-framework';
 
 /**
  * Sample Step Definitions — Dummy implementations for setup verification.
