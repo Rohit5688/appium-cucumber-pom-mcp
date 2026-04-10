@@ -14,9 +14,15 @@ export function registerExportBugReport(
     "export_bug_report",
     {
       title: "Export Bug Report",
-      description: `GENERATE JIRA BUG REPORT. Use when a failed test needs to be tracked in a ticket. Formats the test failure into a Jira-ready report with auto-classified severity, reproduction steps, environment details, and suggested fix. Returns: Markdown ready to paste into Jira.
+      description: `TRIGGER: Failed test needs tracking in ticket OR create Jira bug report
+RETURNS: Markdown string (Jira-ready format with severity, steps, environment, fix suggestion)
+NEXT: Copy Markdown to Jira → Create ticket
+COST: Low (formats error into template, ~100-200 tokens)
+ERROR_HANDLING: None - always succeeds, may request clarification for severity.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Auto-classifies severity, adds reproduction steps, environment details, suggested fix.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         testName: z.string(),
         rawError: z.string(),

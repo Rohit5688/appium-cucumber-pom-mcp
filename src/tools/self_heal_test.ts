@@ -4,7 +4,7 @@ import type { SelfHealingService } from "../services/SelfHealingService.js";
 import type { McpConfigService } from "../services/McpConfigService.js";
 import type { SessionManager } from "../services/SessionManager.js";
 import { textResult, getPlatformSkill } from "./_helpers.js";
-import { toMcpErrorResponse } from "../types/ErrorSystem.js";
+import { toMcpErrorResponse, McpErrors } from "../types/ErrorSystem.js";
 import { PreFlightService } from "../services/PreFlightService.js";
 
 export function registerSelfHealTest(
@@ -17,9 +17,15 @@ export function registerSelfHealTest(
     "self_heal_test",
     {
       title: "Self Heal Test",
-      description: `FIX BROKEN TESTS. Use when a test failure says 'element not found / no such element / selector not found'. Parses the error and current XML to find the correct replacement selector. Returns: { candidates[], promptForLLM }. After getting candidates, use verify_selector to confirm the best one works.
+      description: `TRIGGER: Test failure with 'element not found / no such element / selector not found'
+RETURNS: { candidates: Array<{selector, confidence, strategy}>, promptForLLM: string }
+NEXT: verify_selector to test candidates OR inspect_ui_hierarchy if no candidates
+COST: Low (parses XML/error, fuzzy matches, no device interaction, ~100-200 tokens)
+ERROR_HANDLING: Throws McpErrors.projectValidationFailed if no candidates found. Suggests inspect_ui_hierarchy.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Parses error + XML to find replacement selectors. Use verify_selector on best candidate before updating Page Object.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         testOutput: z.string(),
         xmlHierarchy: z.string().optional(),
@@ -93,10 +99,17 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         maxCandidates
       );
       const platformContext = getPlatformSkill({ projectRoot, testOutput: args.testOutput });
+      const candidates = healResult.instruction.alternativeSelectors || [];
       const data = {
-        candidates: healResult.instruction.alternativeSelectors || [],
+        candidates,
         promptForLLM: platformContext + healResult.prompt
       };
+
+      // If no candidate selectors were found, surface a structured MCP error
+      if (!candidates || candidates.length === 0) {
+        throw McpErrors.testExecutionFailed('No candidate selectors found for self-healing.', 'self_heal_test');
+      }
+
       return textResult(JSON.stringify(data, null, 2), data);
     }
   );

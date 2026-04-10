@@ -20,9 +20,15 @@ export function registerExecuteSandboxCode(
     "execute_sandbox_code",
     {
       title: "Execute Sandbox Code",
-      description: `🚀 TURBO MODE — USE FOR ALL PROJECT ANALYSIS. Runs a JavaScript snippet in a secure V8 sandbox without reading entire files. Always prefer this over analyze_codebase for real projects. Available APIs: forge.api.analyzeCodebase(projectRoot, { type?: 'all'|'pages'|'steps'|'utils', searchPattern?: string }), forge.api.runTests(projectRoot), forge.api.readFile({ filePath, projectRoot }), forge.api.getConfig(projectRoot). Use \`return <value>\` in your script.
+      description: `TRIGGER: Need project analysis OR extract data OR avoid token-heavy reads
+RETURNS: { success: boolean, result: any, executionTime: number }
+NEXT: If analyzing → Use for generate_cucumber_pom | If querying → Proceed with setup/config tools
+COST: Low-Medium (50-200 tokens, no file I/O)
+ERROR_HANDLING: Throws McpError on syntax/forbidden patterns/timeout
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words). Avoid returning full AST dumps; use Javascript array.slice() or map() on large arrays, or pass filters into analyzeCodebase to avoid truncations matching the 25k char limit.`,
+🚀 TURBO MODE — Prefer over analyze_codebase (98% token reduction). APIs: forge.api.analyzeCodebase(projectRoot, {type,searchPattern}), runTests, readFile, getConfig, listFiles, searchFiles, parseAST. Use \`return <value>\`.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         script: z.string(),
         timeoutMs: z.number().optional()
@@ -70,6 +76,196 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         getConfig: async (projectRoot: string) => {
           return configService.read(projectRoot);
         },
+
+        // --- Enhanced, safe, read-only sandbox APIs (feature-flag gated) ---
+        listFiles: async (dir: string, options?: { recursive?: boolean; glob?: string }, projectRoot?: string) => {
+          const fs = await import('fs');
+          const path = await import('path');
+          const os = await import('os');
+
+          const MAX_LIST_ITEMS = 5000;
+          const resolvedRoot = projectRoot ? path.default.resolve(projectRoot) : process.cwd();
+
+          // Feature flag check
+          if (!configService.hasFeature(resolvedRoot, 'enhancedSandbox')) {
+            throw new Error('enhancedSandbox feature disabled');
+          }
+
+          const absDir = path.default.resolve(resolvedRoot, dir);
+          if (!absDir.startsWith(resolvedRoot + path.default.sep) && absDir !== resolvedRoot) {
+            throw new Error(`[SECURITY] Path traversal blocked. "${dir}" resolves outside projectRoot.`);
+          }
+          if (!fs.default.existsSync(absDir)) {
+            throw new Error(`Directory not found: ${absDir}`);
+          }
+
+          const walk = (base: string, rel = ''): string[] => {
+            const results: string[] = [];
+            const entries = fs.default.readdirSync(base, { withFileTypes: true });
+            for (const entry of entries) {
+              const name = entry.name;
+              const full = path.default.join(base, name);
+              const relPath = rel ? path.default.join(rel, name) : name;
+              const stat = fs.default.lstatSync(full);
+              if (stat.isSymbolicLink()) {
+                // Do NOT follow symlinks
+                continue;
+              }
+              if (stat.isFile()) results.push(relPath);
+              else if (stat.isDirectory() && options?.recursive) {
+                results.push(...walk(full, relPath));
+              }
+              if (results.length >= MAX_LIST_ITEMS) break;
+            }
+            return results;
+          };
+
+          let items = options?.recursive ? walk(absDir, '') : fs.default.readdirSync(absDir).filter(n => {
+            try {
+              const s = fs.default.lstatSync(path.default.join(absDir, n));
+              return !s.isSymbolicLink();
+            } catch { return false; }
+          });
+
+          // glob support: use the `glob` package to handle patterns safely and reliably
+          if (options?.glob) {
+            const globModule = await import('glob');
+            const globSync = (globModule as any).sync ?? (globModule as any).default?.sync;
+            const pattern = path.default.join(absDir, options.glob);
+            const matches = globSync(pattern, {
+              dot: false,    // don't match dotfiles
+              follow: false, // do NOT follow symlinks (CRITICAL)
+              nodir: false,
+              absolute: true
+            }) as string[];
+            items = matches.map(m => path.default.relative(absDir, m));
+          }
+  
+          return items.slice(0, MAX_LIST_ITEMS);
+        },
+
+        searchFiles: async (pattern: string, dir: string, options?: { filePattern?: string; projectRoot?: string }) => {
+          const fs = await import('fs');
+          const path = await import('path');
+
+          const MAX_SEARCH_FILES = 1000;
+          const MAX_SEARCH_RESULTS = 500;
+          const MAX_PARSE_FILE_BYTES = 1024 * 1024; // 1MB
+
+          const projectRoot = options?.projectRoot ? path.default.resolve(options.projectRoot) : process.cwd();
+          // Feature flag check
+          if (!configService.hasFeature(projectRoot, 'enhancedSandbox')) {
+            throw new Error('enhancedSandbox feature disabled');
+          }
+
+          // Basic ReDoS heuristic: reject nested quantifiers like (a+)+
+          if (/(?:\([^)]*\+[^)]*\)\+)/.test(pattern) || pattern.length > 200) {
+            throw new Error('Regex rejected: potential ReDoS');
+          }
+
+          let regex: RegExp;
+          try {
+            regex = new RegExp(pattern, 'gm');
+          } catch {
+            throw new Error('Invalid regex pattern');
+          }
+
+          // Gather files using simple recursive listing
+          const files = await apiRegistry.listFiles(dir, { recursive: true, glob: options?.filePattern || '*.ts' }, projectRoot);
+          const hits: Array<{ file: string; line: number; text: string }> = [];
+          let scanned = 0;
+
+          for (const fileRel of files.slice(0, MAX_SEARCH_FILES)) {
+            const fullPath = path.default.join(projectRoot, fileRel);
+            try {
+              const stats = fs.default.statSync(fullPath);
+              if (stats.size > MAX_PARSE_FILE_BYTES) continue;
+              const content = FileGuard.readTextFileSafely(fullPath);
+              const lines = content.split('\\n');
+              for (let i = 0; i < lines.length; i++) {
+                if (regex.test(lines[i])) {
+                  hits.push({ file: fileRel, line: i + 1, text: lines[i] });
+                  if (hits.length >= MAX_SEARCH_RESULTS) break;
+                }
+              }
+              scanned++;
+              if (hits.length >= MAX_SEARCH_RESULTS) break;
+            } catch {
+              // skip unreadable files
+            }
+            if (scanned >= MAX_SEARCH_FILES) break;
+          }
+
+          return hits.slice(0, MAX_SEARCH_RESULTS);
+        },
+
+        parseAST: async (filePath: string, options?: { extractSignatures?: boolean; projectRoot?: string }) => {
+          const fs = await import('fs');
+          const path = await import('path');
+          const ts = await import('typescript');
+
+          const MAX_PARSE_FILE_BYTES = 1024 * 1024; // 1MB
+          const projectRoot = options?.projectRoot ? path.default.resolve(options.projectRoot) : process.cwd();
+
+          // Feature flag check
+          if (!configService.hasFeature(projectRoot, 'enhancedSandbox')) {
+            throw new Error('enhancedSandbox feature disabled');
+          }
+
+          const absPath = path.default.resolve(projectRoot, filePath);
+          if (!absPath.startsWith(projectRoot + path.default.sep) && absPath !== projectRoot) {
+            throw new Error(`[SECURITY] Path traversal blocked. "${filePath}" resolves outside projectRoot.`);
+          }
+          if (!fs.default.existsSync(absPath)) {
+            throw new Error(`File not found: ${absPath}`);
+          }
+          const stats = fs.default.statSync(absPath);
+          if (stats.size > MAX_PARSE_FILE_BYTES) {
+            throw new Error(`File too large: ${absPath}`);
+          }
+
+          const content = FileGuard.readTextFileSafely(absPath);
+          const sourceFile = ts.createSourceFile(absPath, content, ts.ScriptTarget.Latest, true);
+
+          if (options?.extractSignatures) {
+            const signatures: Array<{ name: string; type: string; signature: string }> = [];
+            const visit = (node: any) => {
+              if (ts.isFunctionDeclaration(node) && node.name) {
+                signatures.push({
+                  name: node.name.text,
+                  type: 'function',
+                  signature: node.getText().split('{')[0].trim()
+                });
+              } else if (ts.isClassDeclaration(node) && node.name) {
+                signatures.push({
+                  name: node.name.text,
+                  type: 'class',
+                  signature: `class ${node.name.text}`
+                });
+              }
+              ts.forEachChild(node, visit);
+            };
+            visit(sourceFile);
+            return signatures;
+          }
+
+          return sourceFile;
+        },
+
+        getEnv: async (key: string) => {
+          const SAFE_ENV_VARS = [
+            'NODE_ENV',
+            'CI',
+            'GITHUB_ACTIONS',
+            'APPIUM_PORT',
+            'PLATFORM'
+          ];
+          if (!SAFE_ENV_VARS.includes(key)) {
+            throw new Error(`Environment variable "${key}" is not on the allowlist.`);
+          }
+          return process.env[key] ?? null;
+        }
+
       };
 
       const sandboxResult = await executeSandbox(args.script, apiRegistry, { timeoutMs: args.timeoutMs });

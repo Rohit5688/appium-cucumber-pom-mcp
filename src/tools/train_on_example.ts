@@ -11,9 +11,15 @@ export function registerTrainOnExample(
     "train_on_example",
     {
       title: "Train on Example",
-      description: `TEACH A PROJECT RULE. Use when a generation was wrong and you know the correct pattern, or after fixing a broken selector. Saves the rule to .AppForge/mcp-learning.json. All future generate_cucumber_pom calls will incorporate it. Returns: confirmation with the rule ID.
+      description: `TRIGGER: Generation was wrong OR fixed broken selector OR learned project pattern
+RETURNS: { ruleId: string, pattern: string, solution: string }
+NEXT: Future generate_cucumber_pom calls will auto-apply this rule
+COST: Low (writes to .AppForge/mcp-learning.json, ~50 tokens)
+ERROR_HANDLING: None - always succeeds.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Saves rule to .AppForge/mcp-learning.json. All future generations incorporate learned patterns.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         issuePattern: z.string(),

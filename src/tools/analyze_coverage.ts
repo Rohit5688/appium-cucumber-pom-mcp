@@ -14,9 +14,15 @@ export function registerAnalyzeCoverage(
     "analyze_coverage",
     {
       title: "Analyze Coverage",
-      description: `FIND MISSING TEST COVERAGE. Use when the user says 'what screens are not tested / find coverage gaps / what scenarios am I missing'. Parses .feature files to identify untested screens and missing edge cases. Returns: { report, prompt with suggestions }.
+      description: `TRIGGER: User says 'what screens not tested / find coverage gaps / missing scenarios'
+RETURNS: { report: string, prompt: string, gaps: Array<{screen, missingScenarios[]}> }
+NEXT: Use prompt for generate_cucumber_pom to create missing tests
+COST: Medium (parses all .feature files, ~200-400 tokens)
+ERROR_HANDLING: None - always succeeds, may return empty gaps if full coverage.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Parses .feature files to identify untested screens and missing edge cases.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         featureFilesPaths: z.array(z.string())

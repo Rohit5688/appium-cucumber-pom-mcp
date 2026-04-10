@@ -285,6 +285,19 @@ export class McpConfigService {
         };
     }
     /**
+     * Returns whether a named feature flag is enabled for the given project.
+     * Reads mcp-config.json and returns false on any error (safe default).
+     */
+    hasFeature(projectRoot, featureName) {
+        try {
+            const cfg = this.read(projectRoot);
+            return Boolean(cfg?.features && cfg.features[featureName]);
+        }
+        catch {
+            return false;
+        }
+    }
+    /**
      * Returns the active test environment.
      * Priority: explicitEnv arg > config.currentEnvironment > first in environments > 'staging'
      */

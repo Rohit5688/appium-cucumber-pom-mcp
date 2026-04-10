@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ProjectSetupService } from "../services/ProjectSetupService.js";
 import type { McpConfigService } from "../services/McpConfigService.js";
 import { textResult } from "./_helpers.js";
+import { McpErrors } from "../types/ErrorSystem.js";
 
 export function registerSetupProject(
   server: McpServer,
@@ -25,13 +26,21 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       inputSchema: z.object({
         projectRoot: z.string(),
         platform: z.enum(["android", "ios", "both"]).optional(),
-        appName: z.string().optional()
+        appName: z.string().optional(),
+        preview: z.boolean().optional().describe("When true, shows the file structure that would be created without writing.")
       }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }
     },
     async (args) => {
       const platform = args.platform ?? 'android';
       const appName = args.appName ?? 'MyApp';
+
+      // PREVIEW: show file structure without writing
+      if (args.preview) {
+        const preview = await projectSetupService.previewSetup(args.projectRoot, platform, appName);
+        return textResult(preview);
+      }
+
       const result = await projectSetupService.setup(args.projectRoot, platform, appName);
       
       // Parse the result to determine which phase completed
@@ -59,13 +68,16 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       // Return appropriate message based on phase
       if (parsedResult.phase === 1) {
         // Phase 1: Template created, user needs to fill it manually
-        return textResult(result);
+        // Surface structured error so caller knows manual action is required before Phase 2
+        const detail = parsedResult.message || 'Phase 1 created mcp-config.json. Fill required fields and re-run setup_project for Phase 2.';
+        throw McpErrors.projectValidationFailed(detail, 'setup_project');
       } else if (parsedResult.phase === 2 && parsedResult.status === 'SETUP_COMPLETE') {
         // Phase 2: Full setup complete
         return textResult(result);
       } else {
-        // Phase 2 with errors (missing required fields, parse errors)
-        return textResult(result);
+        // Phase 2 with errors (missing required fields, parse errors) — surface as validation failure
+        const detail = parsedResult.message || result;
+        throw McpErrors.projectValidationFailed(detail, 'setup_project');
       }
     }
   );

@@ -18,9 +18,15 @@ export function registerGenerateCucumberPom(
     "generate_cucumber_pom",
     {
       title: "Generate Cucumber POM",
-      description: `WRITE A NEW TEST. Use when the user asks to 'write a test / create a scenario / add automation for X'. Returns a generation PROMPT pre-loaded with your project's existing steps, page objects, and architecture pattern. Does NOT write files itself. After generating, call validate_and_write to save. Returns: generation prompt text.
+      description: `TRIGGER: User requests test creation OR automation for feature OR coverage gap
+RETURNS: Generation prompt with existing steps/page objects/utilities/patterns
+NEXT: LLM generates code → validate_and_write → run_cucumber_test
+COST: Medium (5-15 files, ~300-500 tokens)
+ERROR_HANDLING: Returns prompt even if no page objects exist. Throws if projectRoot invalid.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Loads: existing steps, page objects, utilities, learned patterns, platform skills.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         testDescription: z.string(),

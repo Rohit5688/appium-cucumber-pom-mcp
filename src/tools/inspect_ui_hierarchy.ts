@@ -14,9 +14,15 @@ export function registerInspectUiHierarchy(
     "inspect_ui_hierarchy",
     {
       title: "Inspect UI Hierarchy",
-      description: `SEE WHAT'S ON SCREEN. Two modes: (1) NO ARGS — fetches live XML and screenshot from the active Appium session. ⚡ REQUIRES ACTIVE SESSION — call start_appium_session first. (2) Pass xmlDump — parses offline with no session needed. Returns: { source, elements[], snapshot }. Use locatorStrategies to build accurate Page Object selectors.
+      description: `TRIGGER: Need to see current screen OR analyze UI structure OR build selectors
+RETURNS: { source: xml, elements: Array<{id, text, class, xpath, locatorStrategy}>, snapshot: base64 }
+NEXT: Use elements for generate_cucumber_pom OR self_heal_test if element not found
+COST: Medium-High (live: fetches XML+screenshot from device, ~500-1000 tokens | offline: parse only, ~200 tokens)
+ERROR_HANDLING: Throws if no active session (mode 1) OR invalid XML (mode 2). Suggests start_appium_session.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Mode 1 (NO ARGS): Live fetch from active session. Mode 2 (xmlDump): Offline parse. Returns locator strategies for Page Objects.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string().optional(),
         xmlDump: z.string().optional(),

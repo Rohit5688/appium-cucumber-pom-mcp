@@ -95,6 +95,35 @@ export class FileStateService {
   }
 
   /**
+   * Returns a list of tracked file paths (absolute).
+   */
+  public getTrackedFiles(): string[] {
+    return Array.from(this.fileStates.keys());
+  }
+
+  /**
+   * Returns files that were recorded as modified on disk since read.
+   * For compatibility with SystemStateService tests we return the filenames
+   * (base name) rather than absolute paths.
+   */
+  public getModifiedFiles(): string[] {
+    const modified: string[] = [];
+    for (const [p, state] of this.fileStates.entries()) {
+      try {
+        if (fs.existsSync(p)) {
+          const stats = fs.statSync(p);
+          if (stats.mtimeMs > state.diskModifiedTime) {
+            modified.push(path.basename(p));
+          }
+        }
+      } catch {
+        // ignore stat errors
+      }
+    }
+    return modified;
+  }
+
+  /**
    * Simple content hash for change detection.
    */
   private hashContent(content: string): string {

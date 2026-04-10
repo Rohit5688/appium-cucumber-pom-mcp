@@ -42,6 +42,131 @@ export class ExecutionService {
         return allowedPattern.test(tags);
     }
     /**
+     * Builds the command that would be executed for a test run.
+     * Used by preview mode to show users what will be run without executing.
+     */
+    async buildCommand(projectRoot, tags, platform) {
+        const fs = await import('fs');
+        const configService = new McpConfigService();
+        let config;
+        try {
+            config = configService.read(projectRoot);
+        }
+        catch {
+            config = null;
+        }
+        let command = '';
+        if (config?.project?.executionCommand) {
+            command = config.project.executionCommand;
+        }
+        else {
+            const defaultConf = fs.existsSync(path.join(projectRoot, 'wdio.conf.ts'))
+                ? 'wdio.conf.ts'
+                : fs.existsSync(path.join(projectRoot, 'wdio.conf.js'))
+                    ? 'wdio.conf.js'
+                    : null;
+            if (defaultConf) {
+                command = `npx wdio run ${defaultConf}`;
+            }
+            else {
+                throw new AppForgeError("E008_PRECONDITION_FAIL", 'No test execution command found.', ['Add "project": { "executionCommand": "npx wdio run wdio.conf.ts" } to mcp-config.json']);
+            }
+        }
+        const isWdio = command.includes('wdio');
+        let configName = 'wdio.conf.ts';
+        if (isWdio && platform) {
+            const specificConfig = `wdio.${platform}.conf.ts`;
+            if (fs.existsSync(path.join(projectRoot, specificConfig))) {
+                configName = specificConfig;
+                command = command.replace(/wdio\.conf\.(ts|js)/, specificConfig);
+            }
+        }
+        let tagExpression = tags || '';
+        if (isWdio) {
+            if (platform && configName === 'wdio.conf.ts') {
+                const platformTag = `@${platform}`;
+                if (tagExpression) {
+                    tagExpression = `(${tagExpression}) and ${platformTag}`;
+                }
+                else {
+                    tagExpression = platformTag;
+                }
+            }
+            if (tagExpression) {
+                command += ` --cucumberOpts.tagExpression=${tagExpression}`;
+            }
+        }
+        return command;
+    }
+    /**
+     * Counts the number of scenarios that match the given tag expression.
+     * Used by preview mode to estimate test duration.
+     */
+    async countScenarios(projectRoot, tags) {
+        const fs = await import('fs');
+        const glob = await import('glob');
+        // Find all .feature files
+        const featuresPath = path.join(projectRoot, 'src', 'features');
+        if (!fs.existsSync(featuresPath)) {
+            return 0;
+        }
+        const featureFiles = glob.sync(path.join(featuresPath, '**', '*.feature'));
+        let totalScenarios = 0;
+        for (const file of featureFiles) {
+            const content = fs.readFileSync(file, 'utf-8');
+            const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('Scenario:') || line.startsWith('Scenario Outline:')) {
+                    // Check if tags match (simplified matching - looks for tags in preceding lines)
+                    if (!tags) {
+                        totalScenarios++;
+                    }
+                    else {
+                        // Look backwards for tags
+                        let tagLine = '';
+                        for (let j = i - 1; j >= 0; j--) {
+                            const prevLine = lines[j].trim();
+                            if (prevLine.startsWith('@')) {
+                                tagLine = prevLine + ' ' + tagLine;
+                            }
+                            else if (prevLine === '') {
+                                continue;
+                            }
+                            else {
+                                break;
+                            }
+                        }
+                        // Simple tag matching (doesn't handle complex expressions perfectly)
+                        if (this.matchesTags(tagLine, tags)) {
+                            totalScenarios++;
+                        }
+                    }
+                }
+            }
+        }
+        return totalScenarios;
+    }
+    /**
+     * Simple tag matching logic for preview mode.
+     * Note: This is a simplified implementation and may not handle all complex tag expressions.
+     */
+    matchesTags(scenarioTags, expression) {
+        if (!expression)
+            return true;
+        // Extract tags from scenario (e.g., "@smoke @android" -> ["smoke", "android"])
+        const availableTags = scenarioTags
+            .split(/\s+/)
+            .filter(t => t.startsWith('@'))
+            .map(t => t.substring(1));
+        // Simple matching: check if expression tags are in available tags
+        const requiredTags = expression
+            .split(/\s+/)
+            .filter(t => t.startsWith('@'))
+            .map(t => t.substring(1));
+        return requiredTags.every(req => availableTags.includes(req));
+    }
+    /**
      * Executes Cucumber Appium tests with tag and platform filtering.
      * If a live session is active and tests fail, auto-captures screenshot + XML for healing.
      *

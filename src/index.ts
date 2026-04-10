@@ -68,9 +68,12 @@ import { registerExportNavigationMap } from "./tools/export_navigation_map.js";
 import { registerGetTokenBudget } from "./tools/get_token_budget.js";
 import { registerCheckAppiumReady } from './tools/check_appium_ready.js';
 import { registerScanStructuralBrain } from './tools/scan_structural_brain.js';
+import { registerCreateTestAtomically } from './tools/create_test_atomically.js';
+import { registerHealAndVerifyAtomically } from './tools/heal_and_verify_atomically.js';
 import { TokenBudgetService } from "./services/TokenBudgetService.js";
 import { ObservabilityService } from "./services/ObservabilityService.js";
 import { StructuralBrainService } from "./services/StructuralBrainService.js";
+import { OrchestrationService } from "./services/OrchestrationService.js";
 
 // Initialize at startup (background scan)
 StructuralBrainService.getInstance().scanProject().catch(() => {
@@ -116,6 +119,17 @@ class AppForgeServer {
   private migrationService = new MigrationService();
   // MEMORY LEAK FIX: Instance pooling for NavigationGraphService to prevent creating new instances per tool call
   private navigationGraphServices = new Map<string, NavigationGraphService>();
+  
+  // Orchestration service for atomic multi-step operations
+  private orchestrationService = new OrchestrationService(
+    this.generationService,
+    this.fileWriterService,
+    this.selfHealingService,
+    this.sessionManager as any, // AppiumSessionService interface
+    this.learningService,
+    this.configService,
+    this.analyzerService
+  );
 
   constructor() {
     this.server = new McpServer(
@@ -168,7 +182,7 @@ class AppForgeServer {
     registerSetupProject(this.server, this.projectSetupService, this.configService);
     registerUpgradeProject(this.server, this.projectMaintenanceService, this.configService);
     registerRepairProject(this.server, this.projectMaintenanceService);
-    registerManageConfig(this.server, this.configService);
+    registerManageConfig(this.server, this.configService, this.credentialService);
     registerInjectAppBuild(this.server, this.configService);
     registerAnalyzeCodebase(this.server, this.configService, this.analyzerService);
     registerExecuteSandboxCode(this.server, this.configService, this.analyzerService, this.executionService);
@@ -203,6 +217,10 @@ class AppForgeServer {
     registerGetTokenBudget(this.server);
     registerCheckAppiumReady(this.server);
     registerScanStructuralBrain(this.server);
+    
+    // Orchestrator tools (atomic multi-step operations)
+    registerCreateTestAtomically(this.server, this.orchestrationService);
+    registerHealAndVerifyAtomically(this.server, this.orchestrationService);
   }
 
   async run() {

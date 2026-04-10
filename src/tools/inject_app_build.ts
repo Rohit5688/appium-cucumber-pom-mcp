@@ -11,7 +11,9 @@ export function registerInjectAppBuild(
     "inject_app_build",
     {
       title: "Inject App Build",
-      description: `UPDATE APP FILE PATH. Use after a new build or when pointing to a different .apk/.ipa/.app file. Updates the app path in mcp-config.json for the specified platform. Set forceWrite: true for CI paths where the file does not exist locally yet. Returns: confirmation with the new path.
+      description: `⚠️ DEPRECATED: Use manage_config({ operation: 'inject_app', platform, appPath }) instead. This tool will be removed in v2.0.
+
+LEGACY: Updates the app path in mcp-config.json for the specified platform. Set forceWrite: true for CI paths where the file does not exist locally yet.
 
 OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({

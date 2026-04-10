@@ -14,9 +14,15 @@ export function registerGenerateCiWorkflow(
     "generate_ci_workflow",
     {
       title: "Generate CI Workflow",
-      description: `SET UP CI/CD PIPELINE. Use when the user says 'add GitHub Actions / create a CI pipeline / automate my test runs'. Generates a pre-configured workflow file for GitHub Actions or GitLab CI — reads deviceName, execution command, and report path from mcp-config.json automatically. Returns: file path and workflow content.
+      description: `TRIGGER: User says 'add GitHub Actions / create CI pipeline / automate test runs'
+RETURNS: { filePath: string, content: string }
+NEXT: Commit workflow file → Push to repo → CI will auto-run on push
+COST: Low (reads mcp-config, generates YAML template, ~100-200 tokens)
+ERROR_HANDLING: None - always succeeds, reads defaults from mcp-config.json.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Generates GitHub Actions or GitLab CI workflow. Auto-reads device/command/report from config.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         provider: z.enum(["github", "gitlab"]),

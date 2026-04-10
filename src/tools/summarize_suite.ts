@@ -13,9 +13,15 @@ export function registerSummarizeSuite(
     "summarize_suite",
     {
       title: "Summarize Suite",
-      description: `TEST RUN SUMMARY. Use after run_cucumber_test or when the user asks 'what were the test results / how many passed'. Parses the Cucumber JSON report. Returns: { summary, totalScenarios, passed, failed, skipped, duration, failingScenarios[] }.
+      description: `TRIGGER: After run_cucumber_test OR user asks 'test results / how many passed'
+RETURNS: { summary: string, totalScenarios: number, passed: number, failed: number, skipped: number, duration: string, failingScenarios: Array<{name, error}> }
+NEXT: If failures → self_heal_test with error | If all pass → Done
+COST: Low (parses JSON report, ~100-200 tokens)
+ERROR_HANDLING: None - always succeeds, returns empty if report not found.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Parses Cucumber JSON report for test results breakdown.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         reportFile: z.string().optional()

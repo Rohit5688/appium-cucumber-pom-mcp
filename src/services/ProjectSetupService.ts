@@ -194,7 +194,7 @@ export class ProjectSetupService {
       }
 
       // 12. Mock scenarios sample JSON
-      this.scaffoldMockScenarios(stagingDir);
+      this.scaffoldMockScenarios(stagingDir, paths);
       filesCreated.push(`${paths.testDataRoot}/mock-scenarios.json`);
 
       // ── Commit: atomically copy staging dir to the real projectRoot ──
@@ -1360,14 +1360,184 @@ export class AssertionUtils {
     this.writeIfNotExists(path.join(projectRoot, targetPath, 'DataUtils.ts'), content);
   }
 
+  /**
+   * Preview what files would be created by setup() without writing anything.
+   * Returns a JSON string describing the planned files and a short message.
+   */
+  public async previewSetup(projectRoot: string, platform: string = 'android', appName: string = 'MyMobileApp'): Promise<string> {
+    const configPath = path.join(projectRoot, 'mcp-config.json');
+
+    if (!fs.existsSync(projectRoot)) {
+      return JSON.stringify({
+        preview: true,
+        filesToCreate: ['mcp-config.json'],
+        message: 'Project root does not exist. Calling setup_project will create mcp-config.json and scaffold files.'
+      }, null, 2);
+    }
+
+    if (!fs.existsSync(configPath)) {
+      return JSON.stringify({
+        preview: true,
+        filesToCreate: ['mcp-config.json'],
+        message: 'No mcp-config.json found. First call to setup_project will create a CONFIGURE_ME template.'
+      }, null, 2);
+    }
+
+    // Read existing config
+    let config: any;
+    try {
+      const cfgService = new McpConfigService();
+      config = cfgService.read(projectRoot);
+    } catch (err: any) {
+      return JSON.stringify({
+        preview: true,
+        filesToCreate: [],
+        message: `Cannot read existing mcp-config.json: ${err.message}`
+      }, null, 2);
+    }
+
+    const paths = this.mcpConfigService.getPaths(config);
+    const environments = Array.isArray(config?.environments) ? config.environments : [];
+    const filesToCreate: string[] = [];
+
+    // Credential files
+    let envFilesScaffolded = 0;
+    for (const env of environments) {
+      if (typeof env === 'string' && env && !env.startsWith('CONFIGURE_ME')) {
+        filesToCreate.push(`${paths.credentialsRoot}/users.${env}.json`);
+        envFilesScaffolded++;
+      }
+    }
+    if (environments.length > 0 && envFilesScaffolded === 0) {
+      filesToCreate.push(`${paths.credentialsRoot}/users.staging.json`);
+    }
+
+    // Core files
+    filesToCreate.push('package.json');
+    filesToCreate.push('tsconfig.json');
+    filesToCreate.push('cucumber.js');
+    filesToCreate.push(`${paths.pagesRoot}/BasePage.ts`);
+    filesToCreate.push(`${paths.utilsRoot}/AppiumDriver.ts`);
+    filesToCreate.push(`${paths.utilsRoot}/ActionUtils.ts`);
+    filesToCreate.push(`${paths.utilsRoot}/WaitUtils.ts`);
+    filesToCreate.push(`${paths.utilsRoot}/MobileGestures.ts`);
+    filesToCreate.push(`${paths.utilsRoot}/LocatorUtils.ts`);
+    filesToCreate.push(`${paths.utilsRoot}/MockServer.ts`);
+    filesToCreate.push(`${paths.stepsRoot}/hooks.ts`);
+    filesToCreate.push(`${paths.featuresRoot}/sample.feature`);
+    filesToCreate.push('.gitignore');
+
+    // WDIO configs
+    const effectivePlatform = (config?.mobile?.defaultPlatform as string) || platform;
+    if (effectivePlatform === 'both') {
+      filesToCreate.push('wdio.shared.conf.ts', 'wdio.android.conf.ts', 'wdio.ios.conf.ts');
+    } else {
+      filesToCreate.push('wdio.conf.ts');
+    }
+
+    filesToCreate.push(`${paths.testDataRoot}/mock-scenarios.json`);
+
+    return JSON.stringify({
+      preview: true,
+      appName,
+      platform: effectivePlatform,
+      filesToCreate,
+      message: `Preview complete. Call setup_project with preview:false to scaffold these files.`
+    }, null, 2);
+  }
+
   // ─── Helpers ───────────────────────────────────────────────
 
   /**
    * Proxy entry-point for upgrade_project — runs the config-aware upgrade flow.
    */
-  public async upgrade(projectRoot: string): Promise<string> {
+  public async upgrade(projectRoot: string, preview: boolean = false): Promise<string> {
     // New: config-aware upgrade is the primary flow
-    return this.upgradeFromConfig(projectRoot);
+    return this.upgradeFromConfig(projectRoot, preview);
+  }
+
+  /**
+   * Preview what would change during an upgrade without actually modifying files.
+   */
+  public async previewUpgrade(projectRoot: string): Promise<{
+    configChanges: string[];
+    filesToRepair: string[];
+    packagesToUpdate: string[];
+    pending: string[];
+  }> {
+    const configPath = path.join(projectRoot, 'mcp-config.json');
+    if (!fs.existsSync(configPath)) {
+      return {
+        configChanges: ['No mcp-config.json found'],
+        filesToRepair: [],
+        packagesToUpdate: [],
+        pending: ['Run setup_project first']
+      };
+    }
+
+    const config = this.mcpConfigService.read(projectRoot);
+    const configChanges: string[] = [];
+    const filesToRepair: string[] = [];
+    const packagesToUpdate: string[] = [];
+    const pending: string[] = [];
+
+    // Check for CONFIGURE_ME markers
+    const unconfigured = this.scanConfigureMe(projectRoot);
+    if (unconfigured.length > 0) {
+      pending.push(...unconfigured.map(field => `${field} needs configuration`));
+    }
+
+    // Check for missing baseline files
+    const baseFiles = [
+      'src/pages/BasePage.ts',
+      'src/step-definitions/hooks.ts',
+      'wdio.conf.ts',
+      'package.json',
+      'tsconfig.json'
+    ];
+
+    for (const file of baseFiles) {
+      const filePath = path.join(projectRoot, file);
+      if (!fs.existsSync(filePath)) {
+        filesToRepair.push(file);
+      }
+    }
+
+    // Check package.json for outdated dependencies
+    const packageJsonPath = path.join(projectRoot, 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+      const currentDeps = {
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies
+      };
+
+      // Compare with latest recommended versions
+      const recommendations = [
+        { name: '@wdio/cli', version: '^8.0.0' },
+        { name: '@wdio/local-runner', version: '^8.0.0' },
+        { name: '@wdio/cucumber-framework', version: '^8.0.0' },
+        { name: 'appium', version: '^2.0.0' }
+      ];
+
+      for (const rec of recommendations) {
+        if (currentDeps[rec.name] && currentDeps[rec.name] !== rec.version) {
+          packagesToUpdate.push(`${rec.name}: ${currentDeps[rec.name]} → ${rec.version}`);
+        }
+      }
+    }
+
+    // Check for config migrations
+    if (config.version !== '1.1.0') {
+      configChanges.push(`mcp-config.json version: ${config.version || 'unversioned'} → 1.1.0`);
+    }
+
+    return {
+      configChanges,
+      filesToRepair,
+      packagesToUpdate,
+      pending
+    };
   }
 
   /**
@@ -1387,7 +1557,15 @@ export class AssertionUtils {
    * Config-aware upgrade: reads mcp-config.json, scans for CONFIGURE_ME markers,
    * and applies scaffolding for newly-configured features.
    */
-  public async upgradeFromConfig(projectRoot: string): Promise<string> {
+  public async upgradeFromConfig(projectRoot: string, preview: boolean = false): Promise<string> {
+    if (preview) {
+      const previewResult = await this.previewUpgrade(projectRoot);
+      return JSON.stringify({
+        preview: true,
+        ...previewResult,
+        hint: '✅ Preview complete. Set preview:false to execute.'
+      }, null, 2);
+    }
     const configPath = path.join(projectRoot, 'mcp-config.json');
     if (!fs.existsSync(configPath)) {
       return JSON.stringify({

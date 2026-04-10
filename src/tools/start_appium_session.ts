@@ -15,9 +15,15 @@ export function registerStartAppiumSession(
     "start_appium_session",
     {
       title: "Start Appium Session",
-      description: `CONNECT TO DEVICE. Use when the user says 'connect to the device / start a session / inspect the app / I want to see what's on screen'. Connects to Appium and starts a session on the device in mcp-config.json. Returns: { sessionId, platform, device, hint }. After success, call inspect_ui_hierarchy with no args to see the current screen.
+      description: `TRIGGER: User says 'connect to device / start session / inspect app / see screen'
+RETURNS: { sessionId, platform, device, navigationHints }
+NEXT: inspect_ui_hierarchy (no args) to see current screen
+COST: High (launches app, ~60-120s, establishes driver connection)
+ERROR_HANDLING: Throws if Appium unreachable, device offline, or app not found.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Connects to device via mcp-config.json capabilities. Resets context/token budget. Deep-link/activity shortcuts in navigationHints.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         profileName: z.string().optional()

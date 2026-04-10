@@ -11,15 +11,28 @@ export function registerRepairProject(
     "repair_project",
     {
       title: "Repair Project",
-      description: `REPAIR MISSING FILES. Use when setup was interrupted or files were accidentally deleted. Regenerates ONLY missing baseline files — never overwrites existing custom code. Safe to run at any time. Returns: list of files regenerated.
+      description: `TRIGGER: Setup interrupted OR files accidentally deleted
+RETURNS: { filesRegenerated: string[], skipped: string[] }
+NEXT: check_environment to verify repair → Continue with workflow
+COST: Low (checks file existence, writes missing files, ~100-200 tokens)
+ERROR_HANDLING: None - always succeeds, regenerates only missing baseline files.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Regenerates ONLY missing baseline files. Never overwrites custom code. Safe to re-run.
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
-        platform: z.enum(["android", "ios", "both"]).optional()
+        platform: z.enum(["android", "ios", "both"]).optional(),
+        preview: z.boolean().optional().describe("When true, shows which baseline files would be regenerated without writing.")
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
-    async (args) => textResult(await projectMaintenanceService.repairProject(args.projectRoot, args.platform))
+    async (args) => {
+      // PREVIEW: return list of files that would be repaired without modifying disk
+      if (args.preview) {
+        return textResult(await projectMaintenanceService.repairProject(args.projectRoot, args.platform, true));
+      }
+      return textResult(await projectMaintenanceService.repairProject(args.projectRoot, args.platform, false));
+    }
   );
 }

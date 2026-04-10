@@ -20,7 +20,7 @@ export class ProjectMaintenanceService {
    * 
    * CB-1 FIX: Validates projectRoot to prevent shell injection attacks
    */
-  public async upgradeProject(projectRoot: string): Promise<string> {
+  public async upgradeProject(projectRoot: string, preview: boolean = false): Promise<string> {
     // CB-1 FIX: Validate projectRoot before any operations
     try {
       validateProjectRoot(projectRoot);
@@ -29,7 +29,7 @@ export class ProjectMaintenanceService {
     }
 
     // New: config-aware upgrade is the primary flow
-    return this.projectSetupService.upgrade(projectRoot);
+    return this.projectSetupService.upgrade(projectRoot, preview);
   }
 
   /**
@@ -37,12 +37,39 @@ export class ProjectMaintenanceService {
    * 
    * CB-1 FIX: Validates projectRoot to prevent shell injection attacks
    */
-  public async repairProject(projectRoot: string, platform: 'android' | 'ios' | 'both' = 'android'): Promise<string> {
+  public async repairProject(
+    projectRoot: string,
+    platform: 'android' | 'ios' | 'both' = 'android',
+    preview: boolean = false
+  ): Promise<string> {
     // CB-1 FIX: Validate projectRoot before any operations
     try {
       validateProjectRoot(projectRoot);
     } catch (error: any) {
       throw McpErrors.projectValidationFailed(`Invalid projectRoot: ${error.message}`, 'ProjectMaintenanceService');
+    }
+
+    // PREVIEW: report which baseline files would be regenerated without writing anything.
+    if (preview) {
+      const baseFiles = [
+        'src/pages/BasePage.ts',
+        'src/step-definitions/hooks.ts',
+        'wdio.conf.ts',
+        'package.json',
+        'tsconfig.json',
+        'cucumber.js',
+        '.gitignore'
+      ];
+      const missing: string[] = [];
+      for (const f of baseFiles) {
+        if (!fs.existsSync(path.join(projectRoot, f))) missing.push(f);
+      }
+      const previewResult = {
+        preview: true,
+        filesToRepair: missing,
+        hint: '✅ Preview complete. Call repair_project with preview:false to perform repair.'
+      };
+      return JSON.stringify(previewResult, null, 2);
     }
 
     try {

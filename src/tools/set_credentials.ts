@@ -11,7 +11,9 @@ export function registerSetCredentials(
     "set_credentials",
     {
       title: "Set Credentials",
-      description: `SAVE CREDENTIALS SECURELY. Stores cloud provider credentials, API keys, or service env vars in the project .env file. Use for BrowserStack, Sauce Labs, or any external service. Values stored in .env and excluded from git. Returns: confirmation of keys saved.
+      description: `⚠️ DEPRECATED: Use manage_config({ operation: 'set_credentials', credentials }) instead. This tool will be removed in v2.0.
+
+LEGACY: Stores cloud provider credentials, API keys, or service env vars in the project .env file. Values stored in .env and excluded from git.
 
 OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({

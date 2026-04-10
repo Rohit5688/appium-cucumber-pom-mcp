@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { CredentialService } from "../services/CredentialService.js";
 import { textResult } from "./_helpers.js";
+import { McpErrors } from "../types/ErrorSystem.js";
 
 export function registerManageUsers(
   server: McpServer,
@@ -12,6 +13,8 @@ export function registerManageUsers(
     {
       title: "Manage Users",
       description: `MANAGE TEST USERS. Use when the user wants to add or view test account credentials for different environments (staging, prod). Stores users with roles in users.{env}.json. Generates a typed getUser() helper. Returns: list of users on read, confirmation on write.
+
+NOTE: This tool may now surface validation/warning conditions by throwing McpErrors.projectValidationFailed (instead of returning an error JSON). Callers should catch exceptions rather than parsing JSON output to detect validation failures.
 
 OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
@@ -26,6 +29,21 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },
-    async (args) => textResult(await credentialService.manageUsers(args.projectRoot, args.operation, args.env, args.users))
+    async (args) => {
+      const resultString = await credentialService.manageUsers(args.projectRoot, args.operation, args.env, args.users);
+      let resultObj: any = null;
+      try {
+        resultObj = JSON.parse(resultString);
+      } catch {
+        resultObj = null;
+      }
+
+      // If read operation failed, throw structured McpError so MCP layer surfaces it
+      if (args.operation === 'read' && resultObj && resultObj.status && resultObj.status !== 'ok') {
+        throw McpErrors.projectValidationFailed(resultObj.message || JSON.stringify(resultObj), 'manage_users');
+      }
+
+      return textResult(resultString);
+    }
   );
 }

@@ -3,7 +3,8 @@ import { z } from "zod";
 import path from 'path';
 import type { McpConfigService } from "../services/McpConfigService.js";
 import type { AuditLocatorService } from "../services/AuditLocatorService.js";
-import { textResult } from "./_helpers.js";
+import { textResult, truncate } from "./_helpers.js";
+import { McpErrors } from "../types/ErrorSystem.js";
 
 export function registerAuditMobileLocators(
   server: McpServer,
@@ -14,9 +15,15 @@ export function registerAuditMobileLocators(
     "audit_mobile_locators",
     {
       title: "Audit Mobile Locators",
-      description: `LOCATOR HEALTH CHECK. Use when the user says 'check my locators / are my selectors stable / too many XPaths'. Scans Page Objects and YAML locator files. Flags XPath (❌ brittle), CSS class/ID (⚠️ fragile), accessibility-id (✅ stable). Returns a health report with per-file breakdown, health score percentage, and specific lines to fix.
+      description: `TRIGGER: User says 'check locators / selectors stable / too many XPaths'
+RETURNS: { healthScore: number, breakdown: Array<{file, issues[]}>, recommendations: string[] }
+NEXT: If score <50 → Fix XPath/brittle selectors | If score >80 → Ready for production
+COST: Medium (scans all Page Objects + YAML files, ~200-400 tokens)
+ERROR_HANDLING: Throws McpErrors.projectValidationFailed if health score <50.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Scans Page Objects/YAML. Flags: XPath (❌ brittle), CSS class/ID (⚠️ fragile), accessibility-id (✅ stable).
+
+OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({ projectRoot: z.string() }),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },
@@ -33,6 +40,18 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       ].map(p => typeof p === 'string' ? p : '').filter(Boolean);
 
       const report = await auditLocatorService.audit(args.projectRoot, locatorsCandidates);
+
+      // Compute a simple health score: percent of accessibility-id locators
+      const total = report.totalLocators || 0;
+      const accessibility = report.accessibilityIdCount || 0;
+      const healthScore = total > 0 ? Math.round((accessibility / total) * 100) : 100;
+
+      // If health is poor, surface a structured MCP error with the full report
+      if (healthScore < 50) {
+        const detail = `Locator health score ${healthScore}% is below the acceptable threshold (50%).\n\n` + truncate(report.markdownReport, "report truncated");
+        throw McpErrors.projectValidationFailed(detail, "audit_mobile_locators");
+      }
+
       return textResult(report.markdownReport);
     }
   );

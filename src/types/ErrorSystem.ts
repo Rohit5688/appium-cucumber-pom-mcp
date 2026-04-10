@@ -77,6 +77,9 @@ export class McpError extends Error {
   public readonly toolName: string | undefined;
   public readonly cause: Error | undefined;
   public readonly timestamp: string;
+  public readonly suggestedNextTools?: string[];
+  public readonly autoFixAvailable?: boolean;
+  public readonly autoFixCommand?: string;
 
   constructor(
     message: string,
@@ -85,6 +88,9 @@ export class McpError extends Error {
       toolName?: string;
       cause?: Error;
       retryable?: boolean; // Override default retryability
+      suggestedNextTools?: string[];
+      autoFixAvailable?: boolean;
+      autoFixCommand?: string;
     }
   ) {
     super(message);
@@ -94,6 +100,9 @@ export class McpError extends Error {
     this.toolName = options?.toolName;
     this.cause = options?.cause;
     this.timestamp = new Date().toISOString();
+    this.suggestedNextTools = options?.suggestedNextTools;
+    this.autoFixAvailable = options?.autoFixAvailable;
+    this.autoFixCommand = options?.autoFixCommand;
   }
 
   /** Serialize to MCP-compatible JSON-RPC error object */
@@ -102,9 +111,11 @@ export class McpError extends Error {
       `[${this.code}] ${this.message}`,
       this.toolName ? `Tool: ${this.toolName}` : null,
       this.retryable ? 'Retryable: yes' : 'Retryable: no',
+      this.suggestedNextTools ? `Next: ${this.suggestedNextTools.join(', ')}` : null,
+      this.autoFixAvailable ? `Auto-fix: ${this.autoFixCommand ?? '<command unavailable>'}` : null,
       this.cause ? `Caused by: ${this.cause.message}` : null,
     ].filter(Boolean).join('\n');
-
+  
     return {
       isError: true,
       content: [{ type: 'text', text: detail }]
@@ -180,6 +191,9 @@ export const McpErrors = {
   projectValidationFailed: (details: string, toolName?: string) =>
     new McpError(`Project validation failed: ${details}`, McpErrorCode.PROJECT_VALIDATION_FAILED, { toolName }),
 
+  testExecutionFailed: (details: string, toolName?: string) =>
+    new McpError(`Test execution failed: ${details}`, McpErrorCode.TEST_EXECUTION_FAILED, { toolName }),
+  
   fileOperationFailed: (details: string, cause?: Error, toolName?: string) =>
     new McpError(`File operation failed: ${details}`, McpErrorCode.FILE_OPERATION_FAILED, { cause, toolName }),
 
@@ -213,16 +227,19 @@ export function toMcpErrorResponse(err: unknown, toolName?: string): { isError: 
 
   const base = mcpErr.toMcpResponse();
 
-  const rpcError = {
-    code: mcpErr.code,
-    message: mcpErr.message,
-    data: {
-      toolName: mcpErr.toolName,
-      retryable: mcpErr.retryable,
-      cause: mcpErr.cause ? String(mcpErr.cause.message) : undefined,
-      timestamp: mcpErr.timestamp
-    }
-  };
+    const rpcError = {
+      code: mcpErr.code,
+      message: mcpErr.message,
+      data: {
+        toolName: mcpErr.toolName,
+        retryable: mcpErr.retryable,
+        cause: mcpErr.cause ? String(mcpErr.cause.message) : undefined,
+        timestamp: mcpErr.timestamp,
+        suggestedNextTools: mcpErr.suggestedNextTools,
+        autoFixAvailable: mcpErr.autoFixAvailable,
+        autoFixCommand: mcpErr.autoFixCommand
+      }
+    };
 
   return {
     isError: true,
