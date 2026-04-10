@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ExecutionService } from "../services/ExecutionService.js";
 import { textResult, truncate } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
+import { ShellSecurityEngine } from "../utils/ShellSecurityEngine.js";
 
 export function registerRunCucumberTest(
   server: McpServer,
@@ -37,6 +38,38 @@ OUTPUT: Ack (≤10 words), proceed.`,
       // PREVIEW MODE: Show what would be executed without running
       if (args.preview) {
         try {
+          // Security validation: mirror runtime checks to prevent preview from accepting unsafe input
+          if (args.tags) {
+            const tagPattern = /^[@\w\s()!&|,]+$/;
+            if (!tagPattern.test(args.tags)) {
+              throw McpErrors.invalidParameter(
+                'tags',
+                'Invalid tag expression. Allowed characters: @, alphanumeric, spaces, parentheses, and logical operators (!, &, |, comma).',
+                'run_cucumber_test'
+              );
+            }
+          }
+          if (args.specificArgs) {
+            const specificArgsArr = args.specificArgs.split(/\s+/).filter(a => a.length > 0);
+            const argsCheck = ShellSecurityEngine.validateArgs(specificArgsArr, 'run_cucumber_test');
+            if (!argsCheck.safe) {
+              throw McpErrors.shellInjectionDetected(
+                ShellSecurityEngine.formatViolations(argsCheck),
+                'run_cucumber_test'
+              );
+            }
+          }
+          if (args.overrideCommand) {
+            const overrideArgs = args.overrideCommand.split(/\s+/).filter(a => a.length > 0);
+            const overrideCheck = ShellSecurityEngine.validateArgs(overrideArgs, 'run_cucumber_test');
+            if (!overrideCheck.safe) {
+              throw McpErrors.shellInjectionDetected(
+                ShellSecurityEngine.formatViolations(overrideCheck),
+                'run_cucumber_test'
+              );
+            }
+          }
+
           const command = await executionService.buildCommand(
             args.projectRoot,
             args.tags,

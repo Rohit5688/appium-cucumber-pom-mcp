@@ -69,7 +69,11 @@ OUTPUT: Ack (≤10 words), proceed.`,
 
           switch (args.operation) {
             case "read":
-              return textResult(JSON.stringify(existing ?? {}, null, 2));
+              return textResult(JSON.stringify({
+                preview: true,
+                existing: existing ?? {},
+                hint: '✅ Preview complete. Set preview:false to execute.'
+              }, null, 2));
 
             case "write": {
               const merged = deepMerge(existing ?? {}, args.config ?? {});
@@ -81,7 +85,11 @@ OUTPUT: Ack (≤10 words), proceed.`,
                   'manage_config'
                 );
               }
-              return textResult(JSON.stringify({ preview: true, mergedConfig: merged }, null, 2));
+               return textResult(JSON.stringify({
+                 preview: true,
+                 mergedConfig: merged,
+                 hint: '✅ Preview complete. Set preview:false to execute.'
+               }, null, 2));
             }
 
             case "inject_app": {
@@ -113,7 +121,11 @@ OUTPUT: Ack (≤10 words), proceed.`,
                   }
                 };
               }
-              return textResult(JSON.stringify({ preview: true, updatedConfigSnippet: previewConfig }, null, 2));
+               return textResult(JSON.stringify({
+                 preview: true,
+                 updatedConfigSnippet: previewConfig,
+                 hint: '✅ Preview complete. Set preview:false to execute.'
+               }, null, 2));
             }
 
             case "set_credentials": {
@@ -126,7 +138,12 @@ OUTPUT: Ack (≤10 words), proceed.`,
               }
               // Do not echo secret values — only show keys and count
               const keys = Object.keys(args.credentials);
-              return textResult(JSON.stringify({ preview: true, keys, count: keys.length }, null, 2));
+               return textResult(JSON.stringify({
+                 preview: true,
+                 keys,
+                 count: keys.length,
+                 hint: '✅ Preview complete. Set preview:false to execute.'
+               }, null, 2));
             }
 
             case "activate_build": {
@@ -139,7 +156,12 @@ OUTPUT: Ack (≤10 words), proceed.`,
               }
               const cfg: any = existing ?? {};
               const buildExists = Boolean(cfg.builds && cfg.builds[args.buildName]);
-              return textResult(JSON.stringify({ preview: true, buildName: args.buildName, exists: buildExists }, null, 2));
+               return textResult(JSON.stringify({
+                 preview: true,
+                 buildName: args.buildName,
+                 exists: buildExists,
+                 hint: '✅ Preview complete. Set preview:false to execute.'
+               }, null, 2));
             }
 
             default:

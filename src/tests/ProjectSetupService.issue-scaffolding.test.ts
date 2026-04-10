@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, beforeEach, afterEach } from 'node:test';
+import * as assert from 'node:assert/strict';
 import { ProjectSetupService } from '../services/ProjectSetupService.js';
 import fs from 'fs';
 import path from 'path';
@@ -23,8 +24,8 @@ describe('ProjectSetupService - Scaffolding Fix Issue', () => {
     // Phase 1: Create config template
     const phase1Result = await setupService.setup(testDir, 'android', 'TestApp');
     const phase1Data = JSON.parse(phase1Result);
-    expect(phase1Data.phase).toBe(1);
-    expect(phase1Data.status).toBe('CONFIG_TEMPLATE_CREATED');
+    assert.strictEqual(phase1Data.phase, 1);
+    assert.strictEqual(phase1Data.status, 'CONFIG_TEMPLATE_CREATED');
 
     // Simulate user filling in required fields
     const configPath = path.join(testDir, 'mcp-config.json');
@@ -49,27 +50,27 @@ describe('ProjectSetupService - Scaffolding Fix Issue', () => {
     const phase2Result = await setupService.setup(testDir, 'android', 'TestApp');
     const phase2Data = JSON.parse(phase2Result);
     
-    expect(phase2Data.phase).toBe(2);
-    expect(phase2Data.status).toBe('SETUP_COMPLETE');
+    assert.strictEqual(phase2Data.phase, 2);
+    assert.strictEqual(phase2Data.status, 'SETUP_COMPLETE');
 
     // Verify mock-scenarios.json was created in the correct location
     const mockScenariosPath = path.join(testDir, 'src/test-data/mock-scenarios.json');
-    expect(fs.existsSync(mockScenariosPath)).toBe(true);
+    assert.strictEqual(fs.existsSync(mockScenariosPath), true);
 
     // Verify the content is valid JSON
     const mockScenariosContent = fs.readFileSync(mockScenariosPath, 'utf-8');
     const mockScenarios = JSON.parse(mockScenariosContent);
     
-    expect(mockScenarios).toHaveProperty('login-success');
-    expect(mockScenarios['login-success']).toHaveProperty('method', 'post');
-    expect(mockScenarios['login-success']).toHaveProperty('path', '/api/auth/login');
-    expect(mockScenarios['login-success']).toHaveProperty('statusCode', 200);
+    assert.ok(mockScenarios.hasOwnProperty('login-success'));
+    assert.strictEqual(mockScenarios['login-success'].method, 'post');
+    assert.strictEqual(mockScenarios['login-success'].path, '/api/auth/login');
+    assert.strictEqual(mockScenarios['login-success'].statusCode, 200);
 
     // Verify all other expected files were created
-    expect(fs.existsSync(path.join(testDir, 'package.json'))).toBe(true);
-    expect(fs.existsSync(path.join(testDir, 'tsconfig.json'))).toBe(true);
-    expect(fs.existsSync(path.join(testDir, 'src/pages/BasePage.ts'))).toBe(true);
-    expect(fs.existsSync(path.join(testDir, 'src/utils/ActionUtils.ts'))).toBe(true);
+    assert.strictEqual(fs.existsSync(path.join(testDir, 'package.json')), true);
+    assert.strictEqual(fs.existsSync(path.join(testDir, 'tsconfig.json')), true);
+    assert.strictEqual(fs.existsSync(path.join(testDir, 'src/pages/BasePage.ts')), true);
+    assert.strictEqual(fs.existsSync(path.join(testDir, 'src/utils/ActionUtils.ts')), true);
   });
 
   it('should work with custom paths configuration', async () => {
@@ -102,14 +103,14 @@ describe('ProjectSetupService - Scaffolding Fix Issue', () => {
     const phase2Result = await setupService.setup(testDir, 'ios', 'TestApp');
     const phase2Data = JSON.parse(phase2Result);
     
-    expect(phase2Data.status).toBe('SETUP_COMPLETE');
+    assert.strictEqual(phase2Data.status, 'SETUP_COMPLETE');
 
     // Verify mock-scenarios.json was created in custom location
     const mockScenariosPath = path.join(testDir, 'custom/test-data/mock-scenarios.json');
-    expect(fs.existsSync(mockScenariosPath)).toBe(true);
+    assert.strictEqual(fs.existsSync(mockScenariosPath), true);
 
     const mockScenariosContent = fs.readFileSync(mockScenariosPath, 'utf-8');
     const mockScenarios = JSON.parse(mockScenariosContent);
-    expect(mockScenarios).toHaveProperty('login-success');
+    assert.ok(mockScenarios.hasOwnProperty('login-success'));
   });
 });

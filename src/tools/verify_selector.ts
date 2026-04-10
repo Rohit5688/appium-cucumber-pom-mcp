@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { SelfHealingService } from "../services/SelfHealingService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { toMcpErrorResponse } from "../types/ErrorSystem.js";
+import { toMcpErrorResponse, McpError, McpErrorCode } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 import { PreFlightService } from "../services/PreFlightService.js";
 import { SessionManager } from "../services/SessionManager.js";
@@ -38,6 +38,15 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
           const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionInfo?.sessionId);
           
           if (!report.allPassed) {
+            // If session is missing or stale, suggest starting a session
+            const sessionFailure = report.checks.find(c => c.name === 'session_check' && !c.passed);
+            if (sessionFailure) {
+              const err = new McpError(sessionFailure.message, McpErrorCode.SESSION_NOT_FOUND, {
+                toolName: 'verify_selector',
+                suggestedNextTools: ['start_appium_session']
+              });
+              return toMcpErrorResponse(err, 'verify_selector');
+            }
             return toMcpErrorResponse(new Error(preFlight.formatReport(report)), 'verify_selector');
           }
 

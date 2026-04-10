@@ -38,11 +38,24 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       // PREVIEW: show file structure without writing
       if (args.preview) {
         const preview = await projectSetupService.previewSetup(args.projectRoot, platform, appName);
-        return textResult(preview);
+        try {
+          const parsed = typeof preview === 'string' ? JSON.parse(preview) : preview;
+          return textResult(JSON.stringify({
+            preview: true,
+            ...parsed,
+            hint: '✅ Preview complete. Set preview:false to execute.'
+          }, null, 2));
+        } catch (e) {
+          return textResult(JSON.stringify({
+            preview: true,
+            result: preview,
+            hint: '✅ Preview complete. Set preview:false to execute.'
+          }, null, 2));
+        }
       }
 
       const result = await projectSetupService.setup(args.projectRoot, platform, appName);
-      
+
       // Parse the result to determine which phase completed
       let parsedResult: any;
       try {
@@ -52,18 +65,18 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
         return textResult(result);
       }
 
-    // Only migrate config if Phase 2 completed successfully
-    if (parsedResult.phase === 2 && parsedResult.status === 'SETUP_COMPLETE') {
-      configService.migrateIfNeeded(args.projectRoot);
-      // Ensure the JSON schema exists for IDE autocompletion (idempotent, best-effort)
-      try {
-        // ensureSchema is a thin, safe wrapper; migrateIfNeeded also generates schema,
-        // but calling ensureSchema here guarantees the file after scaffolding.
-        (configService as any).ensureSchema(args.projectRoot);
-      } catch {
-        // best-effort: do not fail setup if schema generation fails
+      // Only migrate config if Phase 2 completed successfully
+      if (parsedResult.phase === 2 && parsedResult.status === 'SETUP_COMPLETE') {
+        configService.migrateIfNeeded(args.projectRoot);
+        // Ensure the JSON schema exists for IDE autocompletion (idempotent, best-effort)
+        try {
+          // ensureSchema is a thin, safe wrapper; migrateIfNeeded also generates schema,
+          // but calling ensureSchema here guarantees the file after scaffolding.
+          (configService as any).ensureSchema(args.projectRoot);
+        } catch {
+          // best-effort: do not fail setup if schema generation fails
+        }
       }
-    }
 
       // Return appropriate message based on phase
       if (parsedResult.phase === 1) {

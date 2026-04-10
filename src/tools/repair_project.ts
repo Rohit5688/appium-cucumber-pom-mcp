@@ -30,9 +30,24 @@ OUTPUT: Ack (≤10 words), proceed.`,
     async (args) => {
       // PREVIEW: return list of files that would be repaired without modifying disk
       if (args.preview) {
-        return textResult(await projectMaintenanceService.repairProject(args.projectRoot, args.platform, true));
+        const previewData = await projectMaintenanceService.repairProject(args.projectRoot, args.platform, true);
+        try {
+          const parsed = typeof previewData === 'string' ? JSON.parse(previewData) : previewData;
+          return textResult(JSON.stringify({
+            preview: true,
+            ...parsed,
+            hint: '✅ Preview complete. Set preview:false to execute.'
+          }, null, 2));
+        } catch (e) {
+          return textResult(JSON.stringify({
+            preview: true,
+            result: previewData,
+            hint: '✅ Preview complete. Set preview:false to execute.'
+          }, null, 2));
+        }
       }
-      return textResult(await projectMaintenanceService.repairProject(args.projectRoot, args.platform, false));
+      const result = await projectMaintenanceService.repairProject(args.projectRoot, args.platform, false);
+      return textResult(JSON.stringify(result, null, 2));
     }
   );
 }

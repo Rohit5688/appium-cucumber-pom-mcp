@@ -77,6 +77,14 @@ OUTPUT: Ack (≤10 words), proceed.`,
           return configService.read(projectRoot);
         },
 
+        // Expose system state for sandbox scripts (safe, read-only)
+        getSystemState: async (projectRoot?: string) => {
+          // Lazy import to avoid circular deps during startup
+          const { SystemStateService } = await import('../services/SystemStateService.js');
+          const stateService = SystemStateService.getInstance();
+          return stateService.getState(projectRoot ?? process.cwd());
+        },
+
         // --- Enhanced, safe, read-only sandbox APIs (feature-flag gated) ---
         listFiles: async (dir: string, options?: { recursive?: boolean; glob?: string }, projectRoot?: string) => {
           const fs = await import('fs');

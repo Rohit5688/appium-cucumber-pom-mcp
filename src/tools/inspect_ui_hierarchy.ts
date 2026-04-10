@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { ExecutionService } from "../services/ExecutionService.js";
 import { textResult, truncate, getPlatformSkill } from "./_helpers.js";
-import { toMcpErrorResponse } from "../types/ErrorSystem.js";
+import { toMcpErrorResponse, McpError, McpErrorCode } from "../types/ErrorSystem.js";
 import { PreFlightService } from "../services/PreFlightService.js";
 import { SessionManager } from "../services/SessionManager.js";
 
@@ -52,6 +52,15 @@ OUTPUT: Ack (≤10 words), proceed.`,
       const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionId);
       
       if (!report.allPassed) {
+        // If session check failed, return a guided error suggesting start_appium_session
+        const sessionFailure = report.checks.find(c => c.name === 'session_check' && !c.passed);
+        if (sessionFailure) {
+          const err = new McpError(sessionFailure.message, McpErrorCode.SESSION_NOT_FOUND, {
+            toolName: 'inspect_ui_hierarchy',
+            suggestedNextTools: ['start_appium_session']
+          });
+          return toMcpErrorResponse(err, 'inspect_ui_hierarchy');
+        }
         return toMcpErrorResponse(new Error(preFlight.formatReport(report)), 'inspect_ui_hierarchy');
       }
 

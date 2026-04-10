@@ -25,7 +25,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         files: z.array(z.object({ path: z.string(), content: z.string() })),
-        preview: z.boolean().optional()
+        preview: z.boolean().optional().describe("When true, shows what files would be written and validation results without making changes.")
       }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }
     },
@@ -57,29 +57,63 @@ OUTPUT: Ack (≤10 words), proceed.`,
         }
       }
   
-      // If the FileWriterService signaled failure, throw a structured McpError
+      // If the FileWriterService signaled failure, handle according to preview flag.
       if (resultObj && resultObj.success === false) {
         const phase = resultObj.phase || 'validation';
         const detail = resultObj.message || resultObj.error || JSON.stringify(resultObj);
         const toolName = 'validate_and_write';
-  
+
+        // In preview mode we should NOT throw — show what would fail instead.
+        if (args.preview) {
+          const previewPayload = {
+            preview: true,
+            success: false,
+            phase,
+            message: detail,
+            hint: '⚠️ Preview detected — this shows validation results without writing. Set preview:false to execute.'
+          };
+          if (totalWarning) previewPayload.message = totalWarning + (previewPayload.message || '');
+          return textResult(JSON.stringify(previewPayload, null, 2));
+        }
+
+        // Non-preview behavior: surface structured errors
         if (phase === 'write-to-disk') {
           throw McpErrors.fileOperationFailed(detail, undefined, toolName);
         }
-  
-        if (['security-validation', 'gherkin-validation', 'cross-platform-validation'].includes(phase)) {
+
+        if (['security-validation', 'gherkin-validation', 'cross-platform-validation', 'tsc'].includes(phase)) {
           throw McpErrors.projectValidationFailed(detail, toolName);
         }
-  
+
         // Fallback to a generic file operation error
         throw McpErrors.fileOperationFailed(detail, undefined, toolName);
       }
-  
+
       // Success path — return the original service response (possibly modified with warnings)
       if (resultObj) {
+        if (args.preview) {
+          // Ensure preview responses are standardized
+          const payload = {
+            preview: true,
+            ...resultObj,
+            hint: '✅ Preview complete. Set preview:false to execute.'
+          };
+          if (totalWarning && typeof payload === 'object') payload.message = totalWarning + (payload.message || '');
+          return textResult(JSON.stringify(payload, null, 2));
+        }
         return textResult(JSON.stringify(resultObj, null, 2));
       }
-  
+
+      // If result was plain string, wrap consistent preview payload when requested
+      if (args.preview) {
+        return textResult(JSON.stringify({
+          preview: true,
+          result: resultString,
+          hint: '✅ Preview complete. Set preview:false to execute.',
+          message: totalWarning ? totalWarning + resultString : resultString
+        }, null, 2));
+      }
+
       return textResult(resultString);
     }
   );
