@@ -737,6 +737,21 @@ export class ExecutionService {
             await new Promise((resolve) => setTimeout(resolve, safeWait));
         }
         // Re-fetch in case the background promise resolved during our sleep
-        return { found: true, job: this.jobs.get(jobId) };
+        const updatedJob = this.jobs.get(jobId);
+        // Calculate progress for running jobs
+        if (updatedJob.status === 'running') {
+            const startTime = new Date(updatedJob.startedAt).getTime();
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - startTime) / 1000);
+            // Estimate: typical Appium test takes 60-120s for boot + first scenario
+            // Conservative estimate: 2 minutes total
+            const estimatedTotal = 120;
+            updatedJob.progress = {
+                elapsedSeconds,
+                estimatedTotal,
+                lastActivity: new Date().toISOString()
+            };
+        }
+        return { found: true, job: updatedJob };
     }
 }

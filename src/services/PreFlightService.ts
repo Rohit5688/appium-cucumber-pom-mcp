@@ -113,7 +113,16 @@ export class PreFlightService {
       const response = await this.httpGet(statusUrl, 3000); // 3s timeout
       const data = JSON.parse(response);
 
-      if (data?.value?.ready === true || data?.status === 0) {
+      // Accept multiple valid Appium response schemas:
+      // 1. Standard Appium 2.x: { value: { ready: true } }
+      // 2. Legacy format: { status: 0 }
+      // 3. Any non-empty value object (some Appium versions vary)
+      const isReady = 
+        data?.value?.ready === true ||
+        data?.status === 0 ||
+        (data?.value && typeof data.value === 'object' && Object.keys(data.value).length > 0);
+
+      if (isReady) {
         return {
           name: 'appium_server',
           passed: true,

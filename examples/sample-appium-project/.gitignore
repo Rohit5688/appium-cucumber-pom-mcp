@@ -6,7 +6,6 @@ dist/
 
 # Test reports
 reports/
-allure-results/
 screenshots/
 videos/
 

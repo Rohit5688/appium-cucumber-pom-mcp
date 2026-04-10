@@ -1,6 +1,6 @@
 {
   "name": "appforge",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "type": "module",
   "main": "dist/index.js",
   "description": "Enterprise-grade MCP Server for orchestrated mobile automation (Android/iOS) using WebdriverIO and Cucumber BDD.",

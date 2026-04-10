@@ -4,6 +4,7 @@ import type { ExecutionService } from "../services/ExecutionService.js";
 import { textResult, truncate } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 import { ShellSecurityEngine } from "../utils/ShellSecurityEngine.js";
+import { EnvironmentCheckService } from "../services/EnvironmentCheckService.js";
 
 export function registerRunCucumberTest(
   server: McpServer,
@@ -105,6 +106,24 @@ OUTPUT: Ack (≤10 words), proceed.`,
             'run_cucumber_test'
           );
         }
+      }
+
+      // ENVIRONMENT READINESS CHECK: Prevent wasting time on doomed runs
+      // Check if the environment is ready before spawning a long-running test process
+      const envCheckService = new EnvironmentCheckService();
+      const platform = args.platform || 'android'; // Default fallback
+      const envResult = await envCheckService.check(args.projectRoot, platform);
+      
+      if (!envResult.ready) {
+        const issues = envResult.checks
+          .filter((c: any) => c.status === 'fail')
+          .map((c: any) => `  ❌ ${c.name}: ${c.message}`)
+          .join('\n');
+        
+        throw McpErrors.projectValidationFailed(
+          `Environment not ready for test execution:\n${issues}\n\n💡 Run check_environment for detailed diagnostics.`,
+          'run_cucumber_test'
+        );
       }
 
       const runOptions = {

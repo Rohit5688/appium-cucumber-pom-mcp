@@ -49,7 +49,10 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
       // Provide a directed hint based on current status
       let hint: string;
       if (job.status === 'running') {
-        hint = "⏳ Test still running. Call check_test_status again with waitSeconds: 25 to poll again.";
+        const progressInfo = job.progress 
+          ? ` (${job.progress.elapsedSeconds}s elapsed / ~${job.progress.estimatedTotal}s estimated)`
+          : '';
+        hint = `⏳ Test still running${progressInfo}. Call check_test_status again with waitSeconds: 25 to poll again.`;
       } else if (job.status === 'completed') {
         hint = job.result?.success
           ? "✅ Tests passed. Call summarize_suite to get the final report."

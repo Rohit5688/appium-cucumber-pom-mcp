@@ -1,7 +1,11 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import { McpConfigService } from './McpConfigService.js';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 export class ProjectSetupService {
     mcpConfigService = new McpConfigService();
     /**
@@ -15,6 +19,13 @@ export class ProjectSetupService {
         // ─── PHASE 1: Config does not exist yet ─────────────────────────────────────
         if (!fs.existsSync(configPath)) {
             this.generateConfigTemplate(projectRoot);
+            // Create docs directory and reference documentation in Phase 1
+            const docsDir = path.join(projectRoot, 'docs');
+            if (!fs.existsSync(docsDir)) {
+                fs.mkdirSync(docsDir, { recursive: true });
+            }
+            this.scaffoldMcpConfigReference(projectRoot);
+            this.scaffoldPromptCheatbook(projectRoot);
             return JSON.stringify({
                 phase: 1,
                 status: 'CONFIG_TEMPLATE_CREATED',
@@ -32,11 +43,16 @@ export class ProjectSetupService {
                     'You do NOT need to fill in everything now.',
                     'Fields marked CONFIGURE_ME can be filled later — run upgrade_project when you do.',
                     '',
-                    '📖 Reference: docs/MCP_CONFIG_REFERENCE.md explains every field.',
+                    '📖 Documentation created:',
+                    '  • docs/MCP_CONFIG_REFERENCE.md - Complete field reference',
+                    '  • docs/APPFORGE_PROMPT_CHEATBOOK.md - AI prompt guide',
                     '',
                     'When ready, call setup_project again with the same projectRoot to continue.'
                 ].join('\n'),
-                docsPath: path.join(projectRoot, 'docs', 'MCP_CONFIG_REFERENCE.md'),
+                docsCreated: [
+                    'docs/MCP_CONFIG_REFERENCE.md',
+                    'docs/APPFORGE_PROMPT_CHEATBOOK.md'
+                ],
                 nextStep: 'Call setup_project again after filling mcp-config.json'
             }, null, 2);
         }
@@ -155,21 +171,28 @@ export class ProjectSetupService {
             // 8. Before/After hooks
             this.scaffoldHooks(stagingDir, reporting.screenshotOn, reporting);
             filesCreated.push(`${paths.stepsRoot}/hooks.ts`);
-            // 9. Sample feature
+            // 9. Sample feature + step definitions
             this.scaffoldSampleFeature(stagingDir, paths);
             filesCreated.push(`${paths.featuresRoot}/sample.feature`);
-            // 10. .gitignore
+            this.scaffoldSampleSteps(stagingDir, paths);
+            filesCreated.push(`${paths.stepsRoot}/sample.steps.ts`);
+            this.scaffoldLoginPage(stagingDir, paths);
+            filesCreated.push(`${paths.pagesRoot}/LoginPage.ts`);
+            // 10. MCP documentation (helpful guides)
+            this.scaffoldMcpDocs(stagingDir);
+            filesCreated.push('docs/APPFORGE_QUICK_START.md');
+            // 11. .gitignore
             this.scaffoldGitignore(stagingDir, paths);
             filesCreated.push('.gitignore');
             // 11. wdio.conf.ts — WebdriverIO + Appium connection config
             if (effectivePlatform === 'both') {
                 this.scaffoldWdioSharedConfig(stagingDir, timeouts, reporting, paths);
-                this.scaffoldWdioAndroidConfig(stagingDir);
-                this.scaffoldWdioIosConfig(stagingDir);
+                this.scaffoldWdioAndroidConfig(stagingDir, projectRoot, config);
+                this.scaffoldWdioIosConfig(stagingDir, projectRoot, config);
                 filesCreated.push('wdio.shared.conf.ts', 'wdio.android.conf.ts', 'wdio.ios.conf.ts');
             }
             else {
-                this.scaffoldWdioConfig(stagingDir, effectivePlatform, timeouts, reporting, paths);
+                this.scaffoldWdioConfig(stagingDir, projectRoot, effectivePlatform, timeouts, reporting, paths, config);
                 filesCreated.push('wdio.conf.ts');
             }
             // 12. Mock scenarios sample JSON
@@ -196,6 +219,7 @@ export class ProjectSetupService {
             nextSteps: [
                 // MCP #8: npm install MUST be run before any test or AppForge commands
                 '⚡ FIRST: Run `npm install` in the project root to install all dependencies',
+                '🧪 VERIFY: Run `npm run test:smoke` to confirm setup works (dummy test will auto-pass)',
                 'Run check_environment to verify your Appium setup',
                 'Run start_appium_session to connect to your device',
                 unfilledFields.length > 0 ? `Fill: ${unfilledFields.join(', ')} in mcp-config.json` : null
@@ -286,7 +310,7 @@ export class ProjectSetupService {
             },
             "reporting": {
                 "format": "html",
-                "_format_options": "html | allure | junit | none",
+                "_format_options": "html | junit | none",
                 "outputDir": "reports",
                 "screenshotOn": "failure",
                 "_screenshotOn_options": "failure | always | never"
@@ -325,17 +349,17 @@ export class ProjectSetupService {
             scripts["test"] = "npx wdio run wdio.shared.conf.ts";
             scripts["test:android"] = "npx wdio run wdio.android.conf.ts";
             scripts["test:ios"] = "npx wdio run wdio.ios.conf.ts";
-            scripts["test:smoke"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@smoke'";
-            scripts["test:regression"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@regression'";
-            scripts["test:e2e"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tagExpression='@e2e'";
-            scripts["test:smoke:android"] = "npx wdio run wdio.android.conf.ts --cucumberOpts.tagExpression='@smoke'";
-            scripts["test:smoke:ios"] = "npx wdio run wdio.ios.conf.ts --cucumberOpts.tagExpression='@smoke'";
+            scripts["test:smoke"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tags='@smoke'";
+            scripts["test:regression"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tags='@regression'";
+            scripts["test:e2e"] = "npx wdio run wdio.shared.conf.ts --cucumberOpts.tags='@e2e'";
+            scripts["test:smoke:android"] = "npx wdio run wdio.android.conf.ts --cucumberOpts.tags='@smoke'";
+            scripts["test:smoke:ios"] = "npx wdio run wdio.ios.conf.ts --cucumberOpts.tags='@smoke'";
         }
         else {
             scripts["test"] = "npx wdio run wdio.conf.ts";
-            scripts["test:smoke"] = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@smoke'";
-            scripts["test:regression"] = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@regression'";
-            scripts["test:e2e"] = "npx wdio run wdio.conf.ts --cucumberOpts.tagExpression='@e2e'";
+            scripts["test:smoke"] = "npx wdio run wdio.conf.ts --cucumberOpts.tags='@smoke'";
+            scripts["test:regression"] = "npx wdio run wdio.conf.ts --cucumberOpts.tags='@regression'";
+            scripts["test:e2e"] = "npx wdio run wdio.conf.ts --cucumberOpts.tags='@e2e'";
             if (platform === 'android')
                 scripts["test:android"] = "npx wdio run wdio.conf.ts";
             if (platform === 'ios')
@@ -347,33 +371,35 @@ export class ProjectSetupService {
             type: 'module',
             scripts,
             dependencies: {
-                // WebdriverIO core + Appium framework
-                "@wdio/cli": "8.29.1",
-                "@wdio/local-runner": "8.29.1",
-                "@wdio/cucumber-framework": "8.29.1",
-                "@wdio/appium-service": "8.29.1",
-                "@wdio/spec-reporter": "8.29.1",
-                "@wdio/allure-reporter": "8.29.1",
-                "webdriverio": "8.29.1",
-                // Appium server — must be >= 2.5.4 for xcuitest-driver peer compat
-                "appium": "^2.14.0",
+                // WebdriverIO v9 core + Appium framework
+                "@wdio/cli": "^9.24.0",
+                "@wdio/local-runner": "^9.24.0",
+                "@wdio/cucumber-framework": "^9.24.0",
+                "@wdio/appium-service": "^9.24.0",
+                "@wdio/spec-reporter": "^9.24.0",
+                "@wdio/globals": "^9.24.0",
+                "webdriverio": "^9.24.0",
+                // Appium v3 server
+                "appium": "^3.2.0",
                 // Appium drivers — use unscoped package names (scoped @appium/* do NOT exist on npm)
-                "appium-uiautomator2-driver": "^3.9.0",
-                "appium-xcuitest-driver": "^7.25.0",
-                // Cucumber runner — ^10.8.0 required by allure-cucumberjs@3.x peer dep
-                "@cucumber/cucumber": "^10.8.0",
-                "@cucumber/pretty-formatter": "1.0.1",
+                "appium-uiautomator2-driver": "^7.0.0",
+                "appium-xcuitest-driver": "^10.36.0",
+                // Cucumber v9 runner (WDIO compatibility)
+                "@cucumber/cucumber": "9.6.0",
+                "allure-cucumberjs": "^2.15.2",
+                "@cucumber/pretty-formatter": "^1.0.1",
                 // TypeScript runtime
-                "ts-node": "10.9.2",
-                "typescript": "5.4.5",
+                "ts-node": "^10.9.2",
+                "typescript": "^5.9.0",
                 // Utilities
                 "express": "^4.18.0",
-                "yaml": "^2.4.1",
-                "allure-cucumberjs": "^3.0.0"
+                "yaml": "^2.4.1"
             },
             devDependencies: {
                 "@types/node": "^20.0.0",
-                "@types/express": "^4.17.0"
+                "@types/express": "^4.17.0",
+                "@wdio/types": "^9.24.0",
+                "cross-env": "^7.0.3"
             }
         };
         this.writeIfNotExists(path.join(projectRoot, 'package.json'), JSON.stringify(pkg, null, 2));
@@ -387,8 +413,8 @@ export class ProjectSetupService {
         const tsConfig = {
             compilerOptions: {
                 target: "ES2022",
-                module: "NodeNext",
-                moduleResolution: "NodeNext",
+                module: "ES2022",
+                moduleResolution: "node",
                 lib: ["ES2022"],
                 outDir: "./dist",
                 strict: true,
@@ -396,13 +422,13 @@ export class ProjectSetupService {
                 forceConsistentCasingInFileNames: true,
                 skipLibCheck: true,
                 resolveJsonModule: true,
-                declaration: true,
-                declarationMap: true,
-                sourceMap: true
+                declaration: false,
+                allowJs: false
             },
             "ts-node": {
-                esm: true,
-                experimentalSpecifierResolution: "node"
+                compilerOptions: {
+                    module: "commonjs"
+                }
             },
             include: ["src/**/*.ts", "wdio.conf.ts", "wdio.shared.conf.ts", "wdio.android.conf.ts", "wdio.ios.conf.ts"],
             exclude: ["node_modules", "dist", "reports"]
@@ -715,36 +741,34 @@ export class MockServer {
         const shouldCapture = screenshotOn === 'always'
             ? 'true'
             : screenshotOn === 'failure'
-                ? "scenario.result?.status === Status.FAILED"
+                ? "scenario.result?.status === 'failed'"
                 : 'false';
-        const content = `import { Before, After, BeforeAll, AfterAll, Status } from '@cucumber/cucumber';
+        const content = `import { Before, After } from '@wdio/cucumber-framework';
 import { AppiumDriver } from '../utils/AppiumDriver.js';
 import { TestContext } from '../utils/TestContext.js';
 
 /**
  * Cucumber Hooks — Lifecycle management for Appium sessions.
+ * 
+ * WDIO v9: Hooks are imported from @wdio/cucumber-framework
  */
 
-BeforeAll(async function () {
-  console.log('[Hooks] Test suite starting...');
+Before(async function (world, context) {
+  console.log(\`[Hooks] Starting scenario: \${context.pickle.name}\`);
 });
 
-Before(async function (scenario) {
-  console.log(\`[Hooks] Starting scenario: \${scenario.pickle.name}\`);
-});
-
-After(async function (scenario) {
+After(async function (world, context) {
   if (${shouldCapture}) {
     try {
       const screenshot = await AppiumDriver.takeScreenshot();
       if (screenshot) {
         TestContext.addAttachment('screenshot', Buffer.from(screenshot, 'base64'), 'image/png');
-        this.attach(Buffer.from(screenshot, 'base64'), 'image/png');
+        await world.attach(Buffer.from(screenshot, 'base64'), 'image/png');
       }
       const pageSource = await AppiumDriver.getPageSource();
       if (pageSource) {
         TestContext.addAttachment('page-source', pageSource, 'text/xml');
-        this.attach(pageSource, 'text/xml');
+        await world.attach(pageSource, 'text/xml');
       }
       console.log('[Hooks] Captured screenshot and page source for scenario');
     } catch (err) {
@@ -752,10 +776,6 @@ After(async function (scenario) {
     }
   }
   TestContext.clear();
-});
-
-AfterAll(async function () {
-  console.log('[Hooks] Test suite complete. Reports: ${reporting?.outputDir ?? 'reports'}');
 });
 `;
         const targetPath = paths?.stepsRoot || 'src/step-definitions';
@@ -777,6 +797,231 @@ Feature: Sample Login Flow
 `;
         const targetPath = paths?.featuresRoot || 'src/features';
         this.writeIfNotExists(path.join(projectRoot, targetPath, 'sample.feature'), content);
+    }
+    scaffoldSampleSteps(projectRoot, paths) {
+        const content = `import { Given, When, Then } from '@cucumber/cucumber';
+
+/**
+ * Sample Step Definitions — Dummy implementations for setup verification.
+ * These steps auto-pass to confirm the Cucumber + WDIO + Appium stack is working.
+ * Replace with real implementations once you start writing actual tests.
+ */
+
+Given('the app is launched', async function () {
+  console.log('✅ Step: App launch verified (dummy step)');
+  // In a real test, you would start the Appium session here
+});
+
+When('I enter username {string} and password {string}', async function (username: string, password: string) {
+  console.log(\`✅ Step: Credentials entered: \${username} (dummy step)\`);
+  // In a real test, you would use ActionUtils.type() to enter credentials
+});
+
+When('I tap the login button', async function () {
+  console.log('✅ Step: Login button tapped (dummy step)');
+  // In a real test, you would use ActionUtils.tap() to tap the button
+});
+
+Then('I should see the home screen', async function () {
+  console.log('✅ Step: Home screen verified (dummy step)');
+  // In a real test, you would use AssertionUtils.assertDisplayed() to verify the home screen
+});
+`;
+        const targetPath = paths?.stepsRoot || 'src/step-definitions';
+        this.writeIfNotExists(path.join(projectRoot, targetPath, 'sample.steps.ts'), content);
+    }
+    scaffoldLoginPage(projectRoot, paths) {
+        const content = `import { BasePage } from './BasePage.js';
+
+/**
+ * LoginPage — Sample Page Object for setup verification.
+ * This is a dummy implementation to demonstrate the Page Object pattern.
+ * Replace with real selectors and methods once you start writing actual tests.
+ */
+export class LoginPage extends BasePage {
+  // Dummy selectors — replace with real selectors from your app
+  private usernameInput = '~username';
+  private passwordInput = '~password';
+  private loginButton = '~loginButton';
+  private homeScreen = '~homeScreen';
+
+  async isLoaded(): Promise<boolean> {
+    // In a real implementation, check if the login screen is displayed
+    console.log('LoginPage.isLoaded() called (dummy implementation)');
+    return true;
+  }
+
+  async login(username: string, password: string): Promise<void> {
+    console.log(\`LoginPage.login() called with \${username} (dummy implementation)\`);
+    // In a real implementation:
+    // await this.driver.find(this.usernameInput).setValue(username);
+    // await this.driver.find(this.passwordInput).setValue(password);
+    // await this.driver.find(this.loginButton).click();
+  }
+
+  async verifyHomeScreen(): Promise<void> {
+    console.log('LoginPage.verifyHomeScreen() called (dummy implementation)');
+    // In a real implementation:
+    // await this.assert.assertDisplayed(this.homeScreen);
+  }
+}
+`;
+        const targetPath = paths?.pagesRoot || 'src/pages';
+        this.writeIfNotExists(path.join(projectRoot, targetPath, 'LoginPage.ts'), content);
+    }
+    scaffoldMcpConfigReference(projectRoot) {
+        const docsDir = path.join(projectRoot, 'docs');
+        if (!fs.existsSync(docsDir)) {
+            fs.mkdirSync(docsDir, { recursive: true });
+        }
+        // Copy the MCP_CONFIG_REFERENCE.md from AppForge docs to user project
+        const sourceDoc = path.join(__dirname, '../../docs/MCP_CONFIG_REFERENCE.md');
+        const targetDoc = path.join(projectRoot, 'docs/MCP_CONFIG_REFERENCE.md');
+        if (fs.existsSync(sourceDoc)) {
+            fs.copyFileSync(sourceDoc, targetDoc);
+        }
+        else {
+            // Fallback: create a basic reference doc if source doesn't exist
+            const basicRef = `# MCP Config Reference
+
+See the full documentation at: https://github.com/ForgeTest-AI/AppForge/blob/main/docs/MCP_CONFIG_REFERENCE.md
+
+For the complete field reference, platform-specific settings, and examples, refer to the AppForge repository documentation.
+`;
+            fs.writeFileSync(targetDoc, basicRef, 'utf-8');
+        }
+    }
+    scaffoldPromptCheatbook(projectRoot) {
+        const docsDir = path.join(projectRoot, 'docs');
+        if (!fs.existsSync(docsDir)) {
+            fs.mkdirSync(docsDir, { recursive: true });
+        }
+        // Copy the APPFORGE_PROMPT_CHEATBOOK.md from AppForge docs to user project
+        const sourceDoc = path.join(__dirname, '../../docs/APPFORGE_PROMPT_CHEATBOOK.md');
+        const targetDoc = path.join(projectRoot, 'docs/APPFORGE_PROMPT_CHEATBOOK.md');
+        if (fs.existsSync(sourceDoc)) {
+            fs.copyFileSync(sourceDoc, targetDoc);
+        }
+        else {
+            // Fallback: create a basic cheatbook if source doesn't exist
+            const basicCheatbook = `# AppForge Prompt Cheatbook
+
+See the full cheatbook at: https://github.com/ForgeTest-AI/AppForge/blob/main/docs/APPFORGE_PROMPT_CHEATBOOK.md
+
+For the complete prompt guide and best practices for working with AppForge MCP tools, refer to the AppForge repository documentation.
+`;
+            fs.writeFileSync(targetDoc, basicCheatbook, 'utf-8');
+        }
+    }
+    scaffoldMcpDocs(projectRoot) {
+        const docsDir = path.join(projectRoot, 'docs');
+        if (!fs.existsSync(docsDir)) {
+            fs.mkdirSync(docsDir, { recursive: true });
+        }
+        const quickStart = `# AppForge Quick Start Guide
+
+## Welcome to Your New Mobile Test Project!
+
+This project was generated by **AppForge** - an AI-powered mobile test automation framework.
+
+---
+
+## ✅ Verify Setup
+
+Run this command to confirm everything works:
+
+\`\`\`bash
+npm install
+npm run test:smoke
+\`\`\`
+
+Expected output: **1 scenario (1 passed)** ✅
+
+This dummy test confirms your Cucumber + WDIO + Appium stack is correctly configured.
+
+---
+
+## 🚀 Next Steps
+
+### 1. Connect to a Device
+
+\`\`\`bash
+# Start Appium server
+npx appium
+
+# In another terminal, verify device connection
+adb devices  # For Android
+xcrun simctl list  # For iOS simulators
+\`\`\`
+
+### 2. Update App Path
+
+Edit \`mcp-config.json\` and set the path to your mobile app:
+
+\`\`\`json
+{
+  "mobile": {
+    "capabilitiesProfiles": {
+      "myDevice": {
+        "appium:app": "/path/to/your/app.apk"
+      }
+    }
+  }
+}
+\`\`\`
+
+### 3. Write Your First Test
+
+Replace the dummy code in:
+- \`src/features/sample.feature\` - Write Gherkin scenarios
+- \`src/step-definitions/sample.steps.ts\` - Implement step definitions  
+- \`src/pages/LoginPage.ts\` - Add real selectors
+
+---
+
+## 📖 Useful Commands
+
+| Command | Description |
+|---------|-------------|
+| \`npm run test:smoke\` | Run smoke tests |
+| \`npm run test:regression\` | Run regression suite |
+| \`npm test\` | Run all tests |
+
+---
+
+## 🛠️ Common Issues
+
+### Appium Not Running
+\`\`\`bash
+npx appium
+\`\`\`
+
+### Device Not Found
+- **Android**: Enable USB debugging, run \`adb devices\`
+- **iOS**: Ensure simulator is booted
+
+### Tests Timeout
+Increase timeout in \`wdio.conf.ts\`:
+\`\`\`typescript
+cucumberOpts: {
+  timeout: 120000  // 2 minutes
+}
+\`\`\`
+
+---
+
+## 📚 Learn More
+
+- **MCP Config Reference**: \`mcp-config.json\` field documentation
+- **AppForge GitHub**: Full documentation and examples
+- **WebdriverIO Docs**: https://webdriver.io
+- **Appium Docs**: https://appium.io
+
+---
+
+**Generated by AppForge v2.0.0**
+`;
+        this.writeIfNotExists(path.join(docsDir, 'APPFORGE_QUICK_START.md'), quickStart);
     }
     scaffoldGitignore(projectRoot, paths) {
         const credDir = (paths?.credentialsRoot || 'credentials').replace(/\/+$/, '');
@@ -864,36 +1109,81 @@ ${credDir}/
         };
         fs.writeFileSync(path.join(projectRoot, 'mcp-config.json'), JSON.stringify(config, null, 2));
     }
-    scaffoldWdioConfig(projectRoot, platform, timeouts, reporting, paths) {
-        // Issue #16 Fix: Generate platform-specific wdio.conf.ts that doesn't import from missing files
+    scaffoldWdioConfig(targetDir, configSourceDir, platform, timeouts, reporting, paths, config) {
+        // Read actual capabilities from mcp-config.json if available (passed in or from configSourceDir)
+        let capabilities = null;
+        if (config) {
+            // Config already passed in from Phase 2
+            try {
+                const profiles = config?.mobile?.capabilitiesProfiles || {};
+                // Find first profile matching the target platform
+                for (const [profileName, caps] of Object.entries(profiles)) {
+                    const profilePlatform = (caps?.platformName || caps?.['appium:platformName'] || '').toLowerCase();
+                    if ((platform === 'android' && profilePlatform === 'android') ||
+                        (platform === 'ios' && profilePlatform === 'ios')) {
+                        capabilities = caps;
+                        break;
+                    }
+                }
+            }
+            catch {
+                // Config parse error - fall back to defaults
+            }
+        }
+        else {
+            // Try reading from configSourceDir (for standalone calls)
+            const configPath = path.join(configSourceDir, 'mcp-config.json');
+            if (fs.existsSync(configPath)) {
+                try {
+                    const parsedConfig = this.mcpConfigService.read(configSourceDir);
+                    const profiles = parsedConfig?.mobile?.capabilitiesProfiles || {};
+                    for (const [profileName, caps] of Object.entries(profiles)) {
+                        const profilePlatform = (caps?.platformName || caps?.['appium:platformName'] || '').toLowerCase();
+                        if ((platform === 'android' && profilePlatform === 'android') ||
+                            (platform === 'ios' && profilePlatform === 'ios')) {
+                            capabilities = caps;
+                            break;
+                        }
+                    }
+                }
+                catch {
+                    // Config parse error - fall back to defaults
+                }
+            }
+        }
+        // Fallback defaults if no matching profile found
+        const isIos = platform.toLowerCase() === 'ios';
+        const defaultCaps = {
+            platformName: isIos ? 'iOS' : 'Android',
+            'appium:automationName': isIos ? 'XCUITest' : 'UiAutomator2',
+            'appium:deviceName': isIos ? 'iPhone 14' : 'Pixel_8',
+            'appium:app': `CONFIGURE_ME: /path/to/your/app.${isIos ? 'app' : 'apk'}`,
+            'appium:newCommandTimeout': 240,
+            'appium:noReset': false,
+        };
+        const finalCaps = capabilities || defaultCaps;
         const specsPattern = paths?.featuresRoot ? `./${paths.featuresRoot}/**/*.feature` : './src/features/**/*.feature';
         const stepsPattern = paths?.stepsRoot ? `./${paths.stepsRoot}/**/*.ts` : './src/step-definitions/**/*.ts';
+        // Serialize capabilities with proper formatting
+        const capsJson = JSON.stringify(finalCaps, null, 4).split('\n').map(line => '    ' + line).join('\n').trim();
         const content = `import type { Options } from '@wdio/types';
 
 /**
- * WebdriverIO + Appium Configuration
- * Generated by Appium MCP Server for ${platform === 'ios' ? 'iOS' : 'Android'}.
- * Adjust capabilities for your target device/emulator.
+ * WebdriverIO + Appium Configuration for ${isIos ? 'iOS' : 'Android'}
+ * 
+ * Capabilities loaded from mcp-config.json.
+ * To update device/app settings, edit mcp-config.json and run upgrade_project.
  */
 export const config: Options.Testrunner = {
   runner: 'local',
   hostname: 'localhost',
-  port: 4723,
+  port: ${timeouts?.appiumPort ?? 4723},
   path: '/',
 
-  // Uses configured features path
   specs: ['${specsPattern}'],
-
   maxInstances: 1,
 
-  capabilities: [{
-    platformName: '${platform === 'ios' ? 'iOS' : 'Android'}',
-    'appium:automationName': '${platform === 'ios' ? 'XCUITest' : 'UiAutomator2'}',
-    'appium:deviceName': '${platform === 'ios' ? 'iPhone 14' : 'Pixel_8'}',
-    // 'appium:app': '/path/to/your/app.${platform === 'ios' ? 'app' : 'apk'}',
-    'appium:newCommandTimeout': 240,
-    'appium:noReset': false,
-  }],
+  capabilities: [${capsJson}],
 
   framework: 'cucumber',
   cucumberOpts: {
@@ -907,15 +1197,26 @@ export const config: Options.Testrunner = {
     timeout: ${timeouts?.scenarioTimeout ?? 60000},
   },
 
-  reporters: ['${reporting?.format === 'allure' ? 'allure' : reporting?.format === 'junit' ? 'junit' : 'spec'}'],
+  reporters: ['${reporting?.format === 'junit' ? 'junit' : 'spec'}'],
 
   logLevel: 'info',
   waitforTimeout: ${timeouts?.elementWait ?? 10000},
   connectionRetryTimeout: ${timeouts?.connectionRetry ?? 120000},
   connectionRetryCount: ${timeouts?.connectionRetryCount ?? 3},
+
+  // Appium service logs (helps debug connection issues)
+  services: [
+    ['appium', {
+      logPath: './appium.log',
+      args: {
+        relaxedSecurity: true,
+        log: './appium.log'
+      }
+    }]
+  ],
 };
 `;
-        this.writeIfNotExists(path.join(projectRoot, 'wdio.conf.ts'), content);
+        this.writeIfNotExists(path.join(targetDir, 'wdio.conf.ts'), content);
     }
     scaffoldWdioSharedConfig(projectRoot, timeouts, reporting, paths) {
         const specsPattern = paths?.featuresRoot ? `./${paths.featuresRoot}/**/*.feature` : './src/features/**/*.feature';
@@ -926,10 +1227,10 @@ export const config: Options.Testrunner = {
  * Shared WebdriverIO Configuration
  * Adjust common settings here. Platform specifics belong in wdio.android.conf.ts / wdio.ios.conf.ts
  */
-export const config: Options.Testrunner = {
+export const config: Partial<Options.Testrunner> = {
   runner: 'local',
   hostname: 'localhost',
-  port: 4723,
+  port: ${timeouts?.appiumPort ?? 4723},
   path: '/',
 
   // Uses configured features path
@@ -948,7 +1249,7 @@ export const config: Options.Testrunner = {
     timeout: ${timeouts?.scenarioTimeout ?? 60000},
   },
 
-  reporters: ['${reporting?.format === 'allure' ? 'allure' : reporting?.format === 'junit' ? 'junit' : 'spec'}'],
+  reporters: ['${reporting?.format === 'junit' ? 'junit' : 'spec'}'],
 
   logLevel: 'info',
   waitforTimeout: ${timeouts?.elementWait ?? 10000},
@@ -958,39 +1259,151 @@ export const config: Options.Testrunner = {
 `;
         this.writeIfNotExists(path.join(projectRoot, 'wdio.shared.conf.ts'), content);
     }
-    scaffoldWdioAndroidConfig(projectRoot) {
-        const content = `import { config as sharedConfig } from './wdio.shared.conf.ts';
+    scaffoldWdioAndroidConfig(targetDir, configSourceDir, config) {
+        // Read Android capabilities from mcp-config.json if available
+        let androidCaps = null;
+        if (config) {
+            try {
+                const profiles = config?.mobile?.capabilitiesProfiles || {};
+                // Find first Android profile
+                for (const [profileName, caps] of Object.entries(profiles)) {
+                    const platformName = (caps?.platformName || caps?.['appium:platformName'] || '').toLowerCase();
+                    if (platformName === 'android') {
+                        androidCaps = caps;
+                        break;
+                    }
+                }
+            }
+            catch {
+                // Config parse error - fall back to defaults
+            }
+        }
+        else {
+            // Try reading from configSourceDir
+            const configPath = path.join(configSourceDir, 'mcp-config.json');
+            if (fs.existsSync(configPath)) {
+                try {
+                    const parsedConfig = this.mcpConfigService.read(configSourceDir);
+                    const profiles = parsedConfig?.mobile?.capabilitiesProfiles || {};
+                    for (const [profileName, caps] of Object.entries(profiles)) {
+                        const platformName = (caps?.platformName || caps?.['appium:platformName'] || '').toLowerCase();
+                        if (platformName === 'android') {
+                            androidCaps = caps;
+                            break;
+                        }
+                    }
+                }
+                catch {
+                    // Config parse error - fall back to defaults
+                }
+            }
+        }
+        const defaultAndroidCaps = {
+            platformName: 'Android',
+            'appium:automationName': 'UiAutomator2',
+            'appium:deviceName': 'Pixel_8',
+            'appium:app': 'CONFIGURE_ME: /path/to/your/app.apk',
+            'appium:newCommandTimeout': 240,
+            'appium:noReset': false,
+        };
+        const finalCaps = androidCaps || defaultAndroidCaps;
+        const capsJson = JSON.stringify(finalCaps, null, 4).split('\n').map(line => '  ' + line).join('\n').trim();
+        const content = `import { config as sharedConfig } from './wdio.shared.conf';
 
-export const config = {
+/**
+ * Android-specific WebdriverIO Configuration
+ * Capabilities loaded from mcp-config.json
+ */
+export const config: WebdriverIO.Config = {
   ...sharedConfig,
-  capabilities: [{
-    platformName: 'Android',
-    'appium:automationName': 'UiAutomator2',
-    'appium:deviceName': 'Pixel_8',
-    // 'appium:app': '/path/to/your/app.apk',
-    'appium:newCommandTimeout': 240,
-    'appium:noReset': false,
-  }]
+  capabilities: [${capsJson}],
+  
+  // Appium service for Android
+  services: [
+    ['appium', {
+      logPath: './appium-android.log',
+      args: {
+        relaxedSecurity: true,
+        log: './appium-android.log'
+      }
+    }]
+  ],
 };
 `;
-        this.writeIfNotExists(path.join(projectRoot, 'wdio.android.conf.ts'), content);
+        this.writeIfNotExists(path.join(targetDir, 'wdio.android.conf.ts'), content);
     }
-    scaffoldWdioIosConfig(projectRoot) {
-        const content = `import { config as sharedConfig } from './wdio.shared.conf.ts';
+    scaffoldWdioIosConfig(targetDir, configSourceDir, config) {
+        // Read iOS capabilities from mcp-config.json if available
+        let iosCaps = null;
+        if (config) {
+            try {
+                const profiles = config?.mobile?.capabilitiesProfiles || {};
+                // Find first iOS profile
+                for (const [profileName, caps] of Object.entries(profiles)) {
+                    const platformName = (caps?.platformName || caps?.['appium:platformName'] || '').toLowerCase();
+                    if (platformName === 'ios') {
+                        iosCaps = caps;
+                        break;
+                    }
+                }
+            }
+            catch {
+                // Config parse error - fall back to defaults
+            }
+        }
+        else {
+            // Try reading from configSourceDir
+            const configPath = path.join(configSourceDir, 'mcp-config.json');
+            if (fs.existsSync(configPath)) {
+                try {
+                    const parsedConfig = this.mcpConfigService.read(configSourceDir);
+                    const profiles = parsedConfig?.mobile?.capabilitiesProfiles || {};
+                    for (const [profileName, caps] of Object.entries(profiles)) {
+                        const platformName = (caps?.platformName || caps?.['appium:platformName'] || '').toLowerCase();
+                        if (platformName === 'ios') {
+                            iosCaps = caps;
+                            break;
+                        }
+                    }
+                }
+                catch {
+                    // Config parse error - fall back to defaults
+                }
+            }
+        }
+        const defaultIosCaps = {
+            platformName: 'iOS',
+            'appium:automationName': 'XCUITest',
+            'appium:deviceName': 'iPhone 14',
+            'appium:app': 'CONFIGURE_ME: /path/to/your/app.app',
+            'appium:newCommandTimeout': 240,
+            'appium:noReset': false,
+        };
+        const finalCaps = iosCaps || defaultIosCaps;
+        const capsJson = JSON.stringify(finalCaps, null, 4).split('\n').map(line => '  ' + line).join('\n').trim();
+        const content = `import { config as sharedConfig } from './wdio.shared.conf';
 
-export const config = {
+/**
+ * iOS-specific WebdriverIO Configuration
+ * Capabilities loaded from mcp-config.json
+ */
+export const config: WebdriverIO.Config = {
   ...sharedConfig,
-  capabilities: [{
-    platformName: 'iOS',
-    'appium:automationName': 'XCUITest',
-    'appium:deviceName': 'iPhone 14',
-    // 'appium:app': '/path/to/your/app.app',
-    'appium:newCommandTimeout': 240,
-    'appium:noReset': false,
-  }]
+  capabilities: [${capsJson}],
+  
+  // Appium service for iOS
+  services: [
+    ['appium', {
+      logPath: './appium-ios.log',
+      args: {
+        relaxedSecurity: true,
+        log: './appium-ios.log'
+      }
+    }]
+  ],
 };
 `;
-        this.writeIfNotExists(path.join(projectRoot, 'wdio.ios.conf.ts'), content);
+        this.writeIfNotExists(path.join(targetDir, 'wdio.ios.conf.ts'), content);
     }
     scaffoldMockScenarios(projectRoot, paths) {
         const content = JSON.stringify({
@@ -1021,7 +1434,12 @@ export const config = {
     }
     scaffoldAppiumDriver(projectRoot, paths) {
         const content = `import { browser, $ } from '@wdio/globals';
+import fs from 'fs';
 
+/**
+ * AppiumDriver — Core Appium session wrapper for WDIO v9.
+ * Provides platform detection, screenshot capture, and context switching.
+ */
 export class AppiumDriver {
   static async find(selector: string) { return await $(selector); }
 
@@ -1555,21 +1973,7 @@ export class AssertionUtils {
             pending.push('credentials.strategy — run manage_users to choose a credential storage pattern');
         }
         // ─── Reporting Format ────────────────────────────────────────────────────────
-        const reporting = this.mcpConfigService.getReporting(config);
-        if (reporting.format === 'allure') {
-            const wdioConf = path.join(projectRoot, 'wdio.conf.ts');
-            if (fs.existsSync(wdioConf)) {
-                const wdioContent = fs.readFileSync(wdioConf, 'utf-8');
-                if (!wdioContent.includes('allure')) {
-                    // Patch reporters line
-                    const patched = wdioContent.replace(/reporters:\s*\[['"]spec['"]\]/, `reporters: [['allure', { outputDir: '${reporting.outputDir}/allure-results' }]]`);
-                    if (patched !== wdioContent) {
-                        fs.writeFileSync(wdioConf, patched, 'utf-8');
-                        applied.push('Updated wdio.conf.ts to use Allure reporter');
-                    }
-                }
-            }
-        }
+        // Allure support removed to avoid dependency conflicts
         // ─── customWrapperPackage ──────────────────────────────────────────────────
         const codegen = this.mcpConfigService.getCodegen(config);
         if (codegen.customWrapperPackage) {

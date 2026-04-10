@@ -17,7 +17,6 @@ export class SummarySuiteService {
             'reports/cucumber-report.json',
             'reports/cucumber.json',
             'cucumber-report.json',
-            'allure-results/cucumber.json',
             'test-results/cucumber.json',
             'wdio-reports/cucumber.json'
         ].filter(Boolean);

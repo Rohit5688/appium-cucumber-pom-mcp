@@ -1,1 +1,1 @@
-export const APPFORGE_VERSION = "1.0.0";
+export const APPFORGE_VERSION = "2.0.1";
