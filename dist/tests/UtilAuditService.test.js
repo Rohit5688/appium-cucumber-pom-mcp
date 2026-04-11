@@ -21,7 +21,7 @@ describe('UtilAuditService (AppForge Unit Tests)', () => {
     test('should detect missing native Appium usages without a wrapper', async () => {
         // Normal steps checking native Appium methods
         const stepFile = `
-      import { Then } from '@cucumber/cucumber';
+      import { Then } from '@wdio/cucumber-framework';
       
       Then('I drag and drop', async () => {
         // missing wrapper, native appium usage instead
@@ -39,7 +39,7 @@ describe('UtilAuditService (AppForge Unit Tests)', () => {
     });
     test('customWrapperPackage (BUG-12) should ignore wrapper functions acting natively', async () => {
         const stepFile = `
-      import { Then } from '@cucumber/cucumber';
+      import { Then } from '@wdio/cucumber-framework';
       import { dragAndDrop, scrollIntoView, assertScreenshot, handleOTP } from '@company/appium-helpers';
       
       Then('I do something', async () => {

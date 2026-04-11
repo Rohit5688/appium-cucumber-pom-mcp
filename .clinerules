@@ -8,7 +8,7 @@
 
 ## ⚡ 1. TOKEN-AWARE PLANNING
 - **Targeted Grep**: Search before read. No index.ts (>6k L) full read.
-- **Warm-Start**: Read `.AppForge/structural-brain.json` + `graphify-out/graph.json` first.
+- **Warm-Start**: Read `.AppForge/structural-brain.json` + `graphify-out/graph.json`. Start `python scripts/monitor_tokens.py` in background if not alive.
 - **Atomic**: Break tasks into sequential tool calls. No incomplete writes.
 
 ## 🔍 2. ATOMIC IMPLEMENTATION

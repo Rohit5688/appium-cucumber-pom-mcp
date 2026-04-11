@@ -34,7 +34,7 @@ describe('NavigationGraphService - P2 Enhancement 3: Test Coverage', () => {
       // Create initial step definition
       const stepDefFile = path.join(stepDefsDir, 'login.steps.ts');
       fs.writeFileSync(stepDefFile, `
-        import { Given, When } from '@cucumber/cucumber';
+        import { Given, When } from '@wdio/cucumber-framework';
         
         Given('I am on the login screen', async () => {
           // Navigate to login

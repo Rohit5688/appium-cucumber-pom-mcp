@@ -5,6 +5,8 @@
 | **commit** | `/commit` | `~/.agents/skills/caveman-commit` | Terse Conventional Commits. |
 | **review** | `/review` | `~/.agents/skills/caveman-review` | Terse actionable PR feedback. |
 | **compress** | `/caveman:compress` | `~/.agents/skills/compress` | Doc compression. |
+| **prompt-compress** | `caveman:prompt` | `python compress_prompt.py` | Prompt compression. |
+| **monitor-tokens** | `monitor:tokens` | `python scripts/monitor_tokens.py` | Real-time token usage dashboard. |
 | **find** | `how do I...` | `~/.agents/skills/find-skills` | Skill discovery. |
 
 ## RULES

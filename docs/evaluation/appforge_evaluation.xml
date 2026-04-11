@@ -1,0 +1,207 @@
+<evaluation>
+
+  <qa_pair>
+    <question>Which tool should be called FIRST according to workflow_guide when you don't know which tool to use or how to start?</question>
+    <answer>workflow_guide</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Call workflow_guide with workflow="new_project". What is the FIRST tool it recommends calling in that workflow?</question>
+    <answer>check_environment</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Call workflow_guide with workflow="write_test". How many steps does that workflow contain?</question>
+    <answer>6</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Call workflow_guide with workflow="run_and_heal". Which tool does it recommend calling AFTER verify_selector confirms a selector works?</question>
+    <answer>train_on_example</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What is the default platform value used by setup_project when no platform argument is provided?</question>
+    <answer>android</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What does verify_selector return in the "note" field when it successfully auto-learns a healed selector (when an oldSelector is provided during verification)?</question>
+    <answer>Selector verified and heal automatically learned.</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>According to the execute_sandbox_code tool description (Turbo Mode), what is the correct way to return a value from a sandbox script?</question>
+    <answer>use `return &lt;value&gt;` in your script</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What file does train_on_example store learned rules in?</question>
+    <answer>.AppForge/mcp-learning.json</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What parameter should be set to true in the validate_and_write tool to perform validation without writing files to disk?</question>
+    <answer>preview</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Which manage_config operation is used to update the app path for a specific platform in the project configuration?</question>
+    <answer>inject_app</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does the inspect_ui_hierarchy tool support an 'xmlDump' parameter for offline parsing?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>In run_cucumber_test, what is the default value for the 'runAsync' parameter?</question>
+    <answer>true</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Is 'jobId' a required parameter for the check_test_status tool?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Which parameter is required for self_heal_test to analyze a failure?</question>
+    <answer>testOutput</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Is 'testDescription' a required parameter for generate_cucumber_pom?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does the upgrade_project tool support a 'preview' mode?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Which manage_users operations are supported in the 'operation' enum?</question>
+    <answer>read, write</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What tool should be used to check the estimated token usage for the current session?</question>
+    <answer>get_token_budget</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does export_navigation_map support a 'forceRebuild' parameter?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Is 'projectRoot' a required parameter for audit_mobile_locators?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <!-- POSITIVE EXPANSION (21-30) -->
+
+  <qa_pair>
+    <question>Does generate_ci_workflow support both 'github' and 'gitlab' as providers?</question>
+    <answer>github, gitlab</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Is 'entityName' a required property for generate_test_data_factory?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Which parameter in audit_utils allows specifying a custom Appium wrapper package?</question>
+    <answer>customWrapperPackage</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does check_appium_ready have a property for 'appiumUrl' in its schema?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does extract_navigation_map allow toggling 'includeCommonFlows'?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Which frameworks are supported by migrate_test in its sourceFramework enum?</question>
+    <answer>espresso, xcuitest, detox</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does repair_project support 'both' as a target platform?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Which tool should be used to find duplicate step definitions or unused Page Object methods?</question>
+    <answer>suggest_refactorings</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Is 'projectRoot' listed as a required parameter for export_team_knowledge?</question>
+    <answer>yes</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Which tool provides memory, uptime, and singleton pool metrics for the Appium session?</question>
+    <answer>get_session_health</answer>
+  </qa_pair>
+
+  <!-- NEGATIVE & CORNER CASES (31-40) -->
+
+  <qa_pair>
+    <question>What error keyword is returned if run_cucumber_test is called without the required 'projectRoot'?</question>
+    <answer>invalid_type</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What error keyword is returned if manage_config is called with an invalid operation like 'delete_all'?</question>
+    <answer>invalid_value</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What happens if check_test_status is called with 'waitSeconds' set to 100 (exceeding max 55)?</question>
+    <answer>too_big</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What error occurs if start_appium_session is called with a number instead of a string for 'projectRoot'?</question>
+    <answer>invalid_type</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Is an error returned if self_heal_test is called with an empty 'testOutput' string?</question>
+    <answer>required</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What error is returned if create_test_atomically is called with a file missing the 'content' field?</question>
+    <answer>invalid_type</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does setup_project reject a 'platform' value of 'windows' via its enum constraint?</question>
+    <answer>invalid_value</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does manage_users require a 'projectRoot' to function?</question>
+    <answer>invalid_type</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>What error keyword is returned if upgrade_project receives a boolean instead of a string for 'projectRoot'?</question>
+    <answer>invalid_type</answer>
+  </qa_pair>
+
+  <qa_pair>
+    <question>Does repair_project throw a 'required' error if no projectRoot is provided?</question>
+    <answer>invalid_type</answer>
+  </qa_pair>
+
+</evaluation>

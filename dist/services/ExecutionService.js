@@ -93,7 +93,7 @@ export class ExecutionService {
                 }
             }
             if (tagExpression) {
-                command += ` --cucumberOpts.tagExpression=${tagExpression}`;
+                command += ` --cucumberOpts.tags=${tagExpression}`;
             }
         }
         return command;

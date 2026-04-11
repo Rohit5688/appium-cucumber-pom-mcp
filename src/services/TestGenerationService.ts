@@ -5,6 +5,9 @@ import type { CodebaseAnalysisResult } from './CodebaseAnalyzerService.js';
 import { NavigationGraphService } from './NavigationGraphService.js';
 import { Logger } from '../utils/Logger.js';
 import { HybridPromptEngine } from './HybridPromptEngine.js';
+// Re-export so tool handlers can validate generated code without a direct service dep
+export { GeneratedCodeValidator } from './GeneratedCodeValidator.js';
+export type { ValidationResult, ValidationIssue, ValidationInput } from './GeneratedCodeValidator.js';
 
 export interface GenerationOutput {
   reusePlan: string;
@@ -170,6 +173,29 @@ Generate: .feature file + step definitions + Page Object class.
     // Nanotools: build the 3-layer hybrid block (CoT + champion snippet + anti-patterns)
     const hybridBlock = this.hybridEngine.buildHybridBlock(analysis);
 
+    // ── Prompt-level token budget guard ──────────────────────────────────────
+    // Estimates the upcoming prompt size BEFORE building the full string.
+    // Emits a stderr warning (never throws) when the prompt approaches the
+    // context ceiling. This helps operators tune champion file sizes pre-deploy.
+    const estimatedBaseTokens =
+      this.estimateTokens(hybridBlock) +
+      this.estimateTokens(existingStepsSummary) +
+      this.estimateTokens(existingPagesSummary) +
+      this.estimateTokens(navigationContext);
+    const PROMPT_TOKEN_BUDGET = 3500; // conservative ceiling before LLM context pressure
+    if (estimatedBaseTokens > PROMPT_TOKEN_BUDGET) {
+      Logger.warn(
+        `[TestGeneration] ⚠️ Prompt estimate ${estimatedBaseTokens} tokens exceeds ` +
+        `${PROMPT_TOKEN_BUDGET}-token budget. ` +
+        `Consider reducing champion file size or step inventory. ` +
+        `(hybridBlock: ${this.estimateTokens(hybridBlock)}t, ` +
+        `steps: ${this.estimateTokens(existingStepsSummary)}t, ` +
+        `pages: ${this.estimateTokens(existingPagesSummary)}t, ` +
+        `nav: ${this.estimateTokens(navigationContext)}t)`
+      );
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const conflictsWarning = analysis.conflicts.length > 0
       ? `\n## ⚠️ STEP CONFLICTS DETECTED\nThe following step patterns are duplicated across files. DO NOT create any of these:\n${analysis.conflicts.map(c => `- \`${c.pattern}\` (in: ${c.files.join(', ')})`).join('\n')}\n`
       : '';
@@ -200,10 +226,12 @@ ${schemaHint ? `- Schema Hint: ${schemaHint}` : ''}
       : '{ "path": "pages/ExamplePage.ts", "content": "..." }';
 
     return `
-You are an expert Mobile Automation Engineer specializing in **Appium + WebdriverIO + @cucumber/cucumber** BDD testing.
+You are an expert Mobile Automation Engineer specializing in **Appium + WebdriverIO + @wdio/cucumber-framework** BDD testing.
 Generate a COMPLETE Appium/WebdriverIO Cucumber POM test suite from this plain English request:
 
 ⚠️ **CRITICAL CONSTRAINT**: This project uses **ONLY WebdriverIO** with \`driver.$()\` selectors and **Appium** locator strategies. Use \`@wdio/globals\`, \`import { $ }\`, and Appium strategies (accessibility-id, resource-id, xpath). Do NOT import web testing libraries, page objects, or fixtures from other frameworks.
+
+⚠️ **IMPORT CONVENTION (Appium 3 / WDIO v9)**: Step definitions and hooks MUST import \`Given\`, \`When\`, \`Then\`, \`Before\`, \`After\` from **\`@wdio/cucumber-framework\`**, NOT from \`@cucumber/cucumber\`. The \`@cucumber/cucumber\` package is an internal bundled dependency of \`@wdio/cucumber-framework\` and must NOT be imported directly.
 
 "${testDescription}"
 ${testName ? `Test Name: "${testName}"` : ''}

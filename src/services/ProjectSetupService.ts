@@ -418,8 +418,8 @@ export class ProjectSetupService {
         // Appium drivers — use unscoped package names (scoped @appium/* do NOT exist on npm)
         "appium-uiautomator2-driver": "^7.0.0",
         "appium-xcuitest-driver": "^10.36.0",
-        // Cucumber v9 runner (WDIO compatibility)
-        "@cucumber/cucumber": "9.6.0",
+        // Appium 3 + WDIO v9: @wdio/cucumber-framework bundles Cucumber internally.
+        // Do NOT add @cucumber/cucumber as a direct dep — it causes version conflicts.
         "allure-cucumberjs": "^2.15.2",
         "@cucumber/pretty-formatter": "^1.0.1",
         // TypeScript runtime

@@ -267,7 +267,7 @@ Given the user is logged in
             {
                 path: 'src/steps/test.steps.ts',
                 content: `
-import { Given } from '@cucumber/cucumber';
+import { Given } from '@wdio/cucumber-framework';
 
 Given('the user is logged in', async function() {
   // Missing await or implementation

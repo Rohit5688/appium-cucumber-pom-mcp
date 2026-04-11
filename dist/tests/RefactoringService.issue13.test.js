@@ -69,7 +69,7 @@ describe('RefactoringService - Custom Directory Layout (Issue #13)', () => {
         fs.writeFileSync(path.join(testProjectDir, 'mcp-config.json'), JSON.stringify(config, null, 2));
         // Create a step definition file in the custom location
         const stepContent = `
-import { Given, When, Then } from '@cucumber/cucumber';
+import { Given, When, Then } from '@wdio/cucumber-framework';
 
 Given('the user is on the login page', async function() {
   await loginPage.navigateTo();
@@ -205,7 +205,7 @@ export class LoginPage {
         fs.writeFileSync(path.join(testProjectDir, 'mcp-config.json'), JSON.stringify(config, null, 2));
         // Create files in deeply nested structure
         fs.writeFileSync(path.join(deepStepsDir, 'checkout.steps.ts'), `
-import { Given } from '@cucumber/cucumber';
+import { Given } from '@wdio/cucumber-framework';
 Given('user checks out', async () => {});
       `);
         fs.writeFileSync(path.join(deepPagesDir, 'CheckoutPage.ts'), `
@@ -247,11 +247,11 @@ export class CheckoutPage {
         fs.writeFileSync(path.join(testProjectDir, 'mcp-config.json'), JSON.stringify(config, null, 2));
         // Create duplicate step definitions (the issue to detect)
         fs.writeFileSync(path.join(customStepsDir, 'common1.steps.ts'), `
-import { Given } from '@cucumber/cucumber';
+import { Given } from '@wdio/cucumber-framework';
 Given('the app is launched', async () => {});
       `);
         fs.writeFileSync(path.join(customStepsDir, 'common2.steps.ts'), `
-import { Given } from '@cucumber/cucumber';
+import { Given } from '@wdio/cucumber-framework';
 Given('the app is launched', async () => {});  // Duplicate!
       `);
         // Create page object with unused method
@@ -263,7 +263,7 @@ export class HomePage {
       `);
         // Create step that uses only one method
         fs.writeFileSync(path.join(customStepsDir, 'navigation.steps.ts'), `
-import { When } from '@cucumber/cucumber';
+import { When } from '@wdio/cucumber-framework';
 When('user goes to settings', async function() {
   await homePage.navigateToSettings();
 });
@@ -347,7 +347,7 @@ export class CartPage {
 }
       `);
         fs.writeFileSync(path.join(customLayout.steps, 'cart.steps.ts'), `
-import { When } from '@cucumber/cucumber';
+import { When } from '@wdio/cucumber-framework';
 When('user proceeds to checkout', async function() {
   await cartPage.checkout();
 });

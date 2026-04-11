@@ -11,6 +11,13 @@ When you connect this MCP to your AI assistant (e.g., Claude Desktop, Cursor, An
 ### Step 1: Smart Mobile Discovery
 > "I want to integrate this MCP with my existing mobile project. Run `analyze_codebase` on `/your/project/path` to discover my existing Android and iOS Page Objects, step definitions, and environment configurations. If you find any existing `wdio.conf.ts` or `mcp-config.json` files, tell me how we can reuse them instead of creating new ones."
 
+### Ongoing Development
+- [ ] Run `npm run lint` regularly.
+- [ ] Maintain 100% pass rate in the **Gold Standard Evaluation Harness** (`docs/evaluation/`).
+- [ ] Run the evaluation suite before EVERY merge or ship action.
+- [ ] Update `appforge_evaluation.xml` when adding new tools.
+- [ ] Check `docs/issues.md` for current blockers.
+
 ### Step 2: Environment Readiness Check
 > "Check my environment using `check_environment`. Ensure the Appium server is reachable and tell me if I need to install any missing Android SDKs or iOS drivers. If my emulator isn't booted, please provide the exact command to start it."
 

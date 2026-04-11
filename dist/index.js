@@ -114,6 +114,10 @@ class AppForgeServer {
     migrationService = new MigrationService();
     // MEMORY LEAK FIX: Instance pooling for NavigationGraphService to prevent creating new instances per tool call
     navigationGraphServices = new Map();
+    // Nanotools: Lazy Context Pulse — tracks last tool activity per server process lifetime
+    // Used to prevent plan myopia in automated exploration sessions
+    activityTimestamps = new Map();
+    static IDLE_PULSE_MS = 600_000; // 10 minutes
     // Orchestration service for atomic multi-step operations
     orchestrationService = new OrchestrationService(this.generationService, this.fileWriterService, this.selfHealingService, this.sessionManager, // AppiumSessionService interface
     this.learningService, this.configService, this.analyzerService);
@@ -126,6 +130,9 @@ class AppForgeServer {
             const wrappedHandler = async (args, extraOptions) => {
                 const startTime = Date.now();
                 const traceId = obs.toolStart(name, args ?? {}, undefined);
+                // Update activity pulse
+                this.activityTimestamps.set(name, startTime);
+                const lastPulse = Array.from(this.activityTimestamps.values()).sort((a, b) => b - a)[0];
                 try {
                     const result = await handler(args, extraOptions);
                     const tokenService = TokenBudgetService.getInstance();
