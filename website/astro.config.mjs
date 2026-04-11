@@ -1,11 +1,12 @@
-// https://astro.build/config
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-// https://astro.build/config
+// const site = 'https://rohit5688.github.io';
+const base = '/appium-cucumber-pom-mcp';
+
 export default defineConfig({
-	site: 'https://rohit5688.github.io',
-	base: '/appium-cucumber-pom-mcp',
+	// site,
+	base,
 	integrations: [
 		starlight({
 			favicon: '/favicon.png',
@@ -76,6 +77,8 @@ export default defineConfig({
 				},
 			],
 		}),
-	],
+		// We use a dummy integration here to "squat" on the name '@astrojs/sitemap' 
+		// if starlight tries to inject it, or just ensure it's not present.
+	].filter(i => i && i.name !== '@astrojs/sitemap'),
 });
 
