@@ -2,6 +2,8 @@
 title: "📱 AppForge: Ultimate User Guide"
 ---
 
+import { Steps } from '@astrojs/starlight/components';
+
 Welcome to the future of mobile automation! This guide will walk you through setting up, mastering, and troubleshooting your AppForge integration. No more fighting with brittle XPaths or complex Appium configs—let's get your mobile tests running at light speed. 🚀
 
 ---
@@ -9,23 +11,31 @@ Welcome to the future of mobile automation! This guide will walk you through set
 ## 🏗️ 1. Getting Started
 
 ### 🌟 New Project: From Zero to "Green" in 60 Seconds
-If you're starting from scratch, the `setup_project` tool is your best friend.
+If you're starting from scratch, follow these steps to scaffold your framework.
 
-1.  **Run the Tool**: Call `setup_project` with an empty directory.
-2.  **What Happens?**: 
-    *   Creates `features/`, `pages/`, `step-definitions/`, and `utils/` folders.
-    *   Installs `webdriverio`, `@cucumber/cucumber`, and `ts-morph`.
-    *   Scaffolds `tsconfig.json` and WebdriverIO configs (`wdio.conf.ts`, or the new Multi-Config split: `wdio.shared.conf.ts`, `wdio.android.conf.ts`, etc.).
-    *   Generates `BasePage.ts`, `MobileGestures.ts`, and `MockServer.ts`.
-    *   Creates a starter `mcp-config.json` with Android/iOS profiles.
-3.  **Next Step**: Run `npx wdio run wdio.conf.ts` (or `npx wdio run wdio.android.conf.ts` for Multi-Config setups) to see the example pass!
+<Steps>
+
+1. **Run the Tool**: Call `setup_project` with an empty directory.
+2. **What Happens?**: 
+    - Creates `features/`, `pages/`, `step-definitions/`, and `utils/` folders.
+    - Installs `webdriverio`, `@cucumber/cucumber`, and `ts-morph`.
+    - Scaffolds `tsconfig.json` and WebdriverIO configs.
+    - Generates `BasePage.ts`, `MobileGestures.ts`, and `MockServer.ts`.
+    - Creates a starter `mcp-config.json` with Android/iOS profiles.
+3. **Next Step**: Run `npx wdio run wdio.conf.ts` to see the example pass!
+
+</Steps>
 
 ### 🔄 Existing Project: Bring the Magic to Your Code
-Already have a WebdriverIO project? We'll adapt to *you*.
+Already have a WebdriverIO project? We'll adapt to *you* instantly.
 
-1.  **Run Analysis**: Call `analyze_codebase`.
-2.  **Self-Healing Upgrade**: The MCP server will automatically detect your patterns and apply missing configurations like `mcp-config.json`.
-3.  **Zero-Config Maintenance**: The `upgrade_project` tool ensures your dependencies stay up-to-date with current mobile automation standards.
+<Steps>
+
+1. **Run Analysis**: Call `analyze_codebase`.
+2. **Self-Healing Upgrade**: The MCP server will automatically detect your patterns and apply missing configurations.
+3. **Zero-Config Maintenance**: The `upgrade_project` tool ensures your dependencies stay up-to-date with current standards.
+
+</Steps>
 
 ---
 
@@ -33,18 +43,17 @@ Already have a WebdriverIO project? We'll adapt to *you*.
 
 | Tool | Purpose | When to Use |
 | :--- | :--- | :--- |
-| `analyze_codebase` | 🔦 The Scout | Before generating new tests. Learns your Page Objects, steps, and conventions. Supports auto-detecting `pagesDir` and scanning YAML files while ignoring large directories. |
-| `generate_cucumber_pom` | ✍️ The Architect | When you have a new requirement. It prepares the system instructions for the AI. |
-| `validate_and_write` | ✅ The Builder | After the AI generates code. It validates TypeScript/Gherkin and writes files safely. |
-| \`start_appium_session\` | 👁️ The Visionary | To connect to a live device. Returns XML and screenshots for 100% accurate locators. |
-| `self_heal_test` | 🩹 The Doc | If a test fails, run this. It analyzes the failure and tells the AI how to fix the broken locator. |
-| `verify_selector` | ✅ The Verifier | Checks if an element is visible on a live device. Automatically learns working healed locators into the project brain. |
-| `audit_mobile_locators` | 🛡️ The Auditor | Checks your Page Objects (TS and YAML configs) against 20 key Appium methods to ensure high-quality locators. |
-| `manage_users` | 👥 The Team Lead | To manage test credentials across `staging`, `prod`, etc. with typed helpers. |
-| `analyze_coverage` | 📈 The Strategist | To identify gaps in your test suite and suggest missing negative/A11y scenarios. |
-| `migrate_test` | 🚚 The Mover | To translate legacy Espresso/XCUITest/Detox tests into modern Appium Cucumber code. |
-| `execute_sandbox_code` | ⚡ The Optimizer | Runs JS locally to extract config/AST data silently instead of flooding chat history with JSON. |
-| `get_session_metrics`| 📊 The Inspector | To view health metrics, idle timers, and active Appium sessions scoped per-project. |
+| `analyze_codebase` | 🔦 The Scout | Before generating new tests. Learns your Page Objects, steps, and conventions. |
+| `generate_cucumber_pom` | ✍️ The Architect | When you have a new requirement. It prepares system instructions. |
+| `validate_and_write` | ✅ The Builder | After code generation to validate TypeScript/Gherkin and write files. |
+| `start_appium_session` | 👁️ The Visionary | Connect to a live device for 100% accurate locators and XML. |
+| `self_heal_test` | 🩹 The Doc | Analyzes and fixes broken locators automatically. |
+| `verify_selector` | ✅ The Verifier | Checks selector visibility and learns working fixes into the brain. |
+| `audit_mobile_locators` | 🛡️ The Auditor | Checks Page Objects against 20 key Appium methods for quality. |
+| `manage_users` | 👥 The Team Lead | Manages test credentials across environments with typed helpers. |
+| `analyze_coverage` | 📈 The Strategist | Identifies coverage gaps and suggests missing scenarios. |
+| `migrate_test` | 🚚 The Mover | Translates Espresso/XCUITest/Detox tests into Appium Cucumber. |
+| `execute_sandbox_code` | ⚡ The Optimizer | Runs JS locally for silent, token-efficient data extraction. |
 
 ---
 
@@ -75,25 +84,17 @@ Scenario: Find Version Info
 **Implementation Tip**:
 The AI will automatically use `MobileGestures.swipeUp()` or `scrollIntoView()` methods generated during setup.
 
-### 🧠 C. Self-Healing in Action
-Stale locator? No problem.
-1. Test fails on `~submit_btn`.
-2. Run `self_heal_test` with the output.
-3. The tool starts a live session, grabs the XML, finds the element has moved to `id=com.app:id/submit_new`, and proposes the fix.
-4. **Auto-Learning**: Once you verify the fix, the system saves it to its internal brain so it never breaks again.
-
 ---
 
 ## 🩹 4. Troubleshooting: The "Squash the Bug" Matrix 💥
 
 | Symptom | Probable Root Cause | The Fix 🛠️ |
 | :--- | :--- | :--- |
-| `Appium not reachable` | Server not running. | Run `check_environment` to get the exact `appium` command to start the server. |
-| `Undefined Step` | Regex mismatch. | Run `analyze_codebase`. If missing, tell the AI: *"The step 'X' is missing, please regenerate the step file."* |
-| `Session creation failed` | Profile mismatch. | Check `mcp-config.json` profiles. Ensure `deviceName` matches your booted emulator. |
-| `TSC Validation Error` | Syntax error in POM. | Use `validate_and_write` with `dryRun: true` first to see the exact TypeScript error. |
-| `Context Length Exceeded` | Output dump too large. | Tell the AI to use `execute_sandbox_code` instead of requesting full file/AST reads. |
-| `MockServer not working` | Target IP mismatch. | Use `MockServer.getBaseUrl()` helper. Android uses `10.0.2.2` instead of `localhost`. |
+| `Appium not reachable` | Server not running. | Run `check_environment` for exact start-up commands. |
+| `Undefined Step` | Regex mismatch. | Run `analyze_codebase` and re-sync step files. |
+| `Session creation failed` | Profile mismatch. | Check `mcp-config.json` profiles & booted device. |
+| `TSC Validation Error` | Syntax error in POM. | Use `validate_and_write` with `dryRun: true` to see the error. |
+| `Context Length Exceeded` | Output dump too large. | Use `execute_sandbox_code` for data extraction. |
 
 ---
 
@@ -101,23 +102,12 @@ Stale locator? No problem.
 
 ### 📗 A. Live Context is King
 *   **Prompt**: *"Start an Appium session, look at the current screen, and generate a login test based on what you see."*
-*   **Best for**: High accuracy locators on new or changing screens.
 
 ### 📗 B. Migration Requests
 *   **Prompt**: *"Here is an Espresso test `LoginActivityTest.java`. Please migrate it to Appium Cucumber using my existing Page Objects."*
-*   **Best for**: Moving off legacy native frameworks.
 
 ### 📗 C. Coverage Strategy
 *   **Prompt**: *"Analyze the coverage for my project. What negative scenarios am I missing for the checkout flow?"*
-*   **Best for**: Quality assurance planning.
-
-### 📗 D. Programmatic JSON Verification
-*   **Prompt**: *"Run cucumber test but return the output in structuredJSON format so my automated MCP client can parse the test results."*
-*   **Best for**: CI/CD pipelines or programmatic agent loops (as many priority tools now return `structuredContent` payloads natively).
-
-### 📗 E. Using External YAML Locators
-*   **Prompt**: *"Audit my locator usage, making sure to include definitions from the `locators.yaml` file."*
-*   **Best for**: Teams migrating from legacy tools that define selectors in YAML dictionaries rather than TS/JS files.
 
 ---
 
@@ -125,13 +115,12 @@ Stale locator? No problem.
 
 | Do 👍 | Don't 👎 |
 | :--- | :--- |
-| **Provide Profile Names**: Say *"Use the 'pixel8' profile"* to save the AI time. | **Hardcode Credentials**: Let the AI use `manage_users` and `.env` files. |
-| **Mention Accessibility**: Ask for A11y checks to trigger `content-desc` validation. | **Ignored Environment Checks**: Always run `check_environment` before a big test run. |
-| **Use Dry Runs**: Verify code structure before committing to disk. | **Manual Rewrites**: Let the AI heal. Hand-coded fixes won't be "learned" by the brain. |
+| **Provide Profile Names**: Say *"Use the 'pixel8' profile"* to save time. | **Hardcode Credentials**: Use `manage_users` and `.env` files. |
+| **Mention Accessibility**: Ask for A11y checks to trigger `content-desc` validation. | **Manual Rewrites**: Let the AI heal so the "system brain" learns. |
 
 ---
 
-> [!NOTE]
-> **Pro Tip**: Use `generate_ci_workflow` to automatically get a GitHub Action that runs your Appium tests on every PR! It will dynamically intercept your `mcp-config.json` to properly configure execution commands and devices instantly without manual prompting.
+> [!TIP]
+> **Pro Tip**: Use `generate_ci_workflow` to automatically get a GitHub Action that runs your Appium tests on every PR! It will dynamically intercept your `mcp-config.json` to properly configure execution.
 
 **Happy Mobile Testing! 📱✨**
