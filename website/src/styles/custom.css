@@ -1,30 +1,45 @@
 /* Custom AppForge Styles */
 
-/* 
-   Logo Size & Alignment Tuning
-   We've optimized the logo for transparency, now we're increasing 
-   visibility while maintaining professional alignment.
-*/
-
-/* 1. Header Sidebar Logo */
+/* 1. Header Sidebar Logo - Compact but Bold */
 .site-title img {
-    height: 3.5rem !important; /* Increased from default ~2rem */
+    height: 2.75rem !important; /* Sweet spot: visible but keeps header thin */
     width: auto;
-    margin-right: 0.5rem;
+    margin-right: 0.8rem;
     vertical-align: middle;
 }
 
-/* 2. Hero Section Logo (Homepage) */
+/* Tighten the header container to reduce whitespace bloat */
+.header {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+}
+
+/* 2. Hero Section Logo (Homepage) - High Impact */
 .hero img {
-    height: 12rem !important; /* Larger impact for the landing page */
+    height: 30rem !important; /* Restored large hero presence */
+    max-height: 60vh;
+    width: auto !important;
     max-width: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.2)); /* Subtle emerald glow */
+    filter: drop-shadow(0 0 40px rgba(16, 185, 129, 0.45));
+}
+
+/* Reduce whitespace around the large Hero section */
+.hero {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+}
+
+.hero > .sl-flex {
+    gap: 2rem !important;
 }
 
 /* Ensure mobile header stays balanced */
 @media (max-width: 50rem) {
     .site-title img {
-        height: 2.5rem !important;
+        height: 2.25rem !important;
+    }
+    .hero img {
+        height: 16rem !important;
     }
 }
