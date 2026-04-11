@@ -1,11 +1,11 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-// const site = 'https://rohit5688.github.io';
+const site = 'https://rohit5688.github.io';
 const base = '/AppForge';
 
 export default defineConfig({
-	// site,
+	site,
 	base,
 	integrations: [
 		starlight({
