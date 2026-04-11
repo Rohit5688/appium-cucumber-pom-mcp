@@ -69,8 +69,18 @@ export default defineConfig({
 				},
 			],
 		}),
-		// We use a dummy integration here to "squat" on the name '@astrojs/sitemap' 
-		// if starlight tries to inject it, or just ensure it's not present.
-	].filter(i => i && i.name !== '@astrojs/sitemap'),
+		{
+			name: 'sitemap-killer',
+			hooks: {
+				'astro:config:setup': ({ config }) => {
+					// Surgically remove sitemap if starlight injected it
+					const sitemapIdx = config.integrations.findIndex(i => i.name === '@astrojs/sitemap');
+					if (sitemapIdx !== -1) {
+						config.integrations.splice(sitemapIdx, 1);
+					}
+				}
+			}
+		}
+	],
 });
 
