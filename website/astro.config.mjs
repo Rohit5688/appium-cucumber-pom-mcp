@@ -27,7 +27,6 @@ export default defineConfig({
 						{ label: 'User Guide', link: 'repo/userguide' },
 						{ label: 'Onboarding', link: 'repo/onboarding' },
 						{ label: 'Installation', link: 'repo/dockersetup' },
-						{ label: 'E2E Testing Guide', link: 'repo/e2etestingguide' },
 						{ label: 'Test Generation', link: 'repo/testgeneration' },
 					],
 				},
