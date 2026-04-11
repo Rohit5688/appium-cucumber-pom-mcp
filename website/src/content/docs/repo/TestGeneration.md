@@ -1,6 +1,8 @@
 ---
-title: "✍️ Test Generation & Smart Refactoring"
+
 ---
+
+# ✍️ Test Generation & Smart Refactoring
 
 The core of the AppForge server is generating syntactically perfect, mobile-first BDD suites while maintaining a high degree of code reuse.
 

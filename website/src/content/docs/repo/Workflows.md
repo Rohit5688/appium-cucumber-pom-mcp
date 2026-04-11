@@ -1,6 +1,8 @@
 ---
-title: "🔄 MCP AI Conversation Workflows: Appium Edition"
+
 ---
+
+# ⚙️ MCP AI Conversation Workflows: Appium Edition
 
 This document outlines the standard operational workflows when conversing with an AI powered by the AppForge server.
 

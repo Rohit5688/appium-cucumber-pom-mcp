@@ -1,6 +1,8 @@
 ---
-title: "🛡️ AppForge Vendor Security Self-Assessment"
+
 ---
+
+# AppForge Vendor Security Self-Assessment
 
 This document serves as a comprehensive **Vendor Security Assessment** and **Compliance FAQ** for **AppForge** (Mobile Automation MCP Server). It is intended for enterprise Information Security (InfoSec), IT Procurement, and Data Privacy teams — particularly those in regulated sectors such as Healthcare, Financial Services, and Government — evaluating the tool for internal acquisition or developer adoption.
 
