@@ -1,8 +1,6 @@
 ---
-
+title: "🐳 Dockerized AppForge Server"
 ---
-
-# 🐳 Dockerized AppForge Server
 
 The AppForge Server can be fully dockerized for consistent local development and remote team collaboration. Using the official `node` image ensures that all OS-level dependencies for WebdriverIO execution are standardized.
 

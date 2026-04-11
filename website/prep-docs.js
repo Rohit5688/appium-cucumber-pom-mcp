@@ -115,26 +115,32 @@ function processFiles(dir) {
     let fmContent = '';
     let bodyContent = content;
     
-    // Find the actual title frontmatter block
-    const titleMatch = content.match(/title:.*\n/);
-    if (titleMatch) {
-      const titlePos = titleMatch.index;
-      // Search backwards for the opening ---
-      const beforeTitle = content.slice(0, titlePos);
-      const openDashIdx = beforeTitle.lastIndexOf('---');
-      
-      // Search forwards for the closing ---
-      const closeDashIdx = content.indexOf('---', titlePos);
-      
-      if (openDashIdx !== -1 && closeDashIdx !== -1) {
-        fmContent = content.slice(openDashIdx + 3, closeDashIdx).trim();
-        bodyContent = content.slice(closeDashIdx + 3).trim();
+    // Find existing frontmatter
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (fmMatch) {
+      fmContent = fmMatch[1];
+      bodyContent = content.slice(fmMatch[0].length);
+    }
+
+    // Ensure title exists in fmContent
+    if (!fmContent.includes('title:')) {
+      // Try to find H1 in body
+      const h1Match = bodyContent.match(/^#\s+(.*)$/m);
+      let titleVal = '';
+      if (h1Match) {
+        titleVal = cleanHeader(h1Match[1]);
+        // Remove the H1 from body since it will be in frontmatter
+        bodyContent = bodyContent.replace(/^#\s+.*$/m, '').trim();
+      } else {
+        // Fallback to filename
+        titleVal = cleanHeader(file.replace('.md', '').replace(/_/g, ' '));
       }
+      fmContent = `title: "${titleVal}"\n${fmContent}`.trim();
     }
     
-    // 1. Process Frontmatter Title
+    // 1. Process Frontmatter Title (inject emojis)
     fmContent = fmContent.replace(/^title:.*$/m, (line) => {
-        let titleVal = line.replace('title:', '').trim().replace(/^"/, '').replace(/"$/, '').trim();
+        let titleVal = line.replace('title:', '').trim().replace(/^["']/, '').replace(/["']$/, '').trim();
         titleVal = cleanHeader(titleVal);
         const emoji = getEmojiForText(file + ' ' + titleVal, '📄');
         return `title: "${emoji} ${titleVal}"`;
@@ -155,9 +161,9 @@ function processFiles(dir) {
     });
     bodyContent = updatedLines.join('\n');
 
-    const finalContent = `---\n${fmContent.trim()}\n---\n\n${bodyContent}`;
+    const finalContent = `---\n${fmContent.trim()}\n---\n\n${bodyContent.trim()}`;
     fs.writeFileSync(fullPath, finalContent);
-    console.log(`Deep-syncing style/iconography for ${file}`);
+    console.log(`Deep-synced style/iconography for ${file}`);
   }
 }
 

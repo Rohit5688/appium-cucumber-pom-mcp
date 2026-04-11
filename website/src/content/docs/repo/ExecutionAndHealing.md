@@ -1,8 +1,6 @@
 ---
-
+title: "🩹 Execution & Self-Healing: The Mobile Loop"
 ---
-
-# 🚀 Execution & Self-Healing: The Mobile Loop
 
 The AppForge doesn't just write code—it drives live device sessions, analyzes terminal output, and heals broken mobile locators automatically using real-time device XML and screenshots.
 

@@ -1,8 +1,6 @@
 ---
-
+title: "🚀 Continuous Integration & Bug Reporting"
 ---
-
-# 🛠️ Continuous Integration & Bug Reporting
 
 Moving your mobile automation code from your local machine to production requires pipelines and reporting. The AppForge natively scaffolds these flows.
 

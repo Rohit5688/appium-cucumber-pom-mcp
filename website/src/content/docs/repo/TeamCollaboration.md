@@ -1,8 +1,6 @@
 ---
-
+title: "🧠 Team Collaboration & Mobile Learning"
 ---
-
-# 👥 Team Collaboration & Mobile Learning
 
 The AppForge Server doesn't just write code—it **Learns** from your mobile team's unique patterns. Mobile testing is full of tribal knowledge (e.g., "Always wait for the splash screen animation before clicking 'Login'"), and this MCP has a persistent memory (`.AppForge/mcp-learning.json`) to capture it.
 
