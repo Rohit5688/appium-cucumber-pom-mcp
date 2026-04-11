@@ -11,6 +11,7 @@ export default defineConfig({
 		starlight({
 			favicon: '/favicon.png',
 			title: 'AppForge',
+			customCss: ['./src/styles/custom.css'],
 			logo: {
 				src: './src/assets/logo.png',
 			},

@@ -1,0 +1,10 @@
+/* Fix for logo with white background */
+.site-title img {
+    mix-blend-mode: multiply;
+}
+
+/* For Dark mode, we might need a different filter if the logo becomes invisible */
+:root[data-theme='dark'] .site-title img {
+    filter: brightness(0) invert(1);
+    mix-blend-mode: screen;
+}
