@@ -1,11 +1,30 @@
 /* Custom AppForge Styles */
 
 /* 
-   Logo is now a true transparent alpha PNG.
-   No CSS blending or invert hacks required.
+   Logo Size & Alignment Tuning
+   We've optimized the logo for transparency, now we're increasing 
+   visibility while maintaining professional alignment.
 */
 
-.site-title img, 
+/* 1. Header Sidebar Logo */
+.site-title img {
+    height: 3.5rem !important; /* Increased from default ~2rem */
+    width: auto;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+/* 2. Hero Section Logo (Homepage) */
 .hero img {
-    transition: filter 0.2s ease;
+    height: 12rem !important; /* Larger impact for the landing page */
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.2)); /* Subtle emerald glow */
+}
+
+/* Ensure mobile header stays balanced */
+@media (max-width: 50rem) {
+    .site-title img {
+        height: 2.5rem !important;
+    }
 }
