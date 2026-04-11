@@ -1,10 +1,11 @@
-/* Fix for logo with white background */
-.site-title img {
-    mix-blend-mode: multiply;
-}
+/* Custom AppForge Styles */
 
-/* For Dark mode, we might need a different filter if the logo becomes invisible */
-:root[data-theme='dark'] .site-title img {
-    filter: brightness(0) invert(1);
-    mix-blend-mode: screen;
+/* 
+   Logo is now a true transparent alpha PNG.
+   No CSS blending or invert hacks required.
+*/
+
+.site-title img, 
+.hero img {
+    transition: filter 0.2s ease;
 }
