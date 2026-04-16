@@ -19,3 +19,11 @@ help.txt
 detect.json
 .claude/settings.json
 mcp-logs/
+*.log
+scratch/
+backups/
+
+# IDE settings
+.vscode/
+.idea/
+

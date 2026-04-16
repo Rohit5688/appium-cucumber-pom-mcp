@@ -10,6 +10,18 @@ This server bridges the gap between natural language test intent and executable,
 
 ---
 
+## ⚡ 60-Second Quick Start: The "Buy Milk" Demo
+
+Want to see AppForge in action immediately? Copy and paste these three prompts into your AI client (Cursor, Claude Desktop, etc.) to generate and run a real mobile test.
+
+1.  **Prompt 1**: *"Check if my mobile environment is ready (Android/iOS)."*
+2.  **Prompt 2**: *"I want to test the TodoMVC web app in a mobile browser. Create a test that adds 'Buy Milk', 'Clean Room', and 'Feed Cat', then verifies the count is 3."*
+3.  **Prompt 3**: *"Now run the test and show me the results."*
+
+**What happens?** AppForge will check your Appium setup, generate a typed Page Object, write the Gherkin feature, and execute the test on your connected emulator/simulator. Zero manual configuration required.
+
+---
+
 ## 🌟 Core Capabilities
 
 ### 1. 🏗️ Intelligence-Driven Scaffolding
@@ -42,22 +54,16 @@ This server bridges the gap between natural language test intent and executable,
 
 **🚨 MANDATORY READING BEFORE STARTING ANY WORK:**
 
-1. **Universal Token Optimization Guide**: [`docs/AGENT_TOKEN_OPTIMIZATION_GUIDE.md`](docs/AGENT_TOKEN_OPTIMIZATION_GUIDE.md)
-   - Universal best practices for minimizing token consumption
-   - Applies to ANY codebase, not just AppForge
-   - Read this FIRST to understand efficient workflow patterns
+1. **Onboarding Guide**: [`docs/user/Onboarding.md`](docs/user/Onboarding.md)
+   - Step-by-step verification and configuration questionnaire.
+2. **User Guide**: [`docs/user/UserGuide.md`](docs/user/UserGuide.md)
+   - 60-second quick start and core tool reference.
+3. **Prompt Cheatbook**: [`docs/user/APPFORGE_PROMPT_CHEATBOOK.md`](docs/user/APPFORGE_PROMPT_CHEATBOOK.md)
+   - Battle-tested AI prompts for setup, generation, and healing.
+4. **Technical Reference**: [`docs/technical/MCP_CONFIG_REFERENCE.md`](docs/technical/MCP_CONFIG_REFERENCE.md)
+   - authoritative schema reference for `mcp-config.json`.
 
-2. **AppForge-Specific Optimization Notes**: [`.ai-context/optimization-notes.md`](.ai-context/optimization-notes.md)
-   - Project-specific shortcuts and token traps
-   - Known "god nodes" and file reading patterns
-   - Task-specific optimization strategies
-
-**Expected Token Budget**:
-- Simple bug fix: 5,000-10,000 tokens
-- Feature addition: 15,000-30,000 tokens
-- Refactoring: 20,000-40,000 tokens
-
-**Key Principle**: Think first, search second, read targeted sections third. Avoid reading entire files or exploring all services blindly.
+**Key Principle**: Use **Atomic Orchestrators** for all creation and healing tasks. Favor **Turbo Mode** (`execute_sandbox_code`) for codebase analysis.
 
 ---
 
@@ -89,47 +95,46 @@ Add the local server to your MCP Client settings:
 
 ---
 
-## 🛠️ MCP Tool Reference (26 Exposes)
+## 🛠️ MCP Tool Reference (33 Exposes)
 
-### Project Setup & Maintenance
-* `setup_project`: Bootstraps a scalable framework with hooks and standard structure.
-* `upgrade_project`: Updates an existing repository to latest core dependencies and migrates configurations.
-* `manage_config`: Reads/updates `mcp-config.json` capability builds and device routing.
-* `check_environment`: Identifies missing Android SDKs, unbooted iOS simulators, or unreachable Appium servers.
+### 🏗️ Project Setup & Maintenance
+* `setup_project`: Two-phase scaffolding for directory structure and dependencies.
+* `upgrade_project`: Idempotent config migration and baseline file restoration.
+* `manage_config`: Dynamic updates to `mcp-config.json` (build injection, platform swapping).
+* `check_environment`: Comprehensive system health audit (Node, Appium, SDKs, Devices).
 
-### Codebase Intelligence & Generation
-* `analyze_codebase`: AST-based extraction of existing Steps, Pages, and Helpers.
-* `generate_cucumber_pom`: Heart of the machine. Generates the BDD suite instructions mapping English to POM code.
-* `validate_and_write`: Syntactically validates TypeScript and Gherkin before committing writes safely to disk (with backup snapshots).
-* `migrate_test`: Translates Native frameworks (Espresso/XCUITest) into Appium + Cucumber.
+### ✍️ Atomic Generation
+* `create_test_atomically` **[RECOMMENDED]**: Validates, lints, and writes Features + POM + Steps in one call.
+* `generate_cucumber_pom`: Builds the contextual AI prompt with live UI snapshots.
+* `execute_sandbox_code` **[TURBO]**: Runs V8-isolated scripts for fast project analysis (98% token savings).
+* `migrate_test`: Translates Espresso, XCUITest, or Detox tests into Appium Cucumber.
 
-### Execution & Healing
-* `start_appium_session` / `end_appium_session`: Triggers an active app session mapped to the LLM. 
-* `inspect_ui_hierarchy`: Dumps the raw UI tree to find accurate Native/Flutter/React-Native node bounds.
-* `verify_selector`: Real-time query against the active emulator verifying if the AI's proposed locator is truly visible.
-* `run_cucumber_test`: Runs and formats Mocha/Cucumber output strings.
-* `self_heal_test`: Feeds test failures and live screen context into the LLM to patch broken step definitions and locators.
+### 🩹 Atomic Healing
+* `heal_and_verify_atomically` **[RECOMMENDED]**: Diagnoses failures via **Error DNA**, finds candidates, and verifies the best fix live.
+* `self_heal_test`: Heuristic-based locator repair using live UI context and memory.
+* `verify_selector`: Live validation of a proposed selector strategy.
 
-### Advanced Quality Assurance
-* `analyze_coverage`: Reports on missing core functional flows and negative tests.
-* `generate_test_data_factory`: Bootstraps typed `faker.js` entity mockers.
-* `export_bug_report`: Auto-classifies failures into Jira/Linear ready Markdown tickets with environment metadata.
-* `suggest_refactorings`: Flags unused POM methods and Duplicate Step Definitions.
+### 🏃 Execution & Perception
+* `run_cucumber_test`: Async/Sync test execution with sanitized terminal output.
+* `check_test_status`: Polling mechanism for background test jobs.
+* `inspect_ui_hierarchy`: Captures simplified UI XML and visual screenshots for AI context.
+* `start_appium_session`: Establishes driver connection with project-scoped pooling.
 
 ---
 
 ## 📝 Example AI Prompts
 
-> *"I have a new login screen. Draft a BDD feature and the required iOS/Android Page Objects for an invalid password scenario. Use the live Appium session XML to find the exact login button ID."*
+> *"Generate a new Checkout test suite using `create_test_atomically`. Use the live Appium session XML to find the button IDs."*
 
-> *"The Checkout test is failing because the 'Submit Order' button locator changed. Heal the test using the attached vision screenshot and test stack trace, and remember this fix for the future."*
+> *"My login test failed. Use `heal_and_verify_atomically` to diagnose the Error DNA and apply a verified fix."*
 
-> *"Migrate this Espresso `LoginTest.java` file into an Appium Cucumber BDD suite. Ensure you enforce the cross-platform (.android.ts / .ios.ts) POM pattern."*
+> *"Using Turbo Mode, count every Page Object that still uses XPath and suggest a refactoring plan."*
 
 ---
 
-## 🔒 Safety First
-* **Non-Destructive**: Revisions are safely backed up to `.AppForge/backups/`.
-* **Idempotent Analysis**: AST parsing guarantees non-breaking detection of existing test artifacts. 
+## 🔒 Safety & Security
+- **Atomic Operations**: All writes are validated via `tsc --noEmit` before commitment.
+- **V8 Sandbox**: turbo analysis is isolated and network-blocked.
+- **Credential Guards**: Automatic `.gitignore` management for secure user roles.
 
-*(Built for enterprise scale AI workflows by abstracting the friction of mobile configuration and brittle selectors.)*
+*(Built for enterprise scale AI workflows by abstracting mobile configuration and technical debt.)*

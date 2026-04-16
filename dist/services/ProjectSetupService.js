@@ -875,7 +875,7 @@ export class LoginPage extends BasePage {
             fs.mkdirSync(docsDir, { recursive: true });
         }
         // Copy the MCP_CONFIG_REFERENCE.md from AppForge docs to user project
-        const sourceDoc = path.join(__dirname, '../../docs/MCP_CONFIG_REFERENCE.md');
+        const sourceDoc = path.join(__dirname, '../../docs/technical/MCP_CONFIG_REFERENCE.md');
         const targetDoc = path.join(projectRoot, 'docs/MCP_CONFIG_REFERENCE.md');
         if (fs.existsSync(sourceDoc)) {
             fs.copyFileSync(sourceDoc, targetDoc);
@@ -897,7 +897,7 @@ For the complete field reference, platform-specific settings, and examples, refe
             fs.mkdirSync(docsDir, { recursive: true });
         }
         // Copy the APPFORGE_PROMPT_CHEATBOOK.md from AppForge docs to user project
-        const sourceDoc = path.join(__dirname, '../../docs/APPFORGE_PROMPT_CHEATBOOK.md');
+        const sourceDoc = path.join(__dirname, '../../docs/user/APPFORGE_PROMPT_CHEATBOOK.md');
         const targetDoc = path.join(projectRoot, 'docs/APPFORGE_PROMPT_CHEATBOOK.md');
         if (fs.existsSync(sourceDoc)) {
             fs.copyFileSync(sourceDoc, targetDoc);

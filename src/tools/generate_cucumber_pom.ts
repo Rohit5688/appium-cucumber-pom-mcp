@@ -45,7 +45,13 @@ OUTPUT: Ack (≤10 words), proceed.`,
         Logger.warn(`No page objects detected in ${paths.pagesRoot}. Proceeding with fresh generation.`);
       }
 
-      const learningPrompt = learningService.getKnowledgePromptInjection(args.projectRoot);
+      const learningPrompt = learningService.getKnowledgePromptInjection(
+        args.projectRoot,
+        {
+          screenName: args.testName,       // matches rules tagged with screen name
+          toolName: 'generate_cucumber_pom', // matches rules tagged with this tool
+        }
+      );
       const prompt = await generationService.generateAppiumPrompt(
         args.projectRoot,
         args.testDescription,

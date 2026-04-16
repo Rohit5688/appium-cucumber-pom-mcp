@@ -1,34 +1,42 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ProjectSetupService } from "./services/ProjectSetupService.js";
-import { McpConfigService } from "./services/McpConfigService.js";
-import { CodebaseAnalyzerService } from "./services/CodebaseAnalyzerService.js";
-import { TestGenerationService } from "./services/TestGenerationService.js";
-import { FileWriterService } from "./services/FileWriterService.js";
-import { ExecutionService } from "./services/ExecutionService.js";
-import { SelfHealingService } from "./services/SelfHealingService.js";
-import { CredentialService } from "./services/CredentialService.js";
-import { AuditLocatorService } from "./services/AuditLocatorService.js";
-import { SummarySuiteService } from "./services/SummarySuiteService.js";
-import { EnvironmentCheckService } from "./services/EnvironmentCheckService.js";
-import { UtilAuditService } from "./services/UtilAuditService.js";
-import { CiWorkflowService } from "./services/CiWorkflowService.js";
-import { LearningService } from "./services/LearningService.js";
-import { RefactoringService } from "./services/RefactoringService.js";
-import { BugReportService } from "./services/BugReportService.js";
-import { TestDataService } from "./services/TestDataService.js";
-import { SessionManager } from "./services/SessionManager.js";
-import { ProjectMaintenanceService } from "./services/ProjectMaintenanceService.js";
-import { CoverageAnalysisService } from "./services/CoverageAnalysisService.js";
-import { MigrationService } from "./services/MigrationService.js";
-import { NavigationGraphService } from "./services/NavigationGraphService.js";
-import { FileStateService } from "./services/FileStateService.js";
+
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import { APPFORGE_VERSION } from "./version.js";
 import { Logger } from "./utils/Logger.js";
 import { Metrics } from "./utils/Metrics.js";
+import { TokenBudgetService } from "./services/TokenBudgetService.js";
+import { ObservabilityService } from "./services/ObservabilityService.js";
+import { StructuralBrainService } from "./services/StructuralBrainService.js";
+
+// ServiceContainer — resolves all services with correct dep injection (Concern 1)
+import "./container/registrations.js"; // side-effect: registers all factories
+import { container } from "./container/ServiceContainer.js";
+import type { McpConfigService } from "./services/McpConfigService.js";
+import type { CodebaseAnalyzerService } from "./services/CodebaseAnalyzerService.js";
+import type { TestGenerationService } from "./services/TestGenerationService.js";
+import type { FileWriterService } from "./services/FileWriterService.js";
+import type { ExecutionService } from "./services/ExecutionService.js";
+import type { SelfHealingService } from "./services/SelfHealingService.js";
+import type { CredentialService } from "./services/CredentialService.js";
+import type { AuditLocatorService } from "./services/AuditLocatorService.js";
+import type { SummarySuiteService } from "./services/SummarySuiteService.js";
+import type { EnvironmentCheckService } from "./services/EnvironmentCheckService.js";
+import type { UtilAuditService } from "./services/UtilAuditService.js";
+import type { CiWorkflowService } from "./services/CiWorkflowService.js";
+import type { LearningService } from "./services/LearningService.js";
+import type { RefactoringService } from "./services/RefactoringService.js";
+import type { BugReportService } from "./services/BugReportService.js";
+import type { TestDataService } from "./services/TestDataService.js";
+import type { SessionManager } from "./services/SessionManager.js";
+import type { ProjectMaintenanceService } from "./services/ProjectMaintenanceService.js";
+import type { CoverageAnalysisService } from "./services/CoverageAnalysisService.js";
+import type { MigrationService } from "./services/MigrationService.js";
+import type { OrchestrationService } from "./services/OrchestrationService.js";
+import type { ProjectSetupService } from "./services/ProjectSetupService.js";
+import { NavigationGraphService } from "./services/NavigationGraphService.js";
 
 // Tool registrars
 import { registerSetupProject } from "./tools/setup_project.js";
@@ -71,10 +79,6 @@ import { registerCheckAppiumReady } from './tools/check_appium_ready.js';
 import { registerScanStructuralBrain } from './tools/scan_structural_brain.js';
 import { registerCreateTestAtomically } from './tools/create_test_atomically.js';
 import { registerHealAndVerifyAtomically } from './tools/heal_and_verify_atomically.js';
-import { TokenBudgetService } from "./services/TokenBudgetService.js";
-import { ObservabilityService } from "./services/ObservabilityService.js";
-import { StructuralBrainService } from "./services/StructuralBrainService.js";
-import { OrchestrationService } from "./services/OrchestrationService.js";
 
 // Initialize at startup (background scan)
 StructuralBrainService.getInstance().scanProject().catch(() => {
@@ -97,45 +101,38 @@ function summarize(result: any): Record<string, any> {
  */
 class AppForgeServer {
   private server: McpServer;
-  private projectSetupService = new ProjectSetupService();
-  private configService = new McpConfigService();
-  private analyzerService = new CodebaseAnalyzerService();
-  private generationService = new TestGenerationService();
-  private fileWriterService = new FileWriterService();
-  private executionService = new ExecutionService();
-  private selfHealingService = SelfHealingService.getInstance();
-  private credentialService = new CredentialService();
-  private auditLocatorService = new AuditLocatorService();
-  private summarySuiteService = new SummarySuiteService();
-  private environmentCheckService = new EnvironmentCheckService();
-  private utilAuditService = new UtilAuditService();
-  private ciWorkflowService = new CiWorkflowService();
-  private learningService = new LearningService();
-  private refactoringService = new RefactoringService();
-  private bugReportService = new BugReportService();
-  private testDataService = new TestDataService();
-  private sessionManager = SessionManager.getInstance();
-  private projectMaintenanceService = new ProjectMaintenanceService();
-  private coverageAnalysisService = new CoverageAnalysisService();
-  private migrationService = new MigrationService();
-  // MEMORY LEAK FIX: Instance pooling for NavigationGraphService to prevent creating new instances per tool call
-  private navigationGraphServices = new Map<string, NavigationGraphService>();
-  
-  // Nanotools: Lazy Context Pulse — tracks last tool activity per server process lifetime
-  // Used to prevent plan myopia in automated exploration sessions
+
+  // All services resolved from the ServiceContainer (Concern 1 fix).
+  // Construction order and dependency injection are handled by registrations.ts.
+  private readonly projectSetupService    = container.resolve<ProjectSetupService>('projectSetup');
+  private readonly configService          = container.resolve<McpConfigService>('config');
+  private readonly analyzerService        = container.resolve<CodebaseAnalyzerService>('analyzer');
+  private readonly generationService      = container.resolve<TestGenerationService>('generation');
+  private readonly fileWriterService      = container.resolve<FileWriterService>('fileWriter');
+  private readonly executionService       = container.resolve<ExecutionService>('execution');
+  private readonly selfHealingService     = container.resolve<SelfHealingService>('healing');
+  private readonly credentialService      = container.resolve<CredentialService>('credential');
+  private readonly auditLocatorService    = container.resolve<AuditLocatorService>('auditLocator');
+  private readonly summarySuiteService    = container.resolve<SummarySuiteService>('summarySuite');
+  private readonly environmentCheckService = container.resolve<EnvironmentCheckService>('envCheck');
+  private readonly utilAuditService       = container.resolve<UtilAuditService>('utilAudit');
+  private readonly ciWorkflowService      = container.resolve<CiWorkflowService>('ciWorkflow');
+  private readonly learningService        = container.resolve<LearningService>('learning');
+  private readonly refactoringService     = container.resolve<RefactoringService>('refactoring');
+  private readonly bugReportService       = container.resolve<BugReportService>('bugReport');
+  private readonly testDataService        = container.resolve<TestDataService>('testData');
+  private readonly sessionManager         = container.resolve<SessionManager>('session');
+  private readonly projectMaintenanceService = container.resolve<ProjectMaintenanceService>('projectMaint');
+  private readonly coverageAnalysisService = container.resolve<CoverageAnalysisService>('coverage');
+  private readonly migrationService       = container.resolve<MigrationService>('migration');
+  private readonly orchestrationService   = container.resolve<OrchestrationService>('orchestration');
+
+  // MEMORY LEAK FIX: Per-project pool — not in container (per-project, not global singleton)
+  private readonly navigationGraphServices = new Map<string, NavigationGraphService>();
+
+  // Activity pulse tracker (nanotools idle detection)
   private readonly activityTimestamps = new Map<string, number>();
   private static readonly IDLE_PULSE_MS = 600_000; // 10 minutes
-  
-  // Orchestration service for atomic multi-step operations
-  private orchestrationService = new OrchestrationService(
-    this.generationService,
-    this.fileWriterService,
-    this.selfHealingService,
-    this.sessionManager as any, // AppiumSessionService interface
-    this.learningService,
-    this.configService,
-    this.analyzerService
-  );
 
   constructor() {
     this.server = new McpServer(
@@ -181,11 +178,7 @@ class AppForgeServer {
     this.setupToolHandlers();
     Metrics.registerShutdownHook();
     this.server.server.onerror = (error) => Logger.error("[MCP Error]", { error: String(error) });
-
-    // Inject live session manager into services that need it
-    this.executionService.setSessionManager(this.sessionManager);
-    this.selfHealingService.setSessionManager(this.sessionManager);
-    this.selfHealingService.setLearningService(this.learningService);
+    // Deps injected via ServiceContainer — no late set* calls needed
   }
 
   private setupToolHandlers() {

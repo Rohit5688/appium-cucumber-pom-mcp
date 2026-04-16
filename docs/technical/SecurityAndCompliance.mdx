@@ -1,0 +1,71 @@
+---
+title: "🛡️ Security & Enterprise Compliance"
+description: "Data sovereignty, sandbox boundaries, and regulatory alignment."
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+AppForge is engineered with a **Security-First** architectural mandate. As a locally executed MCP server, it ensures total data sovereignty while maintaining rigid defensive boundaries between your mobile environment and the AI context.
+
+---
+
+## 🏛️ 1. The Layered Defensive Model
+
+AppForge utilizes a multi-layered security stack to prevent data leakage, path traversal, and unauthorized system access.
+
+### 🔒 Layer 1: Project Root Isolation (Deterministic)
+The `FileWriterService` enforces a strict **Project Root Guard**. Every file operation is validated via `SecurityUtils.validateProjectRoot()`, ensuring that no write or read operation can escape the declared workspace boundary.
+- **Threat Mitigated**: Path Traversal (e.g., `../../etc/passwd`).
+
+### 🔒 Layer 2: Secure V8 Sandbox (Execution)
+The `execute_sandbox_code` tool executes dynamic logic within a hardened, stateless V8 Virtual Machine.
+- **Isolation**: No access to `process`, `require`, `import`, or the network.
+- **Resource Control**: Hardened 10s execution timeouts and memory caps.
+- **Threat Mitigated**: Remote Code Execution (RCE) and host environment pollution.
+
+### 🔒 Layer 3: Static Security Auditing
+Before any AI-generated code is committed to disk, it undergoes a **Static Security Scan**.
+- **Blocks**: `eval()`, `child_process.exec()`, and raw environment leakage.
+- **Redacts**: Detected credentials (API keys, passwords) during the validation phase.
+- **Feedback**: Returns a 🔒 **SECURITY AUDIT FAILURE** message to the AI, mandating secure logic regeneration.
+
+---
+
+## 👔 2. Enterprise Vendor Compliance (FAQ)
+
+This section provides the technical rationale required for Information Security (InfoSec) and Procurement reviews.
+
+<Tabs>
+  <TabItem label="Data Sovereignty">
+    **Q: Is data transmitted to AppForge servers?**  
+    **A:** No. AppForge is a local binary with **zero telemetry**. No screenshots, code, or metadata are ever transmitted to the tool authors. Data only flows between your local environment and your chosen LLM provider.
+  </TabItem>
+  <TabItem label="Regulatory (GDPR/HIPAA)">
+    **Q: Is the tool compliant with GDPR or HIPAA?**  
+    **A:** Yes. Since AppForge authors never process your data, we are not a Data Processor. Organizations maintain 100% control over the artifacts. Enterprise users must ensure they have a **Socially Responsible BAA/DPA** with their LLM provider (e.g., Anthropic, OpenAI).
+  </TabItem>
+  <TabItem label="Encryption">
+    **Q: How are credentials handled?**  
+    **A:** Credentials reside in a local `.env` file, managed via the `set_credentials` tool. AppForge never hardcodes secrets; it uses Environment Variable abstraction for all session logic.
+  </TabItem>
+</Tabs>
+
+---
+
+## 📱 3. Mobile-Specific Security Guards
+
+When interacting with live devices, AppForge ensures sensitive data is handled with care.
+
+- **Selective UI Hierarchy**: The tool extracts only the structural XML required for locator discovery, minimizing the capture of sensitive text content.
+- **Screenshot Lifecycle**: Base64 captures are transient. They are used for immediate AI context and are not archived by the MCP server unless explicitly saved by the user.
+- **Synthetic Data Enforcement**: Users are encouraged to use the `generate_test_data_factory` tool to populate tests with randomized, non-PII data.
+
+---
+
+> [!CAUTION]
+> **Shared Responsibility Model**: While AppForge secures the local execution, organizations are responsible for ensuring the **security of the LLM endpoint** and the **sanitization of test data** used in environments that the AI assistant can access.
+
+---
+
+> [!NOTE]
+> For detailed regulatory mapping (SOC2, ISO 27001), please contact your account representative for the full compliance whitepaper.

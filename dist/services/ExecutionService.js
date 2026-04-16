@@ -13,7 +13,15 @@ import { McpErrors } from '../types/ErrorSystem.js';
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 export class ExecutionService {
-    sessionManager = null;
+    sessionManager;
+    // Concern 4, Fix 1: constructor injection replaces nullable set* pattern
+    constructor(sessionManager) {
+        this.sessionManager = sessionManager;
+    }
+    /** @deprecated — Use constructor injection via ServiceContainer. Retained as no-op shim for legacy call-sites. */
+    setSessionManager(_manager) {
+        // no-op: sessionManager is now injected via constructor
+    }
     /**
      * In-memory job queue for async test execution.
      * Key: jobId (UUID-like string). Value: TestJob.
@@ -24,10 +32,6 @@ export class ExecutionService {
     /** Generate a unique job ID. */
     newJobId() {
         return `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    }
-    /** Inject a live session manager for auto-fetch capabilities. */
-    setSessionManager(manager) {
-        this.sessionManager = manager;
     }
     /**
      * Validates Cucumber tag expression against an allowlist.

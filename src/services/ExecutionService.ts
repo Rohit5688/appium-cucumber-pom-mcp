@@ -67,7 +67,13 @@ export interface ParsedElement {
 }
 
 export class ExecutionService {
-  private sessionManager: SessionManager | null = null;
+  // Concern 4, Fix 1: constructor injection replaces nullable set* pattern
+  constructor(private readonly sessionManager?: SessionManager) {}
+
+  /** @deprecated — Use constructor injection via ServiceContainer. Retained as no-op shim for legacy call-sites. */
+  public setSessionManager(_manager: SessionManager): void {
+    // no-op: sessionManager is now injected via constructor
+  }
 
   /**
    * In-memory job queue for async test execution.
@@ -82,10 +88,6 @@ export class ExecutionService {
     return `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   }
 
-  /** Inject a live session manager for auto-fetch capabilities. */
-  public setSessionManager(manager: SessionManager): void {
-    this.sessionManager = manager;
-  }
 
   /**
    * Validates Cucumber tag expression against an allowlist.

@@ -24,12 +24,39 @@ OUTPUT: Ack (≤10 words), proceed.`,
         projectRoot: z.string(),
         issuePattern: z.string(),
         solution: z.string(),
-        tags: z.array(z.string()).optional()
+        tags: z.array(z.string()).optional(),
+        rationale: z
+          .string()
+          .optional()
+          .describe('Why this solution was chosen — prevents future agents from "fixing" this back'),
+        antiPatterns: z
+          .array(z.string())
+          .optional()
+          .describe('Approaches that were tried and rejected — e.g. ["do not use XPath here"]'),
+        linkedFile: z
+          .string()
+          .optional()
+          .describe('Relative path of the file this rule governs, e.g. "pages/LoginPage.ts"'),
+        scope: z
+          .enum(['global', 'screen', 'file'])
+          .optional()
+          .describe('How broadly to apply: global=always, screen=matching screen name, file=only linked file'),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },
     async (args) => {
-      const rule = learningService.learn(args.projectRoot, args.issuePattern, args.solution, args.tags ?? []);
+      const rule = learningService.learn(
+        args.projectRoot,
+        args.issuePattern,
+        args.solution,
+        args.tags ?? [],
+        {
+          rationale: args.rationale,
+          antiPatterns: args.antiPatterns,
+          linkedFile: args.linkedFile,
+          scope: args.scope,
+        }
+      );
       return textResult(`✅ Learned rule "${rule.id}": When encountering "${rule.pattern}" → apply: ${rule.solution}`);
     }
   );

@@ -2,15 +2,24 @@ import { ScreenshotStorage } from '../utils/ScreenshotStorage.js';
 import { McpErrors, McpError, McpErrorCode } from '../types/ErrorSystem.js';
 import * as path from 'path';
 export class SelfHealingService {
+    sessionManager;
+    learningService;
     static instance;
-    static getInstance() {
+    /**
+     * Returns the singleton. On the FIRST call, deps are injected via constructor.
+     * Subsequent calls return the cached instance (deps are ignored).
+     */
+    static getInstance(sessionManager, learningService) {
         if (!SelfHealingService.instance) {
-            SelfHealingService.instance = new SelfHealingService();
+            SelfHealingService.instance = new SelfHealingService(sessionManager, learningService);
         }
         return SelfHealingService.instance;
     }
-    sessionManager = null;
-    learningService = null;
+    // Concern 4, Fix 1: constructor injection replaces nullable set* pattern
+    constructor(sessionManager, learningService) {
+        this.sessionManager = sessionManager;
+        this.learningService = learningService;
+    }
     /**
      * Tracks healing attempt counts per test file path.
      * Key: absolute test file path, Value: attempt count (1-based)
@@ -78,12 +87,13 @@ export class SelfHealingService {
                 : `Healed successfully.`
         };
     }
-    /** Inject a live session manager for selector verification. */
-    setSessionManager(manager) {
-        this.sessionManager = manager;
+    /** @deprecated — Use constructor injection via ServiceContainer. Retained as no-op shim for legacy call-sites. */
+    setSessionManager(_manager) {
+        // no-op: sessionManager is now injected via constructor
     }
-    setLearningService(service) {
-        this.learningService = service;
+    /** @deprecated — Use constructor injection via ServiceContainer. Retained as no-op shim for legacy call-sites. */
+    setLearningService(_service) {
+        // no-op: learningService is now injected via constructor
     }
     /** Auto-learns a successful selector fix (12.10). */
     reportHealSuccess(projectRoot, oldSelector, newSelector) {

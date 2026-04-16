@@ -1,4 +1,5 @@
 {
     "playwrightBdd.featureFolder": "examples/sample-appium-project/src/features",
-    "playwrightBdd.stepsFolder": "dist/services"
+    "playwrightBdd.stepsFolder": "dist/services",
+    "playwrightBdd.configPath": "website/astro.config.mjs"
 }

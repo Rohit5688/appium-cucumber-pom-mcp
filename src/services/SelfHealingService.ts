@@ -38,15 +38,26 @@ export interface HealResult {
 
 export class SelfHealingService {
   private static instance: SelfHealingService;
-  public static getInstance(): SelfHealingService {
+
+  /**
+   * Returns the singleton. On the FIRST call, deps are injected via constructor.
+   * Subsequent calls return the cached instance (deps are ignored).
+   */
+  public static getInstance(
+    sessionManager?: SessionManager,
+    learningService?: LearningService
+  ): SelfHealingService {
     if (!SelfHealingService.instance) {
-      SelfHealingService.instance = new SelfHealingService();
+      SelfHealingService.instance = new SelfHealingService(sessionManager, learningService);
     }
     return SelfHealingService.instance;
   }
 
-  private sessionManager: SessionManager | null = null;
-  private learningService: LearningService | null = null;
+  // Concern 4, Fix 1: constructor injection replaces nullable set* pattern
+  constructor(
+    private readonly sessionManager?: SessionManager,
+    private readonly learningService?: LearningService
+  ) {}
   
   /**
    * Tracks healing attempt counts per test file path.
@@ -124,13 +135,14 @@ export class SelfHealingService {
     };
   }
 
-  /** Inject a live session manager for selector verification. */
-  public setSessionManager(manager: SessionManager): void {
-    this.sessionManager = manager;
+  /** @deprecated — Use constructor injection via ServiceContainer. Retained as no-op shim for legacy call-sites. */
+  public setSessionManager(_manager: SessionManager): void {
+    // no-op: sessionManager is now injected via constructor
   }
 
-  public setLearningService(service: LearningService): void {
-    this.learningService = service;
+  /** @deprecated — Use constructor injection via ServiceContainer. Retained as no-op shim for legacy call-sites. */
+  public setLearningService(_service: LearningService): void {
+    // no-op: learningService is now injected via constructor
   }
 
   /** Auto-learns a successful selector fix (12.10). */

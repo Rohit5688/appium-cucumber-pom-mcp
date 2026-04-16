@@ -170,6 +170,27 @@ export class SessionManager {
   }
 
   /**
+   * ISessionVerifier proxy — delegates to the first active AppiumSessionService.
+   * Allows SessionManager to satisfy the ISessionVerifier interface so
+   * OrchestrationService can receive it without an `as any` cast.
+   *
+   * Throws McpErrors.sessionNotFound if no active session exists.
+   */
+  public async verifySelector(selector: string): Promise<{
+    exists: boolean;
+    displayed: boolean;
+    enabled: boolean;
+    tagName?: string;
+    text?: string;
+  }> {
+    const active = Array.from(this.sessions.values()).find(s => s.isActive);
+    if (!active) {
+      throw McpErrors.sessionNotFound('none', 'SessionManager.verifySelector');
+    }
+    return active.service.verifySelector(selector);
+  }
+
+  /**
    * Explicitly end a session for a project
    */
   public async endSession(projectRoot: string): Promise<void> {

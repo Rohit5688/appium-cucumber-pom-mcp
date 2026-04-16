@@ -17,7 +17,7 @@ export default defineConfig({
 				src: './src/assets/logo.png',
 			},
 			social: {
-				// github: 'https://github.com/Rohit5688/appium-cucumber-pom-mcp',
+				github: 'https://github.com/ForgeTest-AI/AppForge',
 			},
 			editLink: {
 				baseUrl: undefined,
@@ -26,7 +26,10 @@ export default defineConfig({
 				{
 					label: '🚀 Getting Started',
 					items: [
+						{ label: '🛠️ Installation & MCP Setup', link: 'repo/user/installation' },
 						{ label: '⏱️ 5-Minute Quickstart', link: 'repo/user/quickstart' },
+						{ label: '⚙️ Setup & Configuration', link: 'repo/user/setup_and_configuration' },
+						{ label: '🔧 Troubleshooting', link: 'repo/user/troubleshooting' },
 					],
 				},
 				{
@@ -35,10 +38,12 @@ export default defineConfig({
 						{ label: 'Master Guide', link: 'repo/user/userguide' },
 						{ label: '📋 Prompt Cheatbook', link: 'repo/user/promptcheatbook' },
 						{ label: '🔄 Core Workflows', link: 'repo/user/workflows' },
+						{ label: '🚀 Worked Examples', link: 'repo/user/workedexamples' },
 					],
 				},
 				{
 					label: '🛠️ Platform Core',
+					collapsed: true,
 					items: [
 						{ label: 'Test Generation', link: 'repo/technical/testgeneration' },
 						{ label: 'Execution & Healing', link: 'repo/technical/executionandhealing' },
@@ -47,14 +52,24 @@ export default defineConfig({
 				},
 				{
 					label: '📐 Architecture',
+					collapsed: true,
 					items: [
-						{ label: 'High-Level Overview', link: 'repo/technical/architecture' },
-						{ label: 'Security & Compliance', link: 'repo/technical/securityandcompliance' },
+						{ label: 'System Architecture', link: 'repo/technical/architecture' },
+						{ label: 'Agent Protocol', link: 'repo/technical/agentprotocol' },
 						{ label: 'MCP Config Reference', link: 'repo/technical/mcp_config_reference' },
+						{ label: 'Security & Compliance', link: 'repo/technical/securityandcompliance' },
+					],
+				},
+				{
+					label: '📚 API Reference',
+					collapsed: true,
+					items: [
+						{ label: 'Master Tool Reference', link: 'api/toolreference' },
 					],
 				},
 				{
 					label: '📈 Infrastructure & Ops',
+					collapsed: true,
 					items: [
 						{ label: 'Continuous Integration', link: 'repo/maintenance/continuousintegration' },
 						{ label: 'Project Evolution', link: 'repo/maintenance/projectevolution' },
@@ -62,6 +77,15 @@ export default defineConfig({
 						{ label: 'Observability & Logging', link: 'repo/maintenance/observabilityandlogging' },
 						{ label: 'Migration Guide', link: 'repo/maintenance/migrationguide' },
 						{ label: 'Team Collaboration', link: 'repo/maintenance/teamcollaboration' },
+					],
+				},
+				{
+					label: '🤝 Community & Help',
+					collapsed: true,
+					items: [
+						{ label: 'Community Support', link: 'repo/user/community' },
+						{ label: 'Frequently Asked Questions', link: 'repo/user/faq' },
+						{ label: 'What\'s New', link: 'repo/user/whatsnew' },
 					],
 				},
 			],

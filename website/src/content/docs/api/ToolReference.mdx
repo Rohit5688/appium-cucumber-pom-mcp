@@ -1,0 +1,566 @@
+---
+title: 📚 Complete Tool Reference
+description: Full API reference for all AppForge MCP tools — every parameter, return type, and usage example.
+---
+
+import { Tabs, TabItem, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+This is the authoritative reference for all AppForge tools. Every tool exposed via the MCP protocol is documented here with its parameters, return shape, and a usage example.
+
+:::tip[Tool Selection Guide]
+If you're unsure which tool to use, ask: `"Which AppForge tool should I use to [goal]?"` — or run `workflow_guide` to get a step-by-step sequence for your task.
+:::
+
+---
+
+## 📋 Tool Index
+
+| Category | Tools |
+| :--- | :--- |
+| **Setup & Config** | `setup_project`, `repair_project`, `upgrade_project`, `manage_config`, `manage_users` |
+| **Analysis** | `analyze_codebase`, `execute_sandbox_code`, `scan_structural_brain`, `get_session_health`, `get_token_budget` |
+| **Session** | `start_appium_session`, `end_appium_session`, `check_appium_ready` |
+| **Inspection** | `inspect_ui_hierarchy` |
+| **Discovery** | `export_navigation_map`, `extract_navigation_map` |
+| **Generation** | `generate_cucumber_pom`, `generate_test_data_factory`, `generate_ci_workflow` |
+| **Validation & Writing** | `validate_and_write`, `create_test_atomically` |
+| **Execution** | `run_cucumber_test`, `check_test_status`, `check_environment` |
+| **Coverage** | `analyze_coverage`, `summarize_suite` |
+| **Quality** | `audit_mobile_locators`, `audit_utils`, `suggest_refactorings` |
+| **Healing** | `self_heal_test`, `heal_and_verify_atomically`, `verify_selector` |
+| **Knowledge** | `train_on_example`, `export_team_knowledge` |
+| **Reporting** | `export_bug_report` |
+| **Mobile Utilities** | `inject_app_build`, `set_credentials` |
+| **Navigation** | `workflow_guide`, `request_user_clarification` |
+
+---
+
+## 🔧 Setup & Configuration Tools
+
+### `setup_project`
+First-time setup. Creates `mcp-config.json` with CONFIGURE_ME placeholders (Phase 1), then scaffolds the full project structure after you fill the config (Phase 2).
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Absolute path to the new project directory |
+| `platform` | `"android" \| "ios" \| "both"` | ❌ | Target platform |
+| `appName` | `string` | ❌ | App display name |
+| `preview` | `boolean` | ❌ | Show what would be created without writing |
+
+**Returns**: Phase 1: config template. Phase 2: `{ filesCreated: string[] }`
+
+**Important**: This is a two-phase tool. After Phase 1, **stop and fill in** `mcp-config.json` before calling `setup_project` a second time to scaffold the full project.
+
+---
+
+### `repair_project`
+Regenerates ONLY missing baseline files. Never overwrites custom code. Safe to re-run at any time.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `platform` | `"android" \| "ios" \| "both"` | ❌ | Platform filter |
+| `preview` | `boolean` | ❌ | Preview without writing |
+
+**Returns**: `{ filesRegenerated: string[], skipped: string[] }`
+
+---
+
+### `upgrade_project`
+Upgrades npm packages, migrates `mcp-config.json`, and repairs any missing baseline files.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `preview` | `boolean` | ❌ | Show what would change without writing |
+
+**Returns**: `{ log: string[], warnings: string[], packagesUpdated: number }`
+
+---
+
+### `manage_config`
+Read, write, preview, or scaffold `mcp-config.json`. The `write` operation deep-merges — it does not overwrite.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `operation` | `"read" \| "write" \| "inject_app" \| "set_credentials" \| "activate_build"` | ✅ | Operation type |
+| `config` | `object` | ❌ | Partial config to merge (for `write`) |
+| `platform` | `"android" \| "ios"` | ❌ | Platform (for `inject_app`, `activate_build`) |
+| `appPath` | `string` | ❌ | Path to `.apk`/`.ipa` (for `inject_app`) |
+| `credentials` | `object` | ❌ | Credentials to store (for `set_credentials`) |
+| `buildName` | `string` | ❌ | Build profile name (for `activate_build`) |
+
+**Usage**:
+```
+"Update mcp-config.json to set the active device profile to 'samsung_s24'"
+```
+
+---
+
+### `manage_users`
+Read or write test account credentials stored in `users.{env}.json`.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `operation` | `"read" \| "write"` | ✅ | Operation |
+| `env` | `string` | ❌ | Environment name (default: `currentEnvironment`) |
+| `users` | `{ username, password, role? }[]` | ❌ | Users to write |
+
+---
+
+## 🔬 Analysis Tools
+
+### `execute_sandbox_code` ⚡ Turbo Mode
+Executes JavaScript in an isolated V8 sandbox. **Use this for all analysis** — 98% fewer tokens than `analyze_codebase`.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `script` | `string` | ✅ | JavaScript to run. Use `return` to return a value. Use `await forge.api.*()` to call services. |
+| `timeoutMs` | `number` | ❌ | Timeout in ms (default: `10000`) |
+
+**Available `forge.api` methods**:
+
+| Method | Description |
+| :--- | :--- |
+| `forge.api.readFile(path)` | Read file contents |
+| `forge.api.listFiles(dir, pattern)` | List files matching a glob |
+| `forge.api.analyzeCodebase(root, opts)` | Run AST analysis |
+| `forge.api.searchFiles(pattern, dir)` | Regex search across files |
+| `forge.api.getConfig()` | Read mcp-config.json |
+
+**Returns**: `{ success: boolean, result: any, executionTime: number }`
+
+---
+
+### `analyze_codebase`
+⚠️ **Token-heavy.** Prefer `execute_sandbox_code` for analysis. Use only for initial onboarding on small projects (< 5 files).
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `customWrapperPackage` | `string` | ❌ | Custom base page package name |
+
+**Returns**: `{ existingSteps[], existingPageObjects[], existingUtils[] }`
+
+---
+
+### `scan_structural_brain`
+Identifies God Nodes (files with > 5 incoming imports). Use before any large refactor.
+
+**Returns**: Table of risky files requiring extra caution.
+
+---
+
+### `get_session_health`
+Returns memory usage, uptime, active Appium connections, and capability details. Use to debug session issues.
+
+---
+
+### `get_token_budget`
+Returns per-tool token usage breakdown for the current session.
+
+---
+
+## 📱 Session Tools
+
+### `start_appium_session`
+Connects to a device via capabilities defined in `mcp-config.json`. Resets the context and token budget.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `profileName` | `string` | ❌ | Capability profile to use (from `capabilitiesProfiles`) |
+
+**Returns**: `{ sessionId, platform, device, navigationHints }`
+
+**Pre-requisite**: Appium must be running (`appium --base-path /wd/hub`).
+
+---
+
+### `end_appium_session`
+Terminates the active Appium session and frees the device. Call when done with inspection or live testing.
+
+**Returns**: Confirmation message.
+
+---
+
+### `check_appium_ready`
+Verifies that Appium is running and the current session is valid.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `appiumUrl` | `string` | ❌ | Appium server URL (default: `http://127.0.0.1:4723`) |
+| `projectRoot` | `string` | ❌ | Project root to check for active sessions |
+
+---
+
+## 🔍 Inspection Tools
+
+### `inspect_ui_hierarchy`
+**No args (live mode)**: Fetches the current XML hierarchy and screenshot from the active Appium session.  
+**With `xmlDump` (offline mode)**: Parses the provided XML without a device connection.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `xmlDump` | `string` | ❌ | XML to parse offline (omit for live mode) |
+| `includeRawXml` | `boolean` | ❌ | Include full raw XML in response |
+| `projectRoot` | `string` | ❌ | Project root |
+
+**Returns**: `{ source: xml, elements: { id, text, class, xpath, locatorStrategy }[], snapshot: base64 }`
+
+**Usage**:
+```
+"Inspect the current screen on the device and tell me the locators for all buttons"
+```
+
+---
+
+## 🗺️ Discovery Tools
+
+### `export_navigation_map`
+Performs static analysis of Page Objects and step definitions to build a navigation graph. No active session required.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `forceRebuild` | `boolean` | ❌ | Re-analyze ignoring cache |
+
+**Returns**: `{ diagram: mermaidString, knownScreens: string[], source: "static" | "live" | "seed" }`
+
+---
+
+### `extract_navigation_map`
+Analyzes existing step definitions, page objects, and test flows to understand multi-screen navigation patterns.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `targetScreen` | `string` | ❌ | Focus on paths to a specific screen |
+| `includeCommonFlows` | `boolean` | ❌ | Include reusable navigation paths |
+
+**Returns**: `{ navigationMap, reusableFlows, suggestions }`
+
+---
+
+## ✨ Generation Tools
+
+### `generate_cucumber_pom`
+**The primary test generation tool.** Loads existing steps, page objects, utilities, and learned patterns, then returns a generation prompt for Appium + Cucumber BDD code.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `testDescription` | `string` | ✅ | Plain-English test intent |
+| `testName` | `string` | ❌ | Name for the generated test |
+| `screenXml` | `string` | ❌ | UI hierarchy XML for offline generation |
+| `screenshotBase64` | `string` | ❌ | Screenshot for context |
+
+**Returns**: Generation prompt → LLM generates `.feature` + `Page.ts` + `steps.ts` → pass to `validate_and_write`.
+
+**Usage**:
+```
+"Generate a Cucumber BDD test for the Android login screen — test successful login and invalid password error"
+```
+
+---
+
+### `generate_test_data_factory`
+Generates a typed Faker.js factory for test data.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `entityName` | `string` | ✅ | Entity name (e.g., `"MobileUser"`) |
+| `schemaDefinition` | `string` | ✅ | Description, JSON schema, or TypeScript interface |
+
+---
+
+### `generate_ci_workflow`
+Generates a GitHub Actions or GitLab CI workflow for running AppForge tests.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `provider` | `"github" \| "gitlab"` | ✅ | CI provider |
+| `platform` | `"android" \| "ios"` | ❌ | Mobile platform |
+| `nodeVersion` | `string` | ❌ | Node version (default: `"18"`) |
+| `appiumVersion` | `string` | ❌ | Appium version |
+
+Auto-reads device, command, and report paths from `mcp-config.json`.
+
+---
+
+## 💾 Validation & Writing Tools
+
+### `validate_and_write`
+Validates TypeScript and Gherkin syntax, then writes files atomically. The primary safety gate.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `files` | `{ path: string, content: string }[]` | ✅ | Files to validate and write |
+| `preview` | `boolean` | ❌ | Show what would be written without writing |
+
+**Returns**: `{ valid: boolean, filesWritten: string[], errors?: string[] }`
+
+---
+
+### `create_test_atomically`
+Orchestrator: validates then writes in a single call.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `generatedFiles` | `{ path: string, content: string }[]` | ✅ | Files to validate and write |
+
+**Returns**: `{ success: boolean, filesWritten: string[] }`
+
+---
+
+## 🚀 Execution Tools
+
+### `run_cucumber_test`
+Runs the Cucumber-WDIO test suite. **Async by default** — returns a `jobId` immediately.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `platform` | `"android" \| "ios"` | ❌ | Target platform |
+| `tags` | `string` | ❌ | Cucumber tag expression (e.g., `"@smoke"`) |
+| `runAsync` | `boolean` | ❌ | Background execution (default: `true`) |
+| `overrideCommand` | `string` | ❌ | Override the execution command from config |
+| `timeoutMs` | `number` | ❌ | Execution timeout (default: `7200000` / 2h) |
+
+**Returns (async)**: `{ status: "started", jobId: "job_xxx" }` → poll with `check_test_status`.
+
+**Async polling pattern**:
+```
+1. "Run the @smoke Android tests"   → returns jobId
+2. "Check status of [jobId]"        → check_test_status (waitSeconds: 30)
+3. "Summarize the test results"     → summarize_suite
+```
+
+---
+
+### `check_test_status`
+Polls a running test job started by `run_cucumber_test`.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `jobId` | `string` | ✅ | Job ID returned by `run_cucumber_test` |
+| `waitSeconds` | `number` | ❌ | Server-side sleep before responding if still running (max: 55s) |
+
+**Returns**: `{ found, job: { jobId, status, startedAt, completedAt?, result? } }`
+
+---
+
+### `check_environment`
+Full environment check: Node.js, Appium, drivers, Android SDK, Xcode, device, and `mcp-config.json`.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `platform` | `"android" \| "ios" \| "both"` | ❌ | Platform to check |
+| `appPath` | `string` | ❌ | App binary path to verify existence |
+
+**Returns**: `{ summary, ready, failCount, warnCount, checks[] }`
+
+---
+
+## 📊 Coverage Tools
+
+### `analyze_coverage`
+Parses `.feature` files to identify untested screens and missing edge cases.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `featureFilesPaths` | `string[]` | ✅ | Paths to `.feature` files |
+
+**Returns**: `{ report, gaps: { screen, missingScenarios[] }[], prompt }`
+
+---
+
+### `summarize_suite`
+Parses the Cucumber JSON report for a test results breakdown.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `reportFile` | `string` | ❌ | Path to a specific report file |
+
+**Returns**: `{ totalScenarios, passed, failed, skipped, duration, failingScenarios[] }`
+
+---
+
+## 🔍 Quality Tools
+
+### `audit_mobile_locators`
+Scans Page Objects and YAML files for brittle locator strategies.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+
+**Locator health**:
+- ✅ `accessibility-id` — stable, platform-agnostic
+- ⚠️ CSS class or element ID — fragile, platform-specific
+- ❌ XPath — brittle, avoid entirely
+
+**Returns**: `{ healthScore, breakdown: { file, issues[] }[], recommendations[] }`
+
+Throws `projectValidationFailed` if health score < 50.
+
+---
+
+### `audit_utils`
+Scans for missing Appium wrapper implementations.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `customWrapperPackage` | `string` | ❌ | Custom wrapper package |
+
+**Returns**: `{ coveragePercent, missing[], actionableSuggestions[] }`
+
+---
+
+### `suggest_refactorings`
+Finds duplicate step definitions, unused Page Object methods, and XPath over-usage.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+
+**Returns**: `{ report, duplicateStepCount, unusedMethodCount, xpathOverusePercent }`
+
+---
+
+## 🔧 Healing Tools
+
+### `self_heal_test`
+Parses error + XML to find replacement selectors for a failing element.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `testOutput` | `string` | ✅ | The failing test error/output |
+| `xmlHierarchy` | `string` | ❌ | Current XML from `inspect_ui_hierarchy` |
+| `screenshotBase64` | `string` | ❌ | Screenshot for visual context |
+| `attempt` | `number` | ❌ | Heal attempt number (for retry logic) |
+
+**Returns**: `{ candidates: { selector, confidence, strategy }[], promptForLLM }`
+
+---
+
+### `heal_and_verify_atomically`
+Orchestrator: finds a healed selector → verifies it on the live device → auto-learns the fix.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `error` | `string` | ✅ | Test failure error message |
+| `xml` | `string` | ✅ | Current XML from `inspect_ui_hierarchy` |
+| `oldSelector` | `string` | ❌ | Original failed selector (for learning) |
+
+**Returns**: `{ healedSelector, verified, learned, confidence }`
+
+**Requires active Appium session.**
+
+---
+
+### `verify_selector`
+Tests a selector live on the active device session.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `selector` | `string` | ✅ | Selector to test |
+| `oldSelector` | `string` | ❌ | Previous failed selector (to record a fix) |
+| `projectRoot` | `string` | ❌ | Project root (for auto-learning) |
+
+**Returns**: `{ exists, displayed, enabled, tagName, text }`
+
+---
+
+## 🧠 Knowledge Tools
+
+### `train_on_example`
+Saves a pattern-solution pair to `mcp-learning.json`. All future generations apply this rule.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+| `issuePattern` | `string` | ✅ | The recurring error or structural ambiguity |
+| `solution` | `string` | ✅ | Fix code or strategy |
+| `scope` | `"global" \| "screen" \| "file"` | ❌ | How broadly to apply (default: `global`) |
+| `tags` | `string[]` | ❌ | Feature tags |
+| `antiPatterns` | `string[]` | ❌ | Approaches that were tried and rejected |
+| `rationale` | `string` | ❌ | Why this solution was chosen |
+| `linkedFile` | `string` | ❌ | Relative path of the file this rule governs |
+
+**Returns**: `{ ruleId, pattern, solution }`
+
+---
+
+### `export_team_knowledge`
+Exports `mcp-learning.json` as a human-readable Markdown table.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `projectRoot` | `string` | ✅ | Project root |
+
+---
+
+## 📊 Reporting Tools
+
+### `export_bug_report`
+Generates a Jira-ready Markdown bug report with auto-classified severity.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `testName` | `string` | ✅ | Failing test name |
+| `rawError` | `string` | ✅ | Error output |
+| `deviceName` | `string` | ❌ | Device name |
+| `platform` | `string` | ❌ | `"android"` or `"ios"` |
+| `appVersion` | `string` | ❌ | App version |
+
+---
+
+## 📍 Utility Tools
+
+### `inject_app_build`
+⚠️ **Deprecated** — use `manage_config({ operation: "inject_app" })` instead. Updates the `.apk`/`.ipa` path in `mcp-config.json`.
+
+---
+
+### `set_credentials`
+⚠️ **Deprecated** — use `manage_config({ operation: "set_credentials" })` instead. Stores credentials in the project `.env` file.
+
+---
+
+### `workflow_guide`
+Returns step-by-step tool sequences for common workflows.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `workflow` | `"new_project" \| "write_test" \| "run_and_heal" \| "inspect_device" \| "all"` | ❌ | Specific workflow |
+
+---
+
+### `request_user_clarification`
+Halts execution to ask the human a structured question. Used for ambiguity that cannot be resolved autonomously.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `question` | `string` | ✅ | The question (≤100 chars) |
+| `context` | `string` | ✅ | Why clarification is needed |
+| `options` | `{ id, label, detail, recommended }[]` | ❌ | Numbered options |
+| `defaultOption` | `number` | ❌ | Option to use if no response received |
+
+---
+
+## Related Pages
+
+- [MCP Config Reference](/AppForge/repo/technical/mcp_config_reference/) — all `mcp-config.json` fields
+- [Token Optimizer](/AppForge/repo/technical/tokenoptimizer/) — minimize token usage
+- [Prompt Cheatbook](/AppForge/repo/user/promptcheatbook/) — 35+ ready-to-paste prompts

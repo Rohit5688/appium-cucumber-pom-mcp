@@ -1,7 +1,7 @@
 import type { TestGenerationService } from "./TestGenerationService.js";
 import type { FileWriterService } from "./FileWriterService.js";
 import type { SelfHealingService } from "./SelfHealingService.js";
-import type { AppiumSessionService } from "./AppiumSessionService.js";
+import type { ISessionVerifier } from "../interfaces/ISessionVerifier.js";
 import type { LearningService } from "./LearningService.js";
 import type { McpConfigService } from "./McpConfigService.js";
 import type { CodebaseAnalyzerService } from "./CodebaseAnalyzerService.js";
@@ -19,7 +19,7 @@ export class OrchestrationService {
     private generationService: TestGenerationService,
     private writerService: FileWriterService,
     private healingService: SelfHealingService,
-    private verifyService: AppiumSessionService,
+    private verifyService: ISessionVerifier,
     private learningService: LearningService,
     private configService: McpConfigService,
     private analyzerService: CodebaseAnalyzerService
