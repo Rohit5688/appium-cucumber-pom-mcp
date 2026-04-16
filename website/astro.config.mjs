@@ -7,6 +7,7 @@ const base = '/AppForge';
 export default defineConfig({
 	site,
 	base,
+	trailingSlash: 'always',
 	integrations: [
 		starlight({
 			favicon: '/favicon.png',
@@ -25,46 +26,42 @@ export default defineConfig({
 				{
 					label: '🚀 Getting Started',
 					items: [
-						{ label: 'User Guide', link: 'repo/userguide' },
-						{ label: 'Onboarding', link: 'repo/onboarding' },
-						{ label: 'Installation', link: 'repo/dockersetup' },
-						{ label: 'Test Generation', link: 'repo/testgeneration' },
+						{ label: '⏱️ 5-Minute Quickstart', link: 'repo/user/quickstart' },
 					],
 				},
 				{
-					label: '🏛️ Architecture',
+					label: '📖 User Guides',
 					items: [
-						{ label: 'Workflows', link: 'repo/workflows' },
-						{ label: 'Execution & Healing', link: 'repo/executionandhealing' },
+						{ label: 'Master Guide', link: 'repo/user/userguide' },
+						{ label: '📋 Prompt Cheatbook', link: 'repo/user/promptcheatbook' },
+						{ label: '🔄 Core Workflows', link: 'repo/user/workflows' },
 					],
 				},
 				{
-					label: '⚙️ Configuration & Reference',
+					label: '🛠️ Platform Core',
 					items: [
-						{ label: 'MCP Config', link: 'repo/mcpconfig' },
-						{ label: 'Config Reference', link: 'repo/mcp_config_reference' },
-						{ label: 'Path Configuration', link: 'repo/path_configuration_explained' },
+						{ label: 'Test Generation', link: 'repo/technical/testgeneration' },
+						{ label: 'Execution & Healing', link: 'repo/technical/executionandhealing' },
+						{ label: 'Token Optimization', link: 'repo/technical/tokenoptimizer' },
 					],
 				},
 				{
-					label: '🛡️ Security & Compliance',
+					label: '📐 Architecture',
 					items: [
-						{ label: 'Security Overview', link: 'repo/security' },
+						{ label: 'High-Level Overview', link: 'repo/technical/architecture' },
+						{ label: 'Security & Compliance', link: 'repo/technical/securityandcompliance' },
+						{ label: 'MCP Config Reference', link: 'repo/technical/mcp_config_reference' },
 					],
 				},
 				{
-					label: '📊 Operations',
+					label: '📈 Infrastructure & Ops',
 					items: [
-						{ label: 'Continuous Integration', link: 'repo/continuousintegration' },
-						{ label: 'Observability & Logging', link: 'repo/observabilityandlogging' },
-						{ label: 'Migration Guide', link: 'repo/migrationguide' },
-						{ label: 'Team Collaboration', link: 'repo/teamcollaboration' },
-					],
-				},
-				{
-					label: '🤖 AI Strategy',
-					items: [
-						{ label: 'Prompt Cheatbook', link: 'repo/appforge_prompt_cheatbook' },
+						{ label: 'Continuous Integration', link: 'repo/maintenance/continuousintegration' },
+						{ label: 'Project Evolution', link: 'repo/maintenance/projectevolution' },
+						{ label: 'Containerization (Docker)', link: 'repo/maintenance/dockersetup' },
+						{ label: 'Observability & Logging', link: 'repo/maintenance/observabilityandlogging' },
+						{ label: 'Migration Guide', link: 'repo/maintenance/migrationguide' },
+						{ label: 'Team Collaboration', link: 'repo/maintenance/teamcollaboration' },
 					],
 				},
 			],
@@ -83,4 +80,3 @@ export default defineConfig({
 		}
 	],
 });
-

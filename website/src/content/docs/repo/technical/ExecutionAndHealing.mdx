@@ -1,0 +1,105 @@
+---
+title: "⚡ Execution & Atomic Healing"
+description: "Mastering the resilience lifecycle of mobile automation."
+---
+
+import { Steps, Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+AppForge redefines the concept of "Failure." Instead of crashing your CI/CD pipelines, our engine triggers an **Atomic Healing Lifecycle** to resolve UI churn in real-time.
+
+<div class="hero-bg-accent"></div>
+
+---
+
+## 🏃 1. Orchestrated Execution
+
+AppForge provides a high-fidelity wrapper around WebdriverIO and Appium, ensuring that every test run is environment-aware.
+
+- **Profile Switching**: Easily toggle between `pixel8`, `iphone15`, and `cloud-farm` using standardized `capabilitiesProfile` keys.
+- **Context Hygiene**: Every session is clean-booted with automatic state reset to prevent test pollution.
+- **DNA Logging**: Full Appium telemetry, XML dumps, and screenshots are captured on every failure.
+
+<details>
+<summary>Technical Specs: Profile Isolation</summary>
+AppForge ensures absolute session parity by creating ephemeral capability instances. This means a crash in `pixel8` cannot contaminate the state of `iphone15`, even if running on the same host environment.
+</details>
+
+---
+
+## 🩹 2. The Healing Lifecycle
+
+When a locator breaks, AppForge doesn't just error out—it initiates a repair sequence.
+
+![AppForge Healing Logic](../../../../assets/healing_logic_2d.png)
+
+<Steps>
+
+1.  ### Fault Detection
+    The execution engine encounters a `NoSuchElement` or `Timeout` exception.
+2.  ### Hierarchy Synthesis
+    The healer fetches the current live XML hierarchy and applies fuzzy-matching algorithms against the established `StructuralBrain`.
+3.  ### Candidate Scoring
+    Potential replacement selectors are ranked by **Confidence Scores**. Only high-confidence matches are presented.
+4.  ### Verification (`verify_selector`)
+    The best candidate is tested live on the device. If it successfully finds the element and verifies its roles, it passes the healing gate.
+5.  ### Atomic Patching
+    Once verified, the engine updates your Page Object file on disk, fixing the source code permanently.
+
+</Steps>
+
+<Aside type="tip" title="Proactive Verification">
+```typescript
+// Manual verification of a healed selector
+await forge.verifySelector({
+  selector: "new_found_id",
+  strategy: "accessibility id",
+  projectRoot: "./tests"
+});
+```
+</Aside>
+
+---
+
+## 🆘 3. Technical Error Taxonomy
+
+Understanding the failure root cause is the first step to remediation.
+
+| Error Code | Meaning | Remediation Logic |
+| :--- | :--- | :--- |
+| `DNA: Locators.Broken` | UI changed; element missing. | Invoke `self_heal_test`. |
+| `DNA: Driver.Crash` | Appium/Driver connectivity lost. | Check server logs and restart. |
+| `DNA: Env.Mismatch` | Capabilities don't match device. | Update `mcp-config.json` profile. |
+| `DNA: Assert.Failed` | App logic is incorrect. | Report bug; do not heal. |
+
+---
+
+## 🧠 4. Healing Knowledge Audit
+
+<details>
+<summary>**Q1: Does healing affect project performance?**</summary>
+**Answer**: Healing only triggers on failure. In a healthy suite, the overhead is zero. On failure, the healing scan typically takes 5-10 seconds—significantly faster than manual developer investigation.
+</details>
+
+<details>
+<summary>**Q2: Can I disable automatic patching?**</summary>
+**Architect's Note**: Yes. Use `runAsync: true` or `dryRun: true` in your tool calls to review candidate fixes before they are applied to your source files.
+
+```json
+// Example: Dry-Run Configuration
+{
+  "operation": "self_heal",
+  "dryRun": true,
+  "threshold": 0.85
+}
+```
+</details>
+
+---
+
+:::tip[Resilience Strategy]
+Always prioritize **Accessibility IDs**. AppForge's healing engine is 5x more effective when it has semantic metadata (labels, roles) to compare against, rather than raw XPaths.
+:::
+
+---
+
+**Orchestrate your resilience. ⚡**

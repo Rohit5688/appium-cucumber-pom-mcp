@@ -1,0 +1,105 @@
+---
+title: "🔄 Core Orchestration Workflows"
+description: "Mapping the human-AI collaboration lifecycle in mobile automation."
+---
+
+import { Steps, Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+Success with AppForge is defined by efficient **Workflow Orchestration**. This guide maps the primary developer journeys, from initial project scaffolding to production-grade self-healing.
+
+<div class="hero-bg-accent"></div>
+
+---
+
+## 🏗️ 1. The Collaborative Scaffolding Flow
+
+Moving from a manual requirement to a production-ready Page Object Model with architectural precision.
+
+<Steps>
+
+1.  ### Semantic Requirement
+    Provide a high-level requirement (e.g., *"Test the user registration flow"*).
+2.  ### Contextual Discovery
+    AppForge runs `analyze_codebase` to identify existing patterns and `start_appium_session` to see the live screen.
+3.  ### Structural Generation (`generate_cucumber_pom`)
+    The engine drafts multi-platform Page Objects and shared Gherkin scenarios based on the live XML hierarchy.
+4.  ### Verification & Commit (`validate_and_write`)
+    The agent compiles the code and writes it to disk, followed by a local test run to verify parity.
+
+</Steps>
+
+---
+
+## 🩹 2. The Atomic Self-Healing Cycle
+
+Ensuring your test suite remains resilient in the face of rapid mobile UI evolution.
+
+![AppForge Healing Flow](../../../../assets/healing_logic_2d.png)
+
+<Steps>
+
+1.  ### Detection
+    A CI/CD run fails with a `NoSuchElement` error.
+2.  ### Diagnostic Analysis (`self_heal_test`)
+    The AI invokes the healer, fetching the current XML hierarchy and comparing it against the last known working state.
+3.  ### Candidate Verification (`verify_selector`)
+    The suggested replacement is tested live on the device to ensure functional consistency.
+4.  ### Adaptive Learning
+5.  ### Permanent Memory
+    The fix is memorialized in the `StructuralBrain` to prevent future regressions.
+
+</Steps>
+
+<Aside type="note" title="Atomic Patch Example">
+```diff
+- await LoginPage.login_btn.click();
++ await LoginPage.submit_btn.click(); // Healed: ID changed in build 2.0.1
+```
+</Aside>
+
+---
+
+## 📦 3. Legacy Migration Journey
+
+Modernizing mature test suites from Espresso or XCUITest without manual rewrites.
+
+<CardGrid stagger>
+    <Card title="Source Ingestion" icon="document">
+        Point `migrate_test` to existing native code files.
+    </Card>
+    <Card title="Semantic Translation" icon="random">
+        Automated mapping of legacy locators to modern Appium strategies.
+    </Card>
+    <Card title="POM Refactoring" icon="setting">
+        Intelligence refactoring into the unified Page Object Model.
+    </Card>
+    <Card title="BDD Synthesis" icon="pencil">
+        Gherkin scenarios wrap the logic for human-readable oversight.
+    </Card>
+</CardGrid>
+
+---
+
+## 📊 4. The Intelligence Feedback Loop
+
+Continuous optimization through data-driven insights.
+
+- **Coverage Discovery**: The AI analyzes the current screen XML and identifies interactable elements.
+- **Orchestration**: Standardized commands (Click, Input, Scroll) are mapped to Appium-specific drivers.
+
+<details>
+<summary>Architect's Tip: State Determination</summary>
+AppForge uses **Deterministic State Extraction**. Before every action, the engine verifies the `activity` (Android) or `bundleId` (iOS) to ensure the target element is within the current context boundary.
+</details>
+- **Utility Refactoring**: Run `audit_utils` to ensure custom Appium wrappers are standardized.
+- **Token Pruning**: Use `execute_sandbox_code` (Turbo Mode) for data-heavy tasks.
+
+---
+
+:::tip[Architect's Goal]
+Aim for "Zero-Friction" handoffs. Each tool call should have a clear "Next Step" (e.g., after generation, always follow with validation).
+:::
+
+---
+
+**Orchestrate your quality, don't just script it. 🔄**

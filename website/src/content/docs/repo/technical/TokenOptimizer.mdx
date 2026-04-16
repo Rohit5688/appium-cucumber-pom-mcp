@@ -1,0 +1,75 @@
+---
+title: "📊 Token Optimization & Sandbox"
+description: "High-efficiency AI collaboration through local data synthesis."
+---
+
+import { Steps, Aside, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+AppForge is engineered for **Token-Aware AI Collaboration**. By offloading heavy analysis to a local V8 sandbox, we achieve a **90% reduction in context bloat** while maintaining absolute security and privacy.
+
+<div class="hero-bg-accent"></div>
+
+---
+
+## 🏗️ 1. Turbo Mode: Local Sandbox Execution
+
+Traditional AI agents flood the LLM context with raw source code and massive XML dumps. AppForge uses the **Sandbox Pattern** to synthesize data locally before communicating with the agent.
+
+![AppForge Sandbox Security](../../../../assets/sandbox_security_2d.png)
+
+### The `execute_sandbox_code` Lifecycle
+1.  **Data Isolation**: All raw artifacts (Codebase AST, UI Hierarchy XML) are loaded into a local, isolated memory space.
+2.  **Local Processing**: The AI's intent is executed as a JavaScript script within the sandbox (V8).
+3.  **Core Synthesis**: Instead of 10,000 lines of code, the agent receives only the **Final Result** (e.g., *"Found 3 matching elements, most stable ID is 'login_btn'"*).
+4.  **Security Boundaries**: Sandbox operations have zero file-system or network access unless explicitly authorized by the developer.
+
+---
+
+## 📈 2. Token Pruning Strategies
+
+AppForge employs three layers of optimization to keep your AI sessions lean and responsive.
+
+<CardGrid stagger>
+    <Card title="Structural Brain" icon="random">
+        Maintains a cached map of your codebase. The AI looks up methods via the 'Brain' instead of re-reading files from disk.
+    </Card>
+    <Card title="XML Compression" icon="setting">
+        Transparently strips non-essential metadata (empty containers, layout wrappers) from mobile UI hierarchies before analysis.
+    </Card>
+    <Card title="Context Shorthand" icon="pencil">
+        Uses condensed navigation hints and deep-link shortcuts to skip manual UI transversal during discovery.
+    </Card>
+</CardGrid>
+
+---
+
+## 🛠️ 3. Performance Metrics
+
+| Mode | Context Bloat | Analysis Time | Reliability |
+| :--- | :--- | :--- | :--- |
+| **Raw Mode** | High (50k+ tokens) | Slow (API Latency) | Moderate |
+| **Turbo Mode** | **Minimal (&lt;1k tokens)** | **Instant (Local)** | **Extreme (Typed)** |
+
+---
+
+## 🧠 4. Optimization Knowledge Audit
+
+<details>
+<summary>**Q1: Is the Sandbox secure for my private credentials?**</summary>
+**Answer**: Yes. The Sandbox is isolated. Furthermore, AppForge never transmits `.env` contents or private certificates to the AI. Only functional summaries are shared.
+</details>
+
+<details>
+<summary>**Q2: When should I manually trigger a 'Brain Sync'?**</summary>
+**Master Tip**: After a major refactor or when adding new Page Objects, run `analyze_codebase`. This ensures the AI's internal map matches your new physical file structure.
+</details>
+
+---
+
+:::tip[Token Mastery]
+If you find the AI repeating itself or "forgetting" your project structure, it's a sign of context exhaustion. Run `execute_sandbox_code` to summarize the current state and clear the path for new reasoning.
+:::
+
+---
+
+**Orchestrate your efficiency. 📊**

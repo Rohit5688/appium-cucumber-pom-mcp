@@ -1,45 +1,481 @@
-/* Custom AppForge Styles */
+/* Custom AppForge Styles - Enterprise Aesthetic */
 
-/* 1. Header Sidebar Logo - Compact but Bold */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+	/* Blue Accent - AppForge Identity (Matches Logo) */
+	--sl-color-accent-low: #002d5a;
+	--sl-color-accent: #0078d4; /* Logo Blue */
+	--sl-color-accent-high: #47a9ff;
+	
+    /* Background & Texture */
+    --bg-mesh: radial-gradient(at 0% 0%, hsla(210,100%,50%,0.1) 0, transparent 50%), 
+               radial-gradient(at 100% 100%, hsla(220,100%,50%,0.1) 0, transparent 50%);
+    --glass-bg: rgba(15, 23, 42, 0.7);
+    --glass-border: rgba(0, 120, 212, 0.2);
+    --card-hover-bg: rgba(15, 23, 42, 0.9);
+
+    /* Typography Metrics */
+    --base-line-height: 1.7;
+    --heading-1-size: 3.25rem;
+    --heading-2-size: 2rem;
+    --heading-3-size: 1.5rem;
+
+    /* Elevation & Depth */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    --glow-blue: 0 0 20px rgba(0, 120, 212, 0.15);
+}
+
+:root[data-theme='light'] {
+	--sl-color-accent-low: #f0f7ff;
+	--sl-color-accent: #0063b1;
+	--sl-color-accent-high: #002d5a;
+    --sl-color-text: #1e293b;
+    --sl-color-gray-2: #334155;
+    --sl-color-white: #0f172a; /* Invert white for text in light mode */
+    --glass-bg: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(0, 120, 212, 0.15);
+    --code-bg: #f8fafc;
+    --code-inline-bg: rgba(0, 120, 212, 0.05);
+    --code-inline-color: #0063b1;
+    --table-row-bg: rgba(248, 250, 252, 0.8);
+    --bg-mesh: radial-gradient(at 0% 0%, hsla(210,100%,80%,0.2) 0, transparent 50%), 
+               radial-gradient(at 100% 100%, hsla(220,100%,80%,0.2) 0, transparent 50%);
+    --card-hover-bg: rgba(0, 120, 212, 0.05);
+}
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-image: var(--bg-mesh);
+    background-attachment: fixed;
+    line-height: var(--base-line-height);
+    color: var(--sl-color-gray-2);
+}
+
+/* 1. Complete Header Overhaul - Extreme Polish */
+.header {
+    background-color: var(--glass-bg) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    border-bottom: 1px solid var(--glass-border) !important;
+    padding: 0 4rem !important;
+    height: 72px !important;
+    display: grid !important;
+    grid-template-columns: 1.2fr 1fr 1.2fr !important;
+    align-items: center !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    z-index: 100 !important;
+    box-sizing: border-box !important;
+}
+
+/* 1a. Left Column: Logo + Brand Identity */
+.site-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+    border: none !important;
+    text-decoration: none !important;
+    justify-self: start !important;
+    margin: 0 !important;
+}
+
 .site-title img {
-    height: 2.75rem !important; /* Sweet spot: visible but keeps header thin */
-    width: auto;
-    margin-right: 0.8rem;
+    height: 44px !important;
+    width: auto !important;
+    filter: drop-shadow(0 0 10px rgba(0, 120, 212, 0.4));
+}
+
+.site-title span {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: var(--sl-color-white) !important;
+    letter-spacing: -0.025em !important;
+    display: block !important;
+    transition: color 0.3s ease !important;
+}
+
+.site-title:hover span {
+    color: var(--sl-color-accent-high) !important;
+}
+
+/* 1b. Center Column: Pure Centered Search */
+.header .search-container,
+.header [class*="search"],
+.header > div:nth-child(2) {
+    justify-self: center !important;
+    width: 100% !important;
+    max-width: 440px !important;
+    margin: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+
+/* 1c. Right Column: Controls Sequence */
+.header > .sl-flex:last-child {
+    justify-self: end !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.75rem !important;
+    border: none !important;
+    margin: 0 !important;
+}
+
+/* 1d. Remove Overlapping Lines & Starlight Dividers */
+.site-title::after,
+.header::after,
+.header [class*="divider"],
+[class*="separator"] {
+    display: none !important;
+    width: 0 !important;
+}
+
+/* Sidebar Offset adjustment for fixed header */
+.main-frame {
+    padding-top: 72px !important;
+}
+
+.sidebar-pane {
+    background-color: var(--glass-bg) !important;
+    backdrop-filter: blur(8px) !important;
+    border-right: 1px solid var(--glass-border) !important;
+    padding-top: 3rem !important;
+}
+
+/* 2. Hero Section - Stunning Presence */
+.hero {
+    position: relative;
+    overflow: hidden;
+    padding: 8rem 0 !important;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(0, 120, 212, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.hero img {
+    height: 20rem !important;
+    max-height: 45vh;
+    filter: drop-shadow(0 0 70px rgba(0, 120, 212, 0.35));
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: floating 6s ease-in-out infinite;
+}
+
+.hero img:hover {
+    transform: scale(1.05) rotate(1deg);
+}
+
+@keyframes floating {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-18px); }
+}
+
+.hero .copy {
+    text-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.hero .action {
+    border-radius: 99px !important;
+    padding: 0.85rem 1.75rem !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 8px 20px rgba(0, 120, 212, 0.25) !important;
+}
+
+.hero .action.primary {
+    background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%) !important;
+    border: none !important;
+}
+
+.hero .action:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(0, 120, 212, 0.45) !important;
+}
+
+/* 3. Cards & Grid System - Glassmorphism */
+.card {
+    background-color: var(--glass-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 1.25rem !important;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    padding: 2.5rem !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    border-color: var(--sl-color-accent) !important;
+    box-shadow: var(--shadow-premium), var(--glow-blue) !important;
+    background-color: var(--card-hover-bg) !important;
+}
+
+.card .icon {
+    background-color: var(--sl-color-accent-low) !important;
+    color: var(--sl-color-accent-high) !important;
+    border-radius: 0.85rem !important;
+    padding: 0.6rem !important;
+}
+
+.card .title {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--sl-color-white) !important;
+}
+
+/* 4. Typography Polish */
+h1, h2, h3, h4 {
+    letter-spacing: -0.03em;
+    font-weight: 700 !important;
+}
+
+.sl-markdown-content {
+    line-height: var(--base-line-height) !important;
+    font-size: 1.1rem !important;
+}
+
+.sl-markdown-content h1 {
+    font-size: var(--heading-1-size) !important;
+    line-height: 1.2;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, var(--sl-color-text) 40%, var(--sl-color-accent-high));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 10px rgba(0, 120, 212, 0.1));
+}
+
+:root[data-theme='dark'] .sl-markdown-content h1 {
+    background: linear-gradient(135deg, #fff 40%, var(--sl-color-accent-high));
+}
+
+/* Center Landing Page Hero Content */
+.hero .sl-flex {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+}
+
+/* 5. Mobile Optimization */
+@media (max-width: 50rem) {
+    .sl-markdown-content h1 {
+        font-size: 2.75rem !important;
+    }
+    .hero img {
+        height: 12rem !important;
+    }
+    .header {
+        padding: 0 1.5rem !important;
+        grid-template-columns: 1fr 1fr !important;
+    }
+    .header > div:nth-child(2) {
+        display: none !important;
+    }
+}
+
+/* Modern Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--sl-color-accent-low);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--sl-color-accent);
+}
+
+/* Landing Page Special Effects */
+.hero-bg-accent {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    height: 700px;
+    background: radial-gradient(circle at 50% 0%, rgba(0, 120, 212, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+:root[data-theme='light'] .hero-bg-accent {
+    background: radial-gradient(circle at 50% 0%, rgba(0, 120, 212, 0.08) 0%, transparent 70%);
+}
+
+.sl-markdown-content h2 {
+    border-left: 4px solid var(--sl-color-accent);
+    padding-left: 1.25rem;
+    background: transparent;
+    -webkit-text-fill-color: currentColor;
+    margin: 4.5rem 0 1.5rem !important;
+    font-weight: 700 !important;
+    font-size: var(--heading-2-size) !important;
+    letter-spacing: -0.02em;
+}
+
+.sl-markdown-content h3 {
+    font-size: var(--heading-3-size) !important;
+    margin: 3rem 0 1.25rem !important;
+    color: var(--sl-color-accent-high) !important;
+}
+
+/* Polished Illustrations */
+.sl-markdown-content img {
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    margin: 2.5rem 0;
+    background: rgba(15, 23, 42, 0.3);
+}
+
+/* 6. Tables - Enterprise Professionalism */
+.sl-markdown-content table {
+    display: table;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 3.5rem 0;
+    background-color: var(--table-row-bg);
+    box-shadow: var(--shadow-sm);
+}
+
+.sl-markdown-content th {
+    background-color: var(--sl-color-accent-low);
+    color: var(--sl-color-accent-high);
+    font-weight: 600;
+    text-align: left;
+    padding: 1rem 1.25rem !important;
+}
+
+.sl-markdown-content tr:nth-child(2n) {
+    background-color: rgba(0, 120, 212, 0.03);
+}
+
+.sl-markdown-content td {
+    padding: 1rem 1.25rem !important;
+    border-top: 1px solid var(--glass-border);
+    color: var(--sl-color-text);
+}
+
+.sl-markdown-content tr:hover td {
+    background-color: rgba(0, 120, 212, 0.06);
+}
+
+/* 9. Details & Summary - Premium Accordions */
+details {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+    color: var(--sl-color-text);
+}
+
+details[open] {
+    background: var(--glass-bg);
+    box-shadow: var(--shadow-md);
+    border-color: var(--sl-color-accent);
+}
+
+summary {
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--sl-color-accent-high);
+    outline: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: color 0.2s ease;
+}
+
+summary:hover {
+    color: var(--sl-color-accent);
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+summary::before {
+    content: '→';
+    transition: transform 0.3s ease;
+    color: var(--sl-color-accent);
+}
+
+details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+/* 7. Code Blocks & Inline Code */
+code:not(pre code) {
+    background-color: rgba(0, 120, 212, 0.08) !important;
+    color: var(--sl-color-accent-high) !important;
+    padding: 0.15rem 0.4rem !important;
+    border-radius: 0.4rem !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    border: 1px solid rgba(0, 120, 212, 0.15) !important;
     vertical-align: middle;
 }
 
-/* Tighten the header container to reduce whitespace bloat */
-.header {
-    padding-top: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
+pre {
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    padding: 1.25rem 1.5rem !important;
+    background-color: #0d1117 !important; /* Keep dark for consistency in dark mode */
+    box-shadow: var(--shadow-md) !important;
+    margin: 2.5rem 0 !important;
 }
 
-/* 2. Hero Section Logo (Homepage) - High Impact */
-.hero img {
-    height: 30rem !important; /* Restored large hero presence */
-    max-height: 60vh;
-    width: auto !important;
-    max-width: 100%;
-    object-fit: contain;
-    filter: drop-shadow(0 0 40px rgba(16, 185, 129, 0.45));
+:root[data-theme='light'] pre {
+    background-color: #f6f8fa !important;
+    border-color: #d0d7de !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
 }
 
-/* Reduce whitespace around the large Hero section */
-.hero {
-    padding-top: 3rem !important;
-    padding-bottom: 3rem !important;
+pre code {
+    background-color: transparent !important;
+    border: none !important;
+    line-height: 1.5 !important;
 }
 
-.hero > .sl-flex {
-    gap: 2rem !important;
+/* 8. Asides - Unified Branding */
+.starlight-aside {
+    border-radius: 1rem !important;
+    border-left-width: 0.6rem !important;
+    padding: 1.5rem !important;
+    box-shadow: var(--shadow-md) !important;
+    margin: 3rem 0 !important;
 }
 
-/* Ensure mobile header stays balanced */
-@media (max-width: 50rem) {
-    .site-title img {
-        height: 2.25rem !important;
-    }
-    .hero img {
-        height: 16rem !important;
-    }
+.starlight-aside--note {
+    border-left-color: var(--sl-color-accent) !important;
+    background-color: var(--sl-color-accent-low) !important;
+}
+
+.starlight-aside--tip {
+    border-left-color: var(--sl-color-accent-high) !important;
+    background-color: rgba(0, 120, 212, 0.1) !important;
 }

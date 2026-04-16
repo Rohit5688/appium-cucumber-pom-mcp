@@ -1,0 +1,92 @@
+---
+title: "✍️ Autonomous Test Generation"
+description: "From Gherkin to Production-Grade POM Architecture."
+---
+
+import { Steps, Aside, FileTree, Card, CardGrid, Badge } from '@astrojs/starlight/components';
+
+AppForge transforms natural language requirements into **State-of-the-Art** Page Object Model (POM) code. This guide outlines the autonomous generation lifecycle and the architectural boundaries that protect your codebase.
+
+<div class="hero-bg-accent"></div>
+
+---
+
+## 🏗️ 1. The Generation Pipeline
+
+AppForge uses a multi-stage validation pipeline to ensure generated code is syntactically perfect and architecturally resilient.
+
+<Steps>
+
+1.  ### Semantic Requirement
+    Provide a requirement (e.g., *"Generate a test for the 'Add to Cart' flow"*).
+2.  ### Contextual Synthesis (`generate_cucumber_pom`)
+    The engine performs a structural audit of existing primitives. It drafts Gherkin scenarios and Page Class stubs using your organization's specific coding patterns.
+3.  ### Structural Validation
+    Before writing, the tool runs a **Static Analysis** (TypeScript) check for syntax and POM consistency.
+4.  ### Atomic Write (`validate_and_write`)
+    Verified code is committed to disk. Existing files are snapshot-backed before being safely updated with the new logic.
+
+</Steps>
+
+---
+
+## 🏛️ 2. Architectural Guardrails <Badge text="Critical" variant="danger" />
+
+To prevent "Spaghetti Code," AppForge enforces rigid architectural boundaries during the generation phase.
+
+<CardGrid stagger>
+    <Card title="Separation of Concerns" icon="setting">
+        Strict POM enforcement. Decouples Gherkin steps from low-level Appium locators for 10x easier maintenance.
+    </Card>
+    <Card title="Cross-Platform Parity" icon="random">
+        Interface-driven design ensures shared Gherkin can drive both Android and iOS apps without duplication.
+    </Card>
+    <Card title="Locator Priority" icon="shield-check">
+        The engine rejects brittle XPaths. High-fidelity strategies (Accessibility ID, Resource ID) are mandated.
+    </Card>
+    <Card title="Security Audit" icon="lock">
+        Automated static scans block credential leakage and insecure patterns during the code generation cycle.
+    </Card>
+</CardGrid>
+
+---
+
+## 🧪 3. Pro-Level Scaffolding
+
+When commanding the AI to generate code, specificity drives quality.
+
+### 📂 Target Structure
+AppForge maps your requirements into this hierarchy:
+
+<FileTree>
+- features/
+  - registration.feature (Human-readable spec)
+- pages/
+  - BasePage.ts (Shared drivers)
+  - RegistrationPage.ts (High-Fidelity POM)
+- step-definitions/
+  - registration.steps.ts (Automation glue)
+</FileTree>
+
+### 💡 Elite Prompts
+- **The "Clean Slate" Scaffold**: *"Map the Registration screen and scaffold a full POM suite. Ensure all locators are unique and cross-platform compatible."*
+- **The "Incremental Add"**: *"Add a `updateProfile` method to `ProfilePage`. Use the existing `BasePage` methods for the swipe gestures."*
+
+---
+
+## 🩹 4. Human-in-the-Loop Verification
+
+While generation is autonomous, the final "Seal of Quality" remains human.
+
+- **Dry-Run Mode**: Use `validate_and_write` with `dryRun: true` to review code in the chat before commit.
+- **Lint Enforcement**: AppForge includes strict `eslint` rules that detect anti-patterns immediately after generation.
+
+---
+
+:::tip[Generation Mastery]
+If the generated code feels "generic," provide a reference file. Use: *"Generate the Login page using MyTemplate.ts as the blueprint for method nomenclature."*
+:::
+
+---
+
+**Orchestrated generation for the engineering elite. ✍️**

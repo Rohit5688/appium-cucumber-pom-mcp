@@ -1,0 +1,172 @@
+---
+title: "📖 User Guide & Mastery"
+description: "Master the AppForge ecosystem with advanced mobile orchestration."
+---
+
+import { Card, CardGrid, Badge, Steps, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
+
+Welcome to the AppForge User Guide. This is your definitive source for orchestrating professional-grade mobile automation using AI agents.
+
+:::note[What you will learn]
+- The **AppForge Philosophy**: Why orchestration beats ad-hoc automation.
+- How to configure the **`mcp-config.json`** brain for mobile resilience.
+- Strategies for **Multi-Platform** (Android/iOS) parity.
+- Best practices for **Gesture Orchestration** and Atomic Healing.
+:::
+
+AppForge is more than a tool; it is a **Structured Methodology** for the Agentic Era. It enforces the **Page Object Model (POM)** pattern and high-fidelity locator strategies by design.
+
+:::tip[New to AppForge?]
+Check out our [⏱️ 5-Minute Quickstart](/AppForge/repo/user/quickstart/) to get up and running immediately.
+:::
+
+---
+
+## 🏛️ Project Architecture & DNA
+
+When you scaffold a new project with `setup_project`, AppForge injects a robust **Testing DNA** that ensures high-maintenance resistance for shifting mobile UIs.
+
+<FileTree>
+- features/
+  - **login.feature** (BDD specs)
+- pages/
+  - **BasePage.ts** (The architectural root)
+  - **LoginPage.ts** (POM class)
+- step-definitions/
+  - **login.steps.ts** (Glue code)
+- utils/
+  - **MobileGestures.ts** (Shared gesture logic)
+- **mcp-config.json** (AI Brain settings)
+- **wdio.conf.ts** (Execution engine)
+</FileTree>
+
+---
+
+## 🛠️ The Power Tools Reference
+
+| Tool | Capability | When to Use |
+| :--- | :--- | :--- |
+| `inspect_ui_hierarchy` | Structural Analysis | Use when an element lacks a unique ID or is 'hidden' in the XML. |
+| `execute_sandbox_code` | Local Synthesis | Processing large XML dumps locally to save context tokens. |
+| `self_heal_test` | Atomic Resilience | Autonomous recovery from breaking UI changes. **Auto-updates source code.** |
+| `audit_mobile_locators` | Quality Control | Run periodically to identify brittle XPaths and suggest Accessibility IDs. |
+| `generate_cucumber_pom` | Content Generation | Scaffolding new features with architectural consistency. |
+
+---
+
+## 🏗️ Technical Implementation Patterns
+
+Mastering these patterns ensures your tests are readable by both humans and AI agents.
+
+### 🖖 Handling Complex Gestures
+AppForge abstracts low-level W3C actions into high-level drivers.
+
+```typescript
+// pages/ProductListPage.ts
+async findProduct(productName: string) {
+    // Uses the high-fidelity scroll driver to find element in a dynamic list
+    await MobileGestures.scrollIntoView(this.productItem(productName));
+    await this.productItem(productName).click();
+}
+```
+
+### 🌍 Cross-Platform Parity
+Write one BDD scenario and drive both Android and iOS with shared Page Objects.
+
+```typescript
+// pages/BasePage.ts
+get loginButton() {
+    return driver.isAndroid 
+        ? $('id:com.app:id/login') 
+        : $('~login_button');
+}
+```
+
+---
+
+## 📑 Implementation Patterns
+
+<Tabs>
+  <TabItem label="Gherkin Spec">
+    ```gherkin
+    # features/auth.feature
+    Scenario: User Login
+      Given I launch the application
+      When I login with valid credentials
+      Then I should see the "Dashboard" screen
+    ```
+  </TabItem>
+  <TabItem label="Page Object">
+    ```typescript
+    // pages/LoginPage.ts
+    export class LoginPage extends BasePage {
+      async login(user: string, pass: string) {
+        await this.userInput.setValue(user);
+        await this.passwordInput.setValue(pass);
+        await this.loginBtn.click();
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Step Definition">
+    ```typescript
+    // step-definitions/auth.steps.ts
+    When('I login with valid credentials', async () => {
+      const { user, pass } = getUser('standard_user');
+      await LoginPage.login(user, pass);
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## 🆘 Troubleshooting: The Error Matrix
+
+:::caution[Heads Up]
+A `DNA: Locators.Broken` error occurs when the UI changes. Don't panic!
+:::
+
+| Symptom | Probable Root Cause | The Fix 🛠️ |
+| :--- | :--- | :--- |
+| `DNA: Locators.Broken` | Mobile UI churn. | Run `self_heal_test`. |
+| `DNA: Driver.Crash` | Local Appium server failure. | Restart Appium with `--base-path /wd/hub`. |
+| `Undefined Step` | Step definition mismatch. | Run `analyze_codebase` to re-sync indices. |
+
+---
+
+## 🧠 Knowledge Audit: Failure Recovery
+
+<details>
+<summary>**Q1: My test failed with an assertion error. Should I use the healer?**</summary>
+**Answer**: No. `self_heal_test` is specifically for locating elements. An assertion failure means the element was found, but the data was wrong—this usually indicates a real bug in the application.
+</details>
+
+<details>
+<summary>**Q2: How do I ensure my tests run fast in CI?**</summary>
+**Pro Hint**: Use the `noReset: true` capability in your `mcp-config.json` profile to prevent the app from re-installing on every session, saving ~20 seconds per run.
+</details>
+
+---
+
+:::tip[CI/CD Orchestration]
+Integrate `generate_ci_workflow` to automatically produce GitHub Actions that include artifact capturing for screenshots and logs.
+:::
+
+:::note[Architect's Comment]
+AppForge prioritizes **Accessibility IDs** because they are platform-agnostic and 10x more resilient than XPaths or resource-names. Always advocate for they in your dev team.
+:::
+
+---
+
+## 🌟 Master-Level Tips
+
+1.  **Warm-Start Discovery**: Always run `analyze_codebase` at the start of a session to give the agent a "Warm Brain" of your project structure.
+2.  **Context Hygiene**: Use `execute_sandbox_code` to calculate complex logic or filter large datasets without flooding the LLM's context window.
+
+---
+
+> [!IMPORTANT]
+> **Data Sovereignty**: AppForge ensures all heavy lifting (XML parsing, local compilation, data synthesis) happens on your local machine. We only transmit the "Refined Intent" to the AI.
+
+**Happy Orchestrating! 📱✨**

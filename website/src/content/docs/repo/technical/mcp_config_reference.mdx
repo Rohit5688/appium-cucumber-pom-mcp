@@ -1,0 +1,154 @@
+---
+title: Master Configuration Reference
+description: Exhaustive documentation of the mcp-config.json schema, types, and mobile capability profiles.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+import { Card, CardGrid, Badge, Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+`mcp-config.json` is the central source of truth for AppForge. It dictates how the AI agent perceives your mobile project, which hardware profiles it targets, how it handles authentication, and where it writes architectural code.
+
+<Aside type="note">
+AppForge utilizes a **Deep Merge** strategy. Any property omitted in your local config will automatically fallback to the system defaults defined in the internal schema.
+</Aside>
+
+---
+
+## 🏗️ 1. Core Metadata
+Root-level properties that define the versioning and scope of the automation project.
+
+| Property | Type | Default | Accepted Values | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `version` | `string` | `"1.1.0"` | SemVer string | The version of the current project configuration. |
+| `schemaVersion` | `string` | `"1.0"` | `"1.0"` | The version of the AppForge schema this config adheres to. |
+| `tags` | `string[]` | `["@smoke"]` | Any `@` tag | Default tags used during test generation and execution. |
+| `projectRoot` | `string` | Required | Absolute Path | The security boundary and working directory for all file operations. |
+
+---
+
+## 📂 2. Semantic Path Mapping (`paths`)
+Defines the directory layout. This is critical for the AI to locate Page Objects and Step Definitions with zero-tokens.
+
+| Property | Type | Default | Expected Content |
+| :--- | :--- | :--- | :--- |
+| `featuresRoot` | `string` | `"src/features"` | Gherkin `.feature` documents. |
+| `pagesRoot` | `string` | `"src/pages"` | Page Object Model (POM) TypeScript/JavaScript classes. |
+| `stepsRoot` | `string` | `"src/step-definitions"` | Cucumber step-to-code mapping logic. |
+| `utilsRoot` | `string` | `"src/utils"` | Custom Appium or utility helper functions. |
+| `locatorsRoot` | `string` | `"src/locators"` | YAML or JSON files containing cross-platform selectors. |
+| `testDataRoot` | `string` | `"src/test-data"` | Environment-specific JSON data fixtures. |
+| `credentialsRoot` | `string` | `"src/credentials"` | Secure test user credentials. |
+| `reportsRoot` | `string` | `"reports"` | Output directory for Cucumber/Allure reports. |
+
+---
+
+## ⏯️ 3. Execution & Intelligence
+Fine-tune the interaction engine and the autonomous healing behavior.
+
+### Interaction Strategies
+| Property | Type | Default | Accepted Values |
+| :--- | :--- | :--- | :--- |
+| `waitStrategy` | `string` | `"networkidle"` | `domcontentloaded`, `load`, `networkidle` |
+| `timeout` | `number` | `30000` | Any positive integer (ms) |
+| `testRunTimeout` | `number` | `120000` | Any positive integer (ms) |
+| `retries` | `number` | `1` | `0` to `5` |
+
+### Self-Healing Logic
+- **`selfHealMaxRetries`**: (Default: `3`) The number of times the AI physician can attempt to find and verify a new selector before failing the test.
+- **`backgroundBlockThreshold`**: (Default: `3`) Number of consecutive background task failures allowed before the session is aborted.
+
+---
+
+## 🌍 4. Multi-Environment & Auth
+AppForge is environment-aware and swaps data context automatically based on the `currentEnvironment` key.
+
+| Property | Type | Accepted Values | Description |
+| :--- | :--- | :--- | :--- |
+| `currentEnvironment` | `string` | `local`, `staging`, `prod` | The active target environment for the current session. |
+| `authStrategy` | `string` | `none`, `users-json`, `env` | Strategy used for handling test user login credentials. |
+| `environments` | `string[]` | Custom list | List of all valid environments documented in the project. |
+
+---
+
+## 📱 5. Hardware Capabilities (`capabilitiesProfiles`)
+Define the Android or iOS profiles used to boot the mobile session.
+
+<Tabs>
+  <TabItem label="Android Blueprint">
+    ```json
+    "android_pixel8": {
+        "platformName": "Android",
+        "automationName": "UiAutomator2",
+        "deviceName": "emulator-5554",
+        "app": "./builds/app-debug.apk",
+        "appPackage": "com.app.example",
+        "appActivity": ".MainActivity",
+        "noReset": true
+    }
+    ```
+  </TabItem>
+  <TabItem label="iOS Blueprint">
+    ```json
+    "ios_iphone15": {
+        "platformName": "iOS",
+        "automationName": "XCUITest",
+        "deviceName": "iPhone 15 Pro",
+        "bundleId": "com.app.example",
+        "udid": "AUTO",
+        "fullReset": false
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## 📐 6. Advanced Metadata
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `architectureNotesPath` | `string` | Path to the master architecture document used by the AI for project context. |
+| `a11yStandards` | `string[]` | Accessibility standards to enforce (e.g., `["wcag2aa", "section508"]`). |
+| `a11yReportPath` | `string` | Destination for the structured accessibility audit report. |
+| `visualParity` | `boolean` | (Feature Flag) Captures screenshots during XML inspection for 100% accurate training data. |
+
+---
+
+## 📋 7. Comprehensive Example
+A production-ready `mcp-config.json` for a modern Mobile-BDD project.
+
+```json
+{
+  "version": "1.1.0",
+  "schemaVersion": "1.0",
+  "tags": ["@smoke", "@critical"],
+  "envKeys": { "baseUrl": "BASE_URL" },
+  "paths": {
+    "featuresRoot": "src/features",
+    "pagesRoot": "src/pages",
+    "stepsRoot": "src/step-definitions",
+    "utilsRoot": "src/utils",
+    "testDataRoot": "src/test-data",
+    "credentialsRoot": "src/credentials"
+  },
+  "browsers": ["chromium"],
+  "timeout": 45000,
+  "retries": 2,
+  "selfHealMaxRetries": 5,
+  "authStrategy": "users-json",
+  "currentEnvironment": "staging",
+  "environments": ["local", "staging", "prod"],
+  "waitStrategy": "networkidle",
+  "testRunTimeout": 180000,
+  "architectureNotesPath": "docs/mcp-architecture-notes.md",
+  "visualParity": true,
+  "projectRoot": "c:\\Users\\Rohit\\mcp\\AppForge"
+}
+```
+
+---
+
+:::tip[Master-Level Command]
+Use `manage_config({ operation: 'read' })` to verify your current configuration state without leaving the AI chat context.
+:::
+
+**Master your configuration. Orchestrate your success. ⚙️**
