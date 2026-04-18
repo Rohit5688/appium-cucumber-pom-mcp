@@ -245,7 +245,6 @@ Return ONLY a valid JSON object matching this schema. DO NOT write raw TypeScrip
   "reusePlan": "Human-readable explanation of what was reused and what is new",
   "filesToCreate": [
     { "path": "features/example.feature", "content": "..." },
-    { "path": "step-definitions/example.steps.ts", "content": "..." },
     ${locatorFileEntry}
   ],
   "filesToUpdate": [
@@ -262,6 +261,15 @@ Return ONLY a valid JSON object matching this schema. DO NOT write raw TypeScrip
       ],
       "methods": [
          { "name": "submit", "args": [], "body": ["await this.submitBtn.click();"] }
+      ]
+    }
+  ],
+  "jsonSteps": [
+    {
+      "path": "step-definitions/example.steps.ts",
+      "imports": ["import { $ } from '@wdio/globals';"],
+      "stepDefinitions": [
+        { "type": "Given", "pattern": "I open the login screen", "args": [], "body": ["await LoginScreen.open();"] }
       ]
     }
   ]
@@ -503,6 +511,7 @@ This project uses BOTH Page Object classes AND YAML locator files. Follow the EX
 11. **WebView Screens**: Use \`this.switchToWebView()\` before interacting with web elements and \`this.switchToNativeContext()\` to return to native.
 12. **App Lifecycle**: Use \`this.openDeepLink(url)\` for direct navigation. Use \`this.handlePermissionDialog(accept)\` for system popups.
 13. **TSConfig Autowiring**: If your implementation creates a NEW top-level architectural directory (e.g., \`models/\`, \`types/\`, \`helpers/\`), you MUST also actively update \`tsconfig.json\` in the target project via standard file editing tools. You must append the corresponding path alias (e.g., \`"@models/*": ["./models/*"]\`) to \`compilerOptions.paths\`, and ENSURE your newly generated TypeScript files strictly use that alias in their imports.
+14. **No Inline Comments**: DO NOT include any inline comments (\`//\` or \`/* */\`) in generated code arrays. This inflates completion tokens unnecessarily. Code should be self-documenting.
 ${envStrategyRule}
 ${platform === 'both' ? `
 ## CROSS-PLATFORM RULES (platform: both)

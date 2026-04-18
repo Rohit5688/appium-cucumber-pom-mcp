@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import type ts from "typescript";
 import type { McpConfigService } from "../services/McpConfigService.js";
 import type { CodebaseAnalyzerService } from "../services/CodebaseAnalyzerService.js";
 import type { ExecutionService } from "../services/ExecutionService.js";
@@ -189,7 +190,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
               const stats = fs.default.statSync(fullPath);
               if (stats.size > MAX_PARSE_FILE_BYTES) continue;
               const content = FileGuard.readTextFileSafely(fullPath);
-              const lines = content.split('\\n');
+              const lines = content.split('\n');
               for (let i = 0; i < lines.length; i++) {
                 if (regex.test(lines[i])) {
                   hits.push({ file: fileRel, line: i + 1, text: lines[i] });
@@ -237,7 +238,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
 
           if (options?.extractSignatures) {
             const signatures: Array<{ name: string; type: string; signature: string }> = [];
-            const visit = (node: any) => {
+            const visit = (node: ts.Node) => {
               if (ts.isFunctionDeclaration(node) && node.name) {
                 signatures.push({
                   name: node.name.text,

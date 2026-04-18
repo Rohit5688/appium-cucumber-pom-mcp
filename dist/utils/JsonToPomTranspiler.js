@@ -1,5 +1,22 @@
 export class JsonToPomTranspiler {
     /**
+     * Validates the structure of a raw JSON page object descriptor.
+     * Returns an array of error messages, or an empty array if valid.
+     */
+    static validate(pom) {
+        const errors = [];
+        if (!pom) {
+            return ['Page Object descriptor is null or undefined'];
+        }
+        if (!pom.className || typeof pom.className !== 'string') {
+            errors.push('Missing or invalid "className" - must be a string');
+        }
+        if (!pom.path || typeof pom.path !== 'string') {
+            errors.push('Missing or invalid "path" - must be a string');
+        }
+        return errors;
+    }
+    /**
      * Transpiles a JSON representation of a Page Object into a fully formatted TypeScript string.
      */
     static transpile(pom) {

@@ -165,22 +165,53 @@ export class MobileSmartTreeService {
     label: string,
     platform: Platform
   ): { locator: string; strategy: LocatorStrategy } {
-    // Priority: accessibility-id > resource-id > xpath
+    // Priority 1 (both): accessibility-id / content-desc — most stable, cross-platform
     const contentDesc = attrs['content-desc'] || attrs['accessibilityLabel'];
-    if (contentDesc) return { locator: `~${contentDesc}`, strategy: 'accessibility id' };
-
-    const resourceId = attrs['resource-id'];
-    if (resourceId) return { locator: `id=${resourceId}`, strategy: 'id' };
-
-    // Fallback: text-based xpath
-    if (label && label !== attrs['resource-id']?.split('/').pop()) {
-      const xpath = platform === 'android'
-        ? `//*[@text="${label}"]`
-        : `//*[@label="${label}"]`;
-      return { locator: xpath, strategy: 'xpath' };
+    if (contentDesc) {
+      return { locator: `~${contentDesc}`, strategy: 'accessibility id' };
     }
 
-    return { locator: `//[${label}]`, strategy: 'xpath' };
+    // Priority 2 (Android): resource-id — stable if app doesn't obfuscate IDs
+    if (platform === 'android') {
+      const resourceId = attrs['resource-id'];
+      if (resourceId) {
+        return { locator: `id=${resourceId}`, strategy: 'id' };
+      }
+    }
+
+    // Priority 3 (iOS): name attribute with no content-desc → maps to accessibility-id
+    // iOS UIAutomation uses `name` attr; Appium exposes it as ~name via accessibility-id
+    if (platform === 'ios') {
+      const iosName = attrs['name'];
+      if (iosName && iosName !== label) {
+        return { locator: `~${iosName}`, strategy: 'accessibility id' };
+      }
+    }
+
+    // Priority 4 (Android): visible text via UIAutomator — more reliable than XPath
+    if (platform === 'android' && label && label !== attrs['resource-id']?.split('/').pop()) {
+      return {
+        locator: `-android uiautomator:new UiSelector().text("${label.replace(/"/g, '\\"')}")`,
+        strategy: '-android uiautomator',
+      };
+    }
+
+    // Priority 5 (iOS): predicate string — label or value text match, namespace-safe
+    if (platform === 'ios') {
+      const iosLabel = attrs['label'] || label;
+      if (iosLabel) {
+        // Try label= first (matches accessibility label), then value= for inputs
+        const field = attrs['value'] ? 'value' : 'label';
+        return {
+          locator: `-ios predicate string:${field} == "${iosLabel.replace(/"/g, '\\"')}"`,
+          strategy: '-ios predicate string',
+        };
+      }
+    }
+
+    // Priority 6: coordinate fallback — last resort, no stable selector available
+    // Bounds are emitted as-is; caller must handle [ coordinate-fallback ] hint
+    return { locator: `[coordinate-fallback: ${attrs['bounds'] ?? 'unknown'}]`, strategy: 'coordinate-fallback' as LocatorStrategy };
   }
 
   private inferRole(tagName: string, attrs: Record<string, string>): ActionElement['role'] {

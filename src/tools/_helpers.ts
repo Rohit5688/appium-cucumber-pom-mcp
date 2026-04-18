@@ -60,3 +60,52 @@ export function getPlatformSkill(args: any): string {
   if (platform === 'ios' && IOS_SKILL) return `\n\n---\n${IOS_SKILL}`;
   return '';
 }
+
+/**
+ * Platform-detection guard — call at the top of any AppForge tool that reads
+ * mobile-specific files (XML hierarchies, Appium sessions, coverage reports).
+ *
+ * If the projectRoot is a Playwright/TestForge project, returns a clear error
+ * object the tool can return immediately. Returns null if safe to continue.
+ *
+ * This prevents the EOF crashes seen when Gemini Flash 3 (or any LLM) invokes
+ * AppForge tools against a web project because it didn't distinguish the servers.
+ *
+ * Usage in a tool handler:
+ *   const guard = assertNotPlaywrightProject(projectRoot);
+ *   if (guard) return guard;
+ */
+export function assertNotPlaywrightProject(projectRoot: string | undefined): { content: { type: 'text'; text: string }[]; isError: true } | null {
+  if (!projectRoot) return null;
+  const playwrightConfigs = [
+    'playwright.config.ts',
+    'playwright.config.js',
+    'playwright.config.mjs',
+    'playwright.config.cjs',
+  ];
+  for (const cfg of playwrightConfigs) {
+    if (fs.existsSync(path.join(projectRoot, cfg))) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: [
+            `🚫 WRONG MCP SERVER`,
+            ``,
+            `This project contains \`${cfg}\` — it is a Playwright/TestForge project.`,
+            `AppForge tools are for Appium (iOS/Android) mobile automation only.`,
+            ``,
+            `Switch to the TestForge MCP server and use the equivalent tool there:`,
+            `  AppForge: suggest_refactorings    → TestForge: suggest_refactorings`,
+            `  AppForge: audit_mobile_locators   → TestForge: audit_locators`,
+            `  AppForge: check_environment       → TestForge: check_environment`,
+            `  AppForge: get_token_budget        → TestForge: get_token_budget`,
+            ``,
+            `Project root detected: ${projectRoot}`,
+          ].join('\n'),
+        }],
+        isError: true,
+      };
+    }
+  }
+  return null;
+}

@@ -3,7 +3,7 @@ import { z } from "zod";
 import path from 'path';
 import type { McpConfigService } from "../services/McpConfigService.js";
 import type { AuditLocatorService } from "../services/AuditLocatorService.js";
-import { textResult, truncate } from "./_helpers.js";
+import { textResult, truncate, assertNotPlaywrightProject } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 
 export function registerAuditMobileLocators(
@@ -28,6 +28,9 @@ OUTPUT: Ack (≤10 words), proceed.`,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },
     async (args) => {
+      const guard = assertNotPlaywrightProject(args.projectRoot);
+      if (guard) return guard;
+
       const config = configService.read(args.projectRoot);
       const paths = configService.getPaths(config);
 
