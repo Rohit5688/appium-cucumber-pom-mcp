@@ -11,8 +11,8 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { executeSandbox } from '../services/SandboxEngine.js';
-import type { SandboxApiRegistry } from '../services/SandboxEngine.js';
+import { executeSandbox } from '../services/execution/SandboxEngine.js';
+import type { SandboxApiRegistry } from '../services/execution/SandboxEngine.js';
 
 describe('SandboxEngine Security Tests (Issue #19)', () => {
   // Mock API registry for tests

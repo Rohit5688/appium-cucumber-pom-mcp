@@ -1,4 +1,4 @@
-import { FileStateService } from '../services/FileStateService.js';
+import { FileStateService } from '../services/io/FileStateService.js';
 import * as fs from 'fs';
 
 const stateService = FileStateService.getInstance();

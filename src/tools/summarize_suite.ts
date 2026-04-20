@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { McpConfigService } from "../services/McpConfigService.js";
-import type { SummarySuiteService } from "../services/SummarySuiteService.js";
+import type { McpConfigService } from "../services/config/McpConfigService.js";
+import type { SummarySuiteService } from "../services/analysis/SummarySuiteService.js";
 import { textResult } from "./_helpers.js";
 
 export function registerSummarizeSuite(

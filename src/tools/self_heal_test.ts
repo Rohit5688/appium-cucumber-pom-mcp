@@ -1,11 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { SelfHealingService } from "../services/SelfHealingService.js";
-import type { McpConfigService } from "../services/McpConfigService.js";
-import type { SessionManager } from "../services/SessionManager.js";
+import type { SelfHealingService } from "../services/execution/SelfHealingService.js";
+import type { McpConfigService } from "../services/config/McpConfigService.js";
+import type { SessionManager } from "../services/execution/SessionManager.js";
 import { textResult, getPlatformSkill } from "./_helpers.js";
 import { toMcpErrorResponse, McpErrors } from "../types/ErrorSystem.js";
-import { PreFlightService } from "../services/PreFlightService.js";
+import { PreFlightService } from "../services/setup/PreFlightService.js";
 
 export function registerSelfHealTest(
   server: McpServer,

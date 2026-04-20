@@ -2,8 +2,8 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
 import * as path from 'path';
 import * as fs from 'fs';
-import { FileWriterService } from '../services/FileWriterService.js';
-import { ProjectMaintenanceService } from '../services/ProjectMaintenanceService.js';
+import { FileWriterService } from '../services/io/FileWriterService.js';
+import { ProjectMaintenanceService } from '../services/setup/ProjectMaintenanceService.js';
 import { validateProjectRoot } from '../utils/SecurityUtils.js';
 /**
  * CB-1 Security Tests: Shell Injection via Unsanitised projectRoot Parameter

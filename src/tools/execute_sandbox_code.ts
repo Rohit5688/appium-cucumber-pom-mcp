@@ -1,12 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type ts from "typescript";
-import type { McpConfigService } from "../services/McpConfigService.js";
-import type { CodebaseAnalyzerService } from "../services/CodebaseAnalyzerService.js";
-import type { ExecutionService } from "../services/ExecutionService.js";
-import { executeSandbox } from "../services/SandboxEngine.js";
-import type { SandboxApiRegistry } from "../services/SandboxEngine.js";
-import { FileStateService } from "../services/FileStateService.js";
+import type { McpConfigService } from "../services/config/McpConfigService.js";
+import type { CodebaseAnalyzerService } from "../services/analysis/CodebaseAnalyzerService.js";
+import type { ExecutionService } from "../services/execution/ExecutionService.js";
+import { executeSandbox } from "../services/execution/SandboxEngine.js";
+import type { SandboxApiRegistry } from "../services/execution/SandboxEngine.js";
+import { FileStateService } from "../services/io/FileStateService.js";
 import { FileGuard } from "../utils/FileGuard.js";
 import { textResult, truncate } from "./_helpers.js";
 import { toMcpErrorResponse } from "../types/ErrorSystem.js";
@@ -27,7 +27,7 @@ NEXT: If analyzing → Use for generate_cucumber_pom | If querying → Proceed w
 COST: Low-Medium (50-200 tokens, no file I/O)
 ERROR_HANDLING: Throws McpError on syntax/forbidden patterns/timeout
 
-🚀 TURBO MODE — Prefer over analyze_codebase (98% token reduction). APIs: forge.api.analyzeCodebase(projectRoot, {type,searchPattern}), runTests, readFile, getConfig, listFiles, searchFiles, parseAST. Use \`return <value>\`.
+🚀 TURBO MODE — Prefer over analyze_codebase (98% token reduction). APIs: forge.api.analyzeCodebase(projectRoot, {type,searchPattern}), runTests, readFile, getConfig, listFiles, searchFiles, parseAST. AppForge extensions: findFiles, grep, extractPublicMethods, parseGherkin, parseUiHierarchy, extractLocatorStrategies, parseMobileLogs. Use \`return <value>\`.
 
 OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
@@ -81,7 +81,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
         // Expose system state for sandbox scripts (safe, read-only)
         getSystemState: async (projectRoot?: string) => {
           // Lazy import to avoid circular deps during startup
-          const { SystemStateService } = await import('../services/SystemStateService.js');
+          const { SystemStateService } = await import('../services/system/SystemStateService.js');
           const stateService = SystemStateService.getInstance();
           return stateService.getState(projectRoot ?? process.cwd());
         },
@@ -273,8 +273,110 @@ OUTPUT: Ack (≤10 words), proceed.`,
             throw new Error(`Environment variable "${key}" is not on the allowlist.`);
           }
           return process.env[key] ?? null;
+        },
+        // ----------------- PARITY & TURBO MODE APIS -----------------
+        findFiles: async (dirRelPath: string, extension: string, projectRoot?: string) => {
+          // Wrap listFiles for parity
+          return apiRegistry.listFiles(dirRelPath, { recursive: true, glob: `**/*${extension}` }, projectRoot);
+        },
+        grep: async (query: string, dirRelPath: string, projectRoot?: string) => {
+          // For parity with TestForge exactly. We'll implement direct string match since searchFiles uses Regex.
+          const fs = await import('fs');
+          const path = await import('path');
+          const root = projectRoot ? path.default.resolve(projectRoot) : process.cwd();
+          const safePath = path.default.resolve(root, dirRelPath);
+          if (!safePath.startsWith(root) && safePath !== root) throw new Error('[SECURITY] Path traversal blocked.');
+          const results: { file: string; line: number; content: string }[] = [];
+          const files = await apiRegistry.listFiles(dirRelPath, { recursive: true, glob: '**/*' }, root);
+          for (const fileRel of files) {
+            const fullPath = path.default.join(root, fileRel);
+            try {
+              if (fs.default.statSync(fullPath).isFile()) {
+                 const content = FileGuard.readTextFileSafely(fullPath);
+                 if (content.includes(query)) {
+                   const lines = content.split('\n');
+                   lines.forEach((lineStr, idx) => {
+                     if (lineStr.includes(query)) results.push({ file: fileRel, line: idx + 1, content: lineStr.trim() });
+                   });
+                 }
+              }
+            } catch { /* skip */ }
+          }
+          return results;
+        },
+        extractPublicMethods: (tsCode: string) => {
+          const methods: string[] = [];
+          const matches = [...tsCode.matchAll(/(?:public\s+|async\s+)?(?:[a-zA-Z0-9_]+)\s*\((.*?)\)\s*(?::\s*[A-Za-z0-9_<>[\]]+)?\s*\{/g)];
+          for (const match of matches) {
+            const full = match[0] as string;
+            if (!full.includes('function') && !full.includes('if') && !full.includes('for') && !full.includes('while') && !full.includes('catch')) {
+              const namePart = full.split('(')[0];
+              if (namePart) methods.push(namePart.trim() + '()');
+            }
+          }
+          return [...new Set(methods)];
+        },
+        parseGherkin: (text: string) => {
+          const lines = text.split('\n');
+          const result: { type: string, name: string, steps: string[] }[] = [];
+          let current: any = null;
+          for (const line of lines) {
+            const t = line.trim();
+            if (t.startsWith('Feature:')) {
+              current = { type: 'Feature', name: t.replace('Feature:', '').trim(), scenarios: [] };
+              result.push(current);
+            } else if (t.startsWith('Scenario:') || t.startsWith('Scenario Outline:')) {
+              current = { type: 'Scenario', name: t.replace(/Scenario( Outline)?:/, '').trim(), steps: [] };
+              result.push(current);
+            } else if (t.match(/^(Given|When|Then|And|But)\s/)) {
+              if (current && current.steps) {
+                current.steps.push(t);
+              }
+            }
+          }
+          return result;
+        },
+        parseUiHierarchy: async (xmlStr: string) => {
+          const nodes: any[] = [];
+          const matches = [...xmlStr.matchAll(/<([a-zA-Z0-9_.-]+)\s+([^>]+)>/g)];
+          for(const match of matches) {
+            const tagName = match[1];
+            const attrsStr = match[2];
+            const attrs: any = {};
+            if (attrsStr) {
+               const attrMatches = [...attrsStr.matchAll(/([a-zA-Z0-9_.-]+)="([^"]*)"/g)];
+               for(const a of attrMatches) attrs[a[1]] = a[2];
+            }
+            if (Object.keys(attrs).length > 0) {
+              nodes.push({ type: tagName, ...attrs });
+            }
+          }
+          return nodes;
+        },
+        extractLocatorStrategies: async (xmlStr: string) => {
+          const nodes = await apiRegistry.parseUiHierarchy(xmlStr);
+          const locators: string[] = [];
+          for (const node of nodes) {
+             if (node['resource-id'] && node['resource-id'] !== '') locators.push(`~${node['resource-id']}`);
+             if (node['content-desc'] && node['content-desc'] !== '') locators.push(`@${node['content-desc']}`);
+             if (node['text'] && node['text'] !== '') locators.push(`text=${node['text']}`);
+          }
+          return [...new Set(locators)];
+        },
+        parseMobileLogs: (logText: string) => {
+          const lines = logText.split('\n');
+          const errors = [];
+          const latency = [];
+          const commands = [];
+          for (const line of lines) {
+             if (line.includes('[W]') || line.includes('[E]') || line.includes('Error') || line.includes('Exception')) {
+                errors.push(line.trim());
+             }
+             if (line.includes('duration:')) latency.push(line.trim());
+             if (line.includes('Executing command')) commands.push(line.trim());
+          }
+          return { errors, latency: latency.slice(-20), commands: commands.slice(-20) };
         }
-
       };
 
       const sandboxResult = await executeSandbox(args.script, apiRegistry, { timeoutMs: args.timeoutMs });

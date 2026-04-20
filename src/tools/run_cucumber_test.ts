@@ -1,10 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { ExecutionService } from "../services/ExecutionService.js";
+import type { ExecutionService } from "../services/execution/ExecutionService.js";
 import { textResult, truncate } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 import { ShellSecurityEngine } from "../utils/ShellSecurityEngine.js";
-import { EnvironmentCheckService } from "../services/EnvironmentCheckService.js";
+import { EnvironmentCheckService } from "../services/setup/EnvironmentCheckService.js";
 
 export function registerRunCucumberTest(
   server: McpServer,

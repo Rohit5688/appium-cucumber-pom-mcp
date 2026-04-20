@@ -24,28 +24,28 @@
  */
 
 import { container } from './ServiceContainer.js';
-import { ProjectSetupService } from '../services/ProjectSetupService.js';
-import { McpConfigService } from '../services/McpConfigService.js';
-import { CodebaseAnalyzerService } from '../services/CodebaseAnalyzerService.js';
-import { TestGenerationService } from '../services/TestGenerationService.js';
-import { FileWriterService } from '../services/FileWriterService.js';
-import { ExecutionService } from '../services/ExecutionService.js';
-import { SelfHealingService } from '../services/SelfHealingService.js';
-import { CredentialService } from '../services/CredentialService.js';
-import { AuditLocatorService } from '../services/AuditLocatorService.js';
-import { SummarySuiteService } from '../services/SummarySuiteService.js';
-import { EnvironmentCheckService } from '../services/EnvironmentCheckService.js';
-import { UtilAuditService } from '../services/UtilAuditService.js';
-import { CiWorkflowService } from '../services/CiWorkflowService.js';
-import { LearningService } from '../services/LearningService.js';
-import { RefactoringService } from '../services/RefactoringService.js';
-import { BugReportService } from '../services/BugReportService.js';
-import { TestDataService } from '../services/TestDataService.js';
-import { SessionManager } from '../services/SessionManager.js';
-import { ProjectMaintenanceService } from '../services/ProjectMaintenanceService.js';
-import { CoverageAnalysisService } from '../services/CoverageAnalysisService.js';
-import { MigrationService } from '../services/MigrationService.js';
-import { OrchestrationService } from '../services/OrchestrationService.js';
+import { ProjectSetupService } from '../services/setup/ProjectSetupService.js';
+import { McpConfigService } from '../services/config/McpConfigService.js';
+import { CodebaseAnalyzerService } from '../services/analysis/CodebaseAnalyzerService.js';
+import { TestGenerationService } from '../services/generation/TestGenerationService.js';
+import { FileWriterService } from '../services/io/FileWriterService.js';
+import { ExecutionService } from '../services/execution/ExecutionService.js';
+import { SelfHealingService } from '../services/execution/SelfHealingService.js';
+import { CredentialService } from '../services/config/CredentialService.js';
+import { AuditLocatorService } from '../services/audit/AuditLocatorService.js';
+import { SummarySuiteService } from '../services/analysis/SummarySuiteService.js';
+import { EnvironmentCheckService } from '../services/setup/EnvironmentCheckService.js';
+import { UtilAuditService } from '../services/audit/UtilAuditService.js';
+import { CiWorkflowService } from '../services/collaboration/CiWorkflowService.js';
+import { LearningService } from '../services/collaboration/LearningService.js';
+import { RefactoringService } from '../services/test/RefactoringService.js';
+import { BugReportService } from '../services/collaboration/BugReportService.js';
+import { TestDataService } from '../services/test/TestDataService.js';
+import { SessionManager } from '../services/execution/SessionManager.js';
+import { ProjectMaintenanceService } from '../services/setup/ProjectMaintenanceService.js';
+import { CoverageAnalysisService } from '../services/analysis/CoverageAnalysisService.js';
+import { MigrationService } from '../services/test/MigrationService.js';
+import { OrchestrationService } from '../services/system/OrchestrationService.js';
 
 // ── Stateful Singletons ────────────────────────────────────────────────────────
 // These hold cross-tool-call state. Always resolved from getInstance().

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { ProjectMaintenanceService } from "../services/ProjectMaintenanceService.js";
+import type { ProjectMaintenanceService } from "../services/setup/ProjectMaintenanceService.js";
 import { textResult } from "./_helpers.js";
 
 export function registerRepairProject(

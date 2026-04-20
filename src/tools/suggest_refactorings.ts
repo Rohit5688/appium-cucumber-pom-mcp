@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { McpConfigService } from "../services/McpConfigService.js";
-import type { CodebaseAnalyzerService } from "../services/CodebaseAnalyzerService.js";
-import type { RefactoringService } from "../services/RefactoringService.js";
+import type { McpConfigService } from "../services/config/McpConfigService.js";
+import type { CodebaseAnalyzerService } from "../services/analysis/CodebaseAnalyzerService.js";
+import type { RefactoringService } from "../services/test/RefactoringService.js";
 import { textResult, truncate, assertNotPlaywrightProject } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { ExecutionService } from "../services/ExecutionService.js";
+import type { ExecutionService } from "../services/execution/ExecutionService.js";
 import { textResult, truncate } from "./_helpers.js";
 
 export function registerCheckTestStatus(

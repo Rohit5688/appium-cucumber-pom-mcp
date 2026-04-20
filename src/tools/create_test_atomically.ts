@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { OrchestrationService } from "../services/OrchestrationService.js";
+import type { OrchestrationService } from "../services/system/OrchestrationService.js";
 import { textResult } from "./_helpers.js";
 import { toMcpErrorResponse } from "../types/ErrorSystem.js";
 

@@ -3,8 +3,8 @@ import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ProjectSetupService } from '../services/ProjectSetupService.js';
-import { McpConfigService } from '../services/McpConfigService.js';
+import { ProjectSetupService } from '../services/setup/ProjectSetupService.js';
+import { McpConfigService } from '../services/config/McpConfigService.js';
 
 describe('setup_project Phase Separation Fix', () => {
   let tempDir: string;

@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs/promises';
-import { UtilAuditService } from '../services/UtilAuditService.js';
+import { UtilAuditService } from '../services/audit/UtilAuditService.js';
 
 describe('UtilAuditService (AppForge Unit Tests)', () => {
   let auditService: UtilAuditService;

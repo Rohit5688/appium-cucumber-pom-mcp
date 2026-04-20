@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { CoverageAnalysisService } from "../services/CoverageAnalysisService.js";
+import type { CoverageAnalysisService } from "../services/analysis/CoverageAnalysisService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
 import { McpError, McpErrorCode, toMcpErrorResponse } from "../types/ErrorSystem.js";

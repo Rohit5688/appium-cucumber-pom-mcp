@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ExecutionService } from '../services/ExecutionService.js';
+import { ExecutionService } from '../services/execution/ExecutionService.js';
 
 /**
  * Issue #15 Test Suite: inspect_ui_hierarchy Invalid Selector Strategy Fix

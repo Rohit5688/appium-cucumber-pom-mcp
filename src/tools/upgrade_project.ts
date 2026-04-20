@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { ProjectMaintenanceService } from "../services/ProjectMaintenanceService.js";
-import type { McpConfigService } from "../services/McpConfigService.js";
+import type { ProjectMaintenanceService } from "../services/setup/ProjectMaintenanceService.js";
+import type { McpConfigService } from "../services/config/McpConfigService.js";
 import { textResult } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { CredentialService } from "../services/CredentialService.js";
+import type { CredentialService } from "../services/config/CredentialService.js";
 import { textResult } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ExecutionService } from '../services/ExecutionService.js';
+import { ExecutionService } from '../services/execution/ExecutionService.js';
 import * as path from 'path';
 import * as fs from 'fs';
 describe('ExecutionService - Issue #17: Edge Cases and Additional Security', () => {

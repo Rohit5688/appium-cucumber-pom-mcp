@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { RefactoringService } from '../services/RefactoringService.js';
+import { RefactoringService } from '../services/test/RefactoringService.js';
 /**
  * Issue #12 Tests: `suggest_refactorings` false positive detection
  *

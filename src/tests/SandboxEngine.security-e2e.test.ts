@@ -3,8 +3,8 @@ import * as assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { executeSandbox } from '../services/SandboxEngine.js';
-import type { SandboxApiRegistry } from '../services/SandboxEngine.js';
+import { executeSandbox } from '../services/execution/SandboxEngine.js';
+import type { SandboxApiRegistry } from '../services/execution/SandboxEngine.js';
 
 /**
  * Full E2E sandbox integration tests:

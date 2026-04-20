@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { FileWriterService } from "../services/FileWriterService.js";
+import type { FileWriterService } from "../services/io/FileWriterService.js";
 import { textResult } from "./_helpers.js";
-import { StructuralBrainService } from "../services/StructuralBrainService.js";
+import { StructuralBrainService } from "../services/analysis/StructuralBrainService.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 
 export function registerValidateAndWrite(

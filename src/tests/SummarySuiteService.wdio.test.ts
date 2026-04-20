@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { SummarySuiteService } from '../services/SummarySuiteService.js';
+import { SummarySuiteService } from '../services/analysis/SummarySuiteService.js';
 import * as fs from 'fs/promises';
 import * as fssync from 'fs';
 import * as path from 'path';

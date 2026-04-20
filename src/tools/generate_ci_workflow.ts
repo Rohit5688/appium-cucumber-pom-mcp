@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { McpConfigService } from "../services/McpConfigService.js";
-import type { CiWorkflowService } from "../services/CiWorkflowService.js";
+import type { McpConfigService } from "../services/config/McpConfigService.js";
+import type { CiWorkflowService } from "../services/collaboration/CiWorkflowService.js";
 import { validateProjectRoot } from "../utils/SecurityUtils.js";
 import { textResult } from "./_helpers.js";
 

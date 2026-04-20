@@ -1,42 +1,41 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
 import { APPFORGE_VERSION } from "./version.js";
 import { Logger } from "./utils/Logger.js";
 import { Metrics } from "./utils/Metrics.js";
-import { TokenBudgetService } from "./services/TokenBudgetService.js";
-import { ObservabilityService } from "./services/ObservabilityService.js";
-import { StructuralBrainService } from "./services/StructuralBrainService.js";
+import { TokenBudgetService } from "./services/config/TokenBudgetService.js";
+import { ObservabilityService } from "./services/analysis/ObservabilityService.js";
+import { StructuralBrainService } from "./services/analysis/StructuralBrainService.js";
 
 // ServiceContainer — resolves all services with correct dep injection (Concern 1)
 import "./container/registrations.js"; // side-effect: registers all factories
 import { container } from "./container/ServiceContainer.js";
-import type { McpConfigService } from "./services/McpConfigService.js";
-import type { CodebaseAnalyzerService } from "./services/CodebaseAnalyzerService.js";
-import type { TestGenerationService } from "./services/TestGenerationService.js";
-import type { FileWriterService } from "./services/FileWriterService.js";
-import type { ExecutionService } from "./services/ExecutionService.js";
-import type { SelfHealingService } from "./services/SelfHealingService.js";
-import type { CredentialService } from "./services/CredentialService.js";
-import type { AuditLocatorService } from "./services/AuditLocatorService.js";
-import type { SummarySuiteService } from "./services/SummarySuiteService.js";
-import type { EnvironmentCheckService } from "./services/EnvironmentCheckService.js";
-import type { UtilAuditService } from "./services/UtilAuditService.js";
-import type { CiWorkflowService } from "./services/CiWorkflowService.js";
-import type { LearningService } from "./services/LearningService.js";
-import type { RefactoringService } from "./services/RefactoringService.js";
-import type { BugReportService } from "./services/BugReportService.js";
-import type { TestDataService } from "./services/TestDataService.js";
-import type { SessionManager } from "./services/SessionManager.js";
-import type { ProjectMaintenanceService } from "./services/ProjectMaintenanceService.js";
-import type { CoverageAnalysisService } from "./services/CoverageAnalysisService.js";
-import type { MigrationService } from "./services/MigrationService.js";
-import type { OrchestrationService } from "./services/OrchestrationService.js";
-import type { ProjectSetupService } from "./services/ProjectSetupService.js";
-import { NavigationGraphService } from "./services/NavigationGraphService.js";
+import type { McpConfigService } from "./services/config/McpConfigService.js";
+import type { CodebaseAnalyzerService } from "./services/analysis/CodebaseAnalyzerService.js";
+import type { TestGenerationService } from "./services/generation/TestGenerationService.js";
+import type { FileWriterService } from "./services/io/FileWriterService.js";
+import type { ExecutionService } from "./services/execution/ExecutionService.js";
+import type { SelfHealingService } from "./services/execution/SelfHealingService.js";
+import type { CredentialService } from "./services/config/CredentialService.js";
+import type { AuditLocatorService } from "./services/audit/AuditLocatorService.js";
+import type { SummarySuiteService } from "./services/analysis/SummarySuiteService.js";
+import type { EnvironmentCheckService } from "./services/setup/EnvironmentCheckService.js";
+import type { UtilAuditService } from "./services/audit/UtilAuditService.js";
+import type { CiWorkflowService } from "./services/collaboration/CiWorkflowService.js";
+import type { LearningService } from "./services/collaboration/LearningService.js";
+import type { RefactoringService } from "./services/test/RefactoringService.js";
+import type { BugReportService } from "./services/collaboration/BugReportService.js";
+import type { TestDataService } from "./services/test/TestDataService.js";
+import type { SessionManager } from "./services/execution/SessionManager.js";
+import type { ProjectMaintenanceService } from "./services/setup/ProjectMaintenanceService.js";
+import type { CoverageAnalysisService } from "./services/analysis/CoverageAnalysisService.js";
+import type { MigrationService } from "./services/test/MigrationService.js";
+import type { OrchestrationService } from "./services/system/OrchestrationService.js";
+import type { ProjectSetupService } from "./services/setup/ProjectSetupService.js";
+import { NavigationGraphService } from "./services/nav/NavigationGraphService.js";
 
 // Tool registrars
 import { registerSetupProject } from "./tools/setup_project.js";
@@ -231,28 +230,27 @@ class AppForgeServer {
     const transportFlag = args.findIndex(a => a === '--transport');
     const transportType = transportFlag !== -1 ? args[transportFlag + 1] : 'stdio';
 
-    if (transportType === 'sse') {
+    if (transportType === 'sse' || transportType === 'http') {
       const portFlag = args.findIndex(a => a === '--port');
       const port = portFlag !== -1 ? parseInt(args[portFlag + 1] || '3100', 10) : 3100;
 
       const app = express();
-      let sseTransport: SSEServerTransport;
+      app.use(express.json());
 
-      app.get('/sse', async (req, res) => {
-        sseTransport = new SSEServerTransport('/message', res);
-        await this.server.connect(sseTransport);
-      });
-
-      app.post('/message', async (req, res) => {
-        if (sseTransport) {
-          await sseTransport.handlePostMessage(req, res);
-        } else {
-          res.status(500).send('SSE transport not connected');
-        }
+      app.post('/mcp', async (req, res) => {
+        // Stateless: fresh transport per request (replaces deprecated SSEServerTransport)
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined, // stateless mode
+        });
+        res.on('close', () => {
+          transport.close();
+        });
+        await this.server.connect(transport);
+        await transport.handleRequest(req, res, req.body);
       });
 
       app.listen(port, () => {
-        Logger.info("AppForge MCP Server started", { transport: "sse", version: APPFORGE_VERSION });
+        Logger.info("AppForge MCP Server started", { transport: "streamable-http", version: APPFORGE_VERSION });
       });
     } else {
       const transport = new StdioServerTransport();

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { LearningService } from "../services/LearningService.js";
+import type { LearningService } from "../services/collaboration/LearningService.js";
 import { textResult } from "./_helpers.js";
 
 export function registerTrainOnExample(

@@ -10,7 +10,7 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { EnvironmentCheckService } from '../services/EnvironmentCheckService.js';
+import { EnvironmentCheckService } from '../services/setup/EnvironmentCheckService.js';
 import { execSync } from 'child_process';
 
 describe('EnvironmentCheckService - ANDROID_HOME Detection', () => {

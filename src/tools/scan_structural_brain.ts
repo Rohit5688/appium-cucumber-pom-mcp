@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { textResult } from "./_helpers.js";
-import { StructuralBrainService } from "../services/StructuralBrainService.js";
+import { StructuralBrainService } from "../services/analysis/StructuralBrainService.js";
 import { z } from "zod";
 
 export function registerScanStructuralBrain(server: McpServer): void {

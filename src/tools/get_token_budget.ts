@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { TokenBudgetService } from "../services/TokenBudgetService.js";
+import { TokenBudgetService } from "../services/config/TokenBudgetService.js";
 
 export function registerGetTokenBudget(
   server: McpServer

@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { PreFlightService } from "../services/PreFlightService.js";
-import { SessionManager } from "../services/SessionManager.js";
+import { PreFlightService } from "../services/setup/PreFlightService.js";
+import { SessionManager } from "../services/execution/SessionManager.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 
 export function registerCheckAppiumReady(server: McpServer): void {

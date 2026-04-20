@@ -1,0 +1,269 @@
+{
+  "nodes": {
+    "https://www.google.com": {
+      "url": "https://www.google.com",
+      "pageName": "Home",
+      "outgoing": [
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/imghp",
+          "confidence": 0.9,
+          "label": "Images"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/setprefs",
+          "confidence": 1,
+          "label": "हिन्दी"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/intl/en_in/ads",
+          "confidence": 0.9,
+          "label": "Advertising"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/services",
+          "confidence": 0.9,
+          "label": "Business"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/preferences",
+          "confidence": 0.9,
+          "label": "Search settings"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/advanced_search",
+          "confidence": 0.9,
+          "label": "Advanced search"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/history/privacyadvisor/search/unauth",
+          "confidence": 0.9,
+          "label": "Your data in Search"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/history/optout",
+          "confidence": 0.9,
+          "label": "Search history"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Google apps\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Google apps"
+        },
+        {
+          "triggerSelector": "[aria-label=\"close\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "close"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Clear\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Clear"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Search by voice\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Search by voice"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Search by image\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Search by image"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Close Choose what you’re giving feedback on\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Close Choose what you’re giving feedback on"
+        },
+        {
+          "triggerSelector": "[aria-label=\"See more\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": ".U48fD{-webkit-tap-highlight-color:trans"
+        },
+        {
+          "triggerSelector": "text=\".JCHpcb:hover,.LvqzR .JCHpcb{color:#1558\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": ".JCHpcb:hover,.LvqzR .JCHpcb{color:#1558"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Word pronunciation\"]",
+          "targetUrl": "?",
+          "confidence": 0.5,
+          "label": "Word pronunciation"
+        },
+        {
+          "triggerSelector": "text=\"Delete\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Delete"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Google Search\"]",
+          "targetUrl": "?",
+          "confidence": 0.5,
+          "label": "Google Search"
+        },
+        {
+          "triggerSelector": "text=\"Report inappropriate predictions\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Report inappropriate predictions"
+        },
+        {
+          "triggerSelector": "text=\"Settings\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Settings"
+        },
+        {
+          "triggerSelector": "text=\"Dark theme: Off\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Dark theme: Off"
+        }
+      ],
+      "visitCount": 1,
+      "lastVisited": "2026-04-19T17:39:13.838Z"
+    },
+    "https://www.google.com/imghp": {
+      "url": "https://www.google.com/imghp",
+      "pageName": "Imghp",
+      "outgoing": [
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/intl/en_in/ads",
+          "confidence": 0.9,
+          "label": "Advertising"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/services",
+          "confidence": 0.9,
+          "label": "Business"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/preferences",
+          "confidence": 0.9,
+          "label": "Search settings"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/advanced_image_search",
+          "confidence": 0.9,
+          "label": "Advanced search"
+        },
+        {
+          "triggerSelector": "a[href]",
+          "targetUrl": "https://www.google.com/history/optout",
+          "confidence": 0.9,
+          "label": "Search history"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Google apps\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Google apps"
+        },
+        {
+          "triggerSelector": "[aria-label=\"close\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "close"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Clear\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Clear"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Search by voice\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Search by voice"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Search by image\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Search by image"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Close Choose what you’re giving feedback on\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Close Choose what you’re giving feedback on"
+        },
+        {
+          "triggerSelector": "[aria-label=\"See more\"]",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": ".U48fD{-webkit-tap-highlight-color:trans"
+        },
+        {
+          "triggerSelector": "text=\".JCHpcb:hover,.LvqzR .JCHpcb{color:#1558\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": ".JCHpcb:hover,.LvqzR .JCHpcb{color:#1558"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Word pronunciation\"]",
+          "targetUrl": "?",
+          "confidence": 0.5,
+          "label": "Word pronunciation"
+        },
+        {
+          "triggerSelector": "text=\"Delete\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Delete"
+        },
+        {
+          "triggerSelector": "[aria-label=\"Google Search\"]",
+          "targetUrl": "?",
+          "confidence": 0.5,
+          "label": "Google Search"
+        },
+        {
+          "triggerSelector": "text=\"Report inappropriate predictions\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Report inappropriate predictions"
+        },
+        {
+          "triggerSelector": "text=\"Settings\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Settings"
+        },
+        {
+          "triggerSelector": "text=\"Dark theme: Off\"",
+          "targetUrl": "?",
+          "confidence": 0.4,
+          "label": "Dark theme: Off"
+        }
+      ],
+      "visitCount": 1,
+      "lastVisited": "2026-04-19T17:39:16.551Z"
+    }
+  },
+  "entryUrl": "https://www.google.com",
+  "lastUpdated": "2026-04-19T17:39:16.634Z",
+  "source": "live"
+}

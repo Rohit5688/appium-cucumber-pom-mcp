@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ProjectSetupService } from '../services/ProjectSetupService.js';
+import { ProjectSetupService } from '../services/setup/ProjectSetupService.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';

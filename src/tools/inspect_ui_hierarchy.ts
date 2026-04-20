@@ -1,10 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { ExecutionService } from "../services/ExecutionService.js";
+import type { ExecutionService } from "../services/execution/ExecutionService.js";
 import { textResult, truncate, getPlatformSkill } from "./_helpers.js";
 import { toMcpErrorResponse, McpError, McpErrorCode } from "../types/ErrorSystem.js";
-import { PreFlightService } from "../services/PreFlightService.js";
-import { SessionManager } from "../services/SessionManager.js";
+import { PreFlightService } from "../services/setup/PreFlightService.js";
+import { SessionManager } from "../services/execution/SessionManager.js";
 
 export function registerInspectUiHierarchy(
   server: McpServer,

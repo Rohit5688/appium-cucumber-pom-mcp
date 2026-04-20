@@ -2,8 +2,8 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
-import { CredentialService } from '../services/CredentialService.js';
-import { McpConfigService } from '../services/McpConfigService.js';
+import { CredentialService } from '../services/config/CredentialService.js';
+import { McpConfigService } from '../services/config/McpConfigService.js';
 
 describe('CredentialService - manage_users (Issue #14 Fix)', () => {
   const testProjectRoot = path.join(process.cwd(), 'test-proj-manage-users-' + Date.now());

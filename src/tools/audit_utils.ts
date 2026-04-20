@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { UtilAuditService } from "../services/UtilAuditService.js";
+import type { UtilAuditService } from "../services/audit/UtilAuditService.js";
 import { textResult } from "./_helpers.js";
 
 export function registerAuditUtils(

@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import SystemStateService from '../services/SystemStateService.js';
-import * as FileStateModule from '../services/FileStateService.js';
+import SystemStateService from '../services/system/SystemStateService.js';
+import * as FileStateModule from '../services/io/FileStateService.js';
 
 describe('SystemStateService integration', () => {
   it('should integrate with mocked AppiumSessionService and FileStateService and report state', async () => {

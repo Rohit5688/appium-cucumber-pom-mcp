@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { EnvironmentCheckService } from "../services/EnvironmentCheckService.js";
+import type { EnvironmentCheckService } from "../services/setup/EnvironmentCheckService.js";
 import { textResult, truncate } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { NavigationGraphService } from "../services/NavigationGraphService.js";
+import { NavigationGraphService } from "../services/nav/NavigationGraphService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { textResult } from "./_helpers.js";
 

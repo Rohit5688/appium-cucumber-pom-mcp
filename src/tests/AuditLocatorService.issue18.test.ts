@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { AuditLocatorService } from '../services/AuditLocatorService.js';
+import { AuditLocatorService } from '../services/audit/AuditLocatorService.js';
 
 /**
  * Issue #18 Tests: YAML Parser Misses `id=`, CSS Class, and `#id` Selector Types

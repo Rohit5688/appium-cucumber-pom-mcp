@@ -1,13 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
 import { APPFORGE_VERSION } from "./version.js";
 import { Logger } from "./utils/Logger.js";
 import { Metrics } from "./utils/Metrics.js";
-import { TokenBudgetService } from "./services/TokenBudgetService.js";
-import { ObservabilityService } from "./services/ObservabilityService.js";
-import { StructuralBrainService } from "./services/StructuralBrainService.js";
+import { TokenBudgetService } from "./services/config/TokenBudgetService.js";
+import { ObservabilityService } from "./services/analysis/ObservabilityService.js";
+import { StructuralBrainService } from "./services/analysis/StructuralBrainService.js";
 // ServiceContainer — resolves all services with correct dep injection (Concern 1)
 import "./container/registrations.js"; // side-effect: registers all factories
 import { container } from "./container/ServiceContainer.js";
@@ -186,25 +186,24 @@ class AppForgeServer {
         const args = process.argv.slice(2);
         const transportFlag = args.findIndex(a => a === '--transport');
         const transportType = transportFlag !== -1 ? args[transportFlag + 1] : 'stdio';
-        if (transportType === 'sse') {
+        if (transportType === 'sse' || transportType === 'http') {
             const portFlag = args.findIndex(a => a === '--port');
             const port = portFlag !== -1 ? parseInt(args[portFlag + 1] || '3100', 10) : 3100;
             const app = express();
-            let sseTransport;
-            app.get('/sse', async (req, res) => {
-                sseTransport = new SSEServerTransport('/message', res);
-                await this.server.connect(sseTransport);
-            });
-            app.post('/message', async (req, res) => {
-                if (sseTransport) {
-                    await sseTransport.handlePostMessage(req, res);
-                }
-                else {
-                    res.status(500).send('SSE transport not connected');
-                }
+            app.use(express.json());
+            app.post('/mcp', async (req, res) => {
+                // Stateless: fresh transport per request (replaces deprecated SSEServerTransport)
+                const transport = new StreamableHTTPServerTransport({
+                    sessionIdGenerator: undefined, // stateless mode
+                });
+                res.on('close', () => {
+                    transport.close();
+                });
+                await this.server.connect(transport);
+                await transport.handleRequest(req, res, req.body);
             });
             app.listen(port, () => {
-                Logger.info("AppForge MCP Server started", { transport: "sse", version: APPFORGE_VERSION });
+                Logger.info("AppForge MCP Server started", { transport: "streamable-http", version: APPFORGE_VERSION });
             });
         }
         else {

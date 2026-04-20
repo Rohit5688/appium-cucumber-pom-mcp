@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
 import * as path from 'path';
 import * as fs from 'fs';
-import { FileWriterService } from '../services/FileWriterService.js';
+import { FileWriterService } from '../services/io/FileWriterService.js';
 import { validateFilePath } from '../utils/SecurityUtils.js';
 /**
  * CB-2 Security Tests: Directory Traversal Prevention in File Paths

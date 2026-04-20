@@ -1,12 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { SelfHealingService } from "../services/SelfHealingService.js";
+import type { SelfHealingService } from "../services/execution/SelfHealingService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
 import { toMcpErrorResponse, McpError, McpErrorCode } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
-import { PreFlightService } from "../services/PreFlightService.js";
-import { SessionManager } from "../services/SessionManager.js";
+import { PreFlightService } from "../services/setup/PreFlightService.js";
+import { SessionManager } from "../services/execution/SessionManager.js";
 
 export function registerVerifySelector(
   server: McpServer,

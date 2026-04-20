@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ExecutionService } from '../services/ExecutionService.js';
+import { ExecutionService } from '../services/execution/ExecutionService.js';
 
 describe('ExecutionService - Issue #17: Input Validation', () => {
   const executionService = new ExecutionService();

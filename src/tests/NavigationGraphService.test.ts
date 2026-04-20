@@ -2,8 +2,8 @@ import { describe, test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import { NavigationGraphService } from '../services/NavigationGraphService.js';
-import type { NavigationPath, ElementInfo } from '../services/NavigationGraphService.js';
+import { NavigationGraphService } from '../services/nav/NavigationGraphService.js';
+import type { NavigationPath, ElementInfo } from '../services/nav/NavigationGraphService.js';
 
 describe('NavigationGraphService - P2 Enhancement 3: Test Coverage', () => {
   const testProjectRoot = path.join(process.cwd(), 'test-nav-project-' + Date.now());

@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs/promises';
-import { UtilAuditService } from '../services/UtilAuditService.js';
+import { UtilAuditService } from '../services/audit/UtilAuditService.js';
 /**
  * Issue #20: audit_utils Only Scans src/utils and src/pages, Misses Project-Root-Level utils/ Directory
  *

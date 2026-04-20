@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { RefactoringService } from '../services/RefactoringService.js';
-import type { CodebaseAnalysisResult } from '../services/CodebaseAnalyzerService.js';
+import { RefactoringService } from '../services/test/RefactoringService.js';
+import type { CodebaseAnalysisResult } from '../services/analysis/CodebaseAnalyzerService.js';
 
 /**
  * Issue #12 Tests: `suggest_refactorings` false positive detection

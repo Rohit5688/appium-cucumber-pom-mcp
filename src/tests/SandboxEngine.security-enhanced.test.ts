@@ -10,8 +10,8 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { executeSandbox } from '../services/SandboxEngine.js';
-import type { SandboxApiRegistry } from '../services/SandboxEngine.js';
+import { executeSandbox } from '../services/execution/SandboxEngine.js';
+import type { SandboxApiRegistry } from '../services/execution/SandboxEngine.js';
 
 describe('SandboxEngine Enhanced Security Tests', () => {
   it('MUST NOT follow symlinks when listing files (symlink defense)', async () => {

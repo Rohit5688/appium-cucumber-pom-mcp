@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "entries": {
+    "input[name=\"q\"]": {
+      "selector": "input[name=\"q\"]",
+      "tag": "",
+      "id": "",
+      "text": "",
+      "hierarchy": "",
+      "visualHash": "c65f37b2cb1a",
+      "lastSeen": "2026-04-19T17:38:58.435Z",
+      "healCount": 0
+    }
+  }
+}

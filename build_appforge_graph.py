@@ -15,8 +15,25 @@ def run():
     code_files = []
     for f in detection.get('files', {}).get('code', []):
         path = Path(f)
+        
+        # Focus strictly on the 'src' directory to avoid noise
+        if 'src' not in path.parts:
+            continue
+            
+        # Exclude tests and interfaces to eliminate purely structural or redundant node gaps
+        if 'tests' in path.parts or 'interfaces' in path.parts:
+            continue
+            
+        if path.name.endswith('.test.ts') or path.name.endswith('.spec.ts'):
+            continue
+            
+        # Exclude TypeScript declarations to prevent disconnected thin communities
+        if path.name.endswith('.d.ts'):
+            continue
+            
         if path.is_dir():
-            code_files.extend(collect_files(path))
+            collected = [p for p in collect_files(path) if not p.name.endswith('.d.ts')]
+            code_files.extend(collected)
         else:
             code_files.append(path)
             

@@ -1,4 +1,4 @@
-import { ContextManager } from '../services/ContextManager.js';
+import { ContextManager } from '../services/system/ContextManager.js';
 
 const ctx = ContextManager.getInstance();
 ctx.reset();

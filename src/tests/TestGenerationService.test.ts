@@ -1,10 +1,10 @@
 import { test, describe } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { TestGenerationService } from '../services/TestGenerationService.js';
-import { GeneratedCodeValidator } from '../services/GeneratedCodeValidator.js';
-import { HybridPromptEngine } from '../services/HybridPromptEngine.js';
-import type { McpConfig } from '../services/McpConfigService.js';
-import type { CodebaseAnalysisResult } from '../services/CodebaseAnalyzerService.js';
+import { TestGenerationService } from '../services/generation/TestGenerationService.js';
+import { GeneratedCodeValidator } from '../services/generation/GeneratedCodeValidator.js';
+import { HybridPromptEngine } from '../services/generation/HybridPromptEngine.js';
+import type { McpConfig } from '../services/config/McpConfigService.js';
+import type { CodebaseAnalysisResult } from '../services/analysis/CodebaseAnalyzerService.js';
 
 describe('TestGenerationService — Issue #11 Fix Validation', () => {
   const service = new TestGenerationService();

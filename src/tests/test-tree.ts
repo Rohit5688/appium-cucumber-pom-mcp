@@ -1,4 +1,4 @@
-import { MobileSmartTreeService } from '../services/MobileSmartTreeService.js';
+import { MobileSmartTreeService } from '../services/execution/MobileSmartTreeService.js';
 
 const sampleXml = `
 <hierarchy>

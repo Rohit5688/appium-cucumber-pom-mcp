@@ -1,10 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { SessionManager } from "../services/SessionManager.js";
-import { ContextManager } from '../services/ContextManager.js';
+import type { SessionManager } from "../services/execution/SessionManager.js";
+import { ContextManager } from '../services/system/ContextManager.js';
 import { textResult } from "./_helpers.js";
-import { SelfHealingService } from '../services/SelfHealingService.js';
-import { TokenBudgetService } from '../services/TokenBudgetService.js';
+import { SelfHealingService } from '../services/execution/SelfHealingService.js';
+import { TokenBudgetService } from '../services/config/TokenBudgetService.js';
 import { toMcpErrorResponse } from '../types/ErrorSystem.js';
 
 export function registerStartAppiumSession(

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { SessionManager } from "../services/SessionManager.js";
+import type { SessionManager } from "../services/execution/SessionManager.js";
 import { textResult } from "./_helpers.js";
 
 export function registerGetSessionHealth(

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { BugReportService } from "../services/BugReportService.js";
+import type { BugReportService } from "../services/collaboration/BugReportService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
 import { McpError, McpErrorCode, toMcpErrorResponse } from "../types/ErrorSystem.js";

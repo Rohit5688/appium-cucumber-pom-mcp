@@ -1,8 +1,8 @@
 import { test, describe } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { TestGenerationService } from '../services/TestGenerationService.js';
-import { GeneratedCodeValidator } from '../services/GeneratedCodeValidator.js';
-import { HybridPromptEngine } from '../services/HybridPromptEngine.js';
+import { TestGenerationService } from '../services/generation/TestGenerationService.js';
+import { GeneratedCodeValidator } from '../services/generation/GeneratedCodeValidator.js';
+import { HybridPromptEngine } from '../services/generation/HybridPromptEngine.js';
 describe('TestGenerationService — Issue #11 Fix Validation', () => {
     const service = new TestGenerationService();
     const mockConfig = {

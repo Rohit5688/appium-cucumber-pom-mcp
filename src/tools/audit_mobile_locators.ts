@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import path from 'path';
-import type { McpConfigService } from "../services/McpConfigService.js";
-import type { AuditLocatorService } from "../services/AuditLocatorService.js";
+import type { McpConfigService } from "../services/config/McpConfigService.js";
+import type { AuditLocatorService } from "../services/audit/AuditLocatorService.js";
 import { textResult, truncate, assertNotPlaywrightProject } from "./_helpers.js";
 import { McpErrors } from "../types/ErrorSystem.js";
 

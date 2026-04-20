@@ -3,9 +3,9 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { CodebaseAnalyzerService } from '../services/CodebaseAnalyzerService.js';
-import { McpConfigService } from '../services/McpConfigService.js';
-import { RefactoringService } from '../services/RefactoringService.js';
+import { CodebaseAnalyzerService } from '../services/analysis/CodebaseAnalyzerService.js';
+import { McpConfigService } from '../services/config/McpConfigService.js';
+import { RefactoringService } from '../services/test/RefactoringService.js';
 
 /**
  * Issue #13 Tests: `suggest_refactorings` must respect mcp-config.json directory paths

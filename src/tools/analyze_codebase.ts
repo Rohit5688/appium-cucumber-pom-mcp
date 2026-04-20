@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { McpConfigService } from "../services/McpConfigService.js";
-import type { CodebaseAnalyzerService } from "../services/CodebaseAnalyzerService.js";
+import type { McpConfigService } from "../services/config/McpConfigService.js";
+import type { CodebaseAnalyzerService } from "../services/analysis/CodebaseAnalyzerService.js";
 import { textResult, truncate } from "./_helpers.js";
 
 export function registerAnalyzeCodebase(
