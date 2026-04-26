@@ -18,11 +18,11 @@ export function registerGenerateCucumberPom(
     "generate_cucumber_pom",
     {
       title: "Generate Cucumber POM",
-      description: `TRIGGER: User requests test creation OR automation for feature OR coverage gap
+      description: `TRIGGER: Call AFTER capturing screenXml via get_page_source or screenshot. Generates Cucumber POM for mobile.
 RETURNS: Generation prompt with existing steps/page objects/utilities/patterns
 NEXT: LLM generates code → validate_and_write → run_cucumber_test
 COST: Medium (5-15 files, ~300-500 tokens)
-ERROR_HANDLING: Returns prompt even if no page objects exist. Throws if projectRoot invalid.
+ERROR_HANDLING: Warns if no screenXml provided — pass UI dump for accurate element IDs.
 
 Loads: existing steps, page objects, utilities, learned patterns, platform skills.
 
@@ -43,6 +43,17 @@ OUTPUT: Ack (≤10 words), proceed.`,
 
       if (analysis.existingPageObjects.length === 0) {
         Logger.warn(`No page objects detected in ${paths.pagesRoot}. Proceeding with fresh generation.`);
+      }
+
+      // Fix-B2: Gate for fast models — warn when no screen context is provided
+      if (!args.screenXml && !args.screenshotBase64) {
+        Logger.warn(
+          `[CONTEXT MISSING] No screenXml or screenshotBase64 provided for "${args.projectRoot}".\n` +
+          `For accurate element IDs, capture UI dump first:\n` +
+          `  → Use get_page_source to get screenXml from the running device\n` +
+          `  → Or take a screenshot and pass screenshotBase64\n` +
+          `Proceeding without screen context produces guessed XPath selectors that fail at runtime.`
+        );
       }
 
       const learningPrompt = learningService.getKnowledgePromptInjection(
