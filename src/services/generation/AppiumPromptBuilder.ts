@@ -172,12 +172,15 @@ ${schemaHint ? `- Schema Hint: ${schemaHint}` : ''}
       ? '{ "path": "locators/example.yaml", "content": "..." }'
       : '{ "path": "pages/ExamplePage.ts", "content": "..." }';
     return `
+⚡⚡ **[PRE-GENERATION MANDATES — READ BEFORE WRITING ANY CODE]**
+1. Import \`Given\`, \`When\`, \`Then\`, \`Before\`, \`After\` ONLY from **\`@wdio/cucumber-framework\`** — NEVER from \`@cucumber/cucumber\`.
+2. Use ONLY WebdriverIO with \`$()\` selectors and Appium locator strategies. Do NOT import Playwright, TestForge, or web-testing fixtures.
+3. BasePage strategy for THIS project: see ## PROJECT CONFIGURATION below. Do NOT override it.
+4. **[PHASE 4 — SERIALIZE LARGE GENERATIONS]**: If generating a large Page Object AND complex step definitions simultaneously, you MUST do it in two turns: (a) generate & write \`jsonPageObjects\` first, wait for compilation success, (b) THEN generate \`.feature\` and \`.steps.ts\` files.
+──────────────────────────────────────────────────────────────────────────
+
 You are an expert Mobile Automation Engineer specializing in **Appium + WebdriverIO + @wdio/cucumber-framework** BDD testing.
 Generate a COMPLETE Appium/WebdriverIO Cucumber POM test suite from this plain English request:
-
-⚠️ **CRITICAL CONSTRAINT**: This project uses **ONLY WebdriverIO** with \`driver.$()\` selectors and **Appium** locator strategies. Use \`@wdio/globals\`, \`import { $ }\`, and Appium strategies (accessibility-id, resource-id, xpath). Do NOT import web testing libraries, page objects, or fixtures from other frameworks.
-
-⚠️ **IMPORT CONVENTION (Appium 3 / WDIO v9)**: Step definitions and hooks MUST import \`Given\`, \`When\`, \`Then\`, \`Before\`, \`After\` from **\`@wdio/cucumber-framework\`**, NOT from \`@cucumber/cucumber\`. The \`@cucumber/cucumber\` package is an internal bundled dependency of \`@wdio/cucumber-framework\` and must NOT be imported directly.
 
 "${testDescription}"
 ${testName ? `Test Name: "${testName}"` : ''}
@@ -201,11 +204,15 @@ ${credentialsInstruction}
 1. **Happy Path**: Implement the primary user flow.
 2. **Negative Scenarios**: Suggest/implement at least one failure path (e.g. invalid login, empty fields).
 3. **Accessibility**: Include steps to verify significant elements have TalkBack/VoiceOver labels.
-4. **[PHASE 4: STATE-MACHINE MICRO-PROMPTING]**: If this request requires generating a very large Page Object AND complex step definitions simultaneously across multiple files, you MUST serialize your work. Generate and invoke \`validate_and_write\` for ONLY the \`jsonPageObjects\` first. Wait for the compilation success response before generating the \`.feature\` and \`.steps.ts\` files in a subsequent attempt. Do NOT overwhelm your context window.
 
+## PROJECT CONFIGURATION
 ${codegenContext}
 
-## EXISTING CODE (REUSE THESE -- DO NOT DUPLICATE)
+${this.getArchitectureRules(analysis, platform)}
+
+${learningPrompt ?? ''}
+
+## EXISTING CODE (REUSE THESE — DO NOT DUPLICATE)
 ${conflictsWarning}
 ${aliasesWarning}
 ${knownScreenMap}
@@ -221,10 +228,6 @@ ${existingUtilsSummary}
 ${navigationContext}
 
 ${hybridBlock}
-
-${this.getArchitectureRules(analysis, platform)}
-
-${learningPrompt ?? ''}
 
 ## OUTPUT FORMAT (JSON ONLY)
 
@@ -327,19 +330,19 @@ This project uses BOTH Page Object classes AND YAML locator files. Follow the EX
 ## STRICT RULES - PAGE OBJECT MODEL (Detected: ${arch})
 
 1. **BDD Triad**: Generate a Gherkin \`.feature\` file, a \`.steps.ts\` file, and a \`.page.ts\` file.
-2. **Strict POM**: ALL locators and driver commands belong ONLY inside Page Object methods. Step definitions MUST call page methods only.
-3. **Page Classes extend BasePage**: Import and extend \`BasePage\` from \`../pages/BasePage\`.
-4. **Locators**: Use accessibility-id (\`~id\`) as the PRIMARY strategy. Fall back to \`resource-id\` or \`xpath\` only when necessary.
+2. **Strict POM**: ALL locators and driver commands belong ONLY inside Page Object methods — accessed via ActionUtils (see Rule 7). Step definitions MUST call page methods only — NEVER call \`$()\` or \`driver\` directly in step files.
+3. **Page Classes**: Follow the BasePage strategy declared in ## PROJECT CONFIGURATION above — do NOT override it. Do NOT hardcode \`extends BasePage\` if the project uses compose or custom strategy.
+4. **Locators**: Use accessibility-id (\`~id\`) as the PRIMARY strategy. Fall back to \`resource-id\` or \`xpath\` only when \`inspect_ui_hierarchy\` confirms no accessibility-id exists.
 5. **Reuse**: If an existing step or page method matches, DO NOT create a new one.
 6. **Mobile Gestures**: Import \`MobileGestures\` from \`../utils/MobileGestures\` for swipe, longPress, scrollToText, handleAlert.
-7. **Action Utilities**: Import \`ActionUtils\` from \`../utils/ActionUtils\` for all element interactions: \`ActionUtils.tap(selector)\`, \`ActionUtils.type(selector, text)\`, \`ActionUtils.clear(selector)\`, \`ActionUtils.tapByText(text)\`, \`ActionUtils.tapByIndex(selector, n)\`, \`ActionUtils.tapAndWait(tap, waitFor)\`, \`ActionUtils.hideKeyboard()\`, \`ActionUtils.tapBack()\`. Do NOT call \`$(selector).click()\` or \`$(selector).setValue()\` directly inside Page Objects — always go through ActionUtils.
+7. **Action Utilities — The ONLY Approved Driver Layer**: Import \`ActionUtils\` from \`../utils/ActionUtils\` for ALL element interactions. \`ActionUtils\` IS the approved way to call the WebdriverIO driver — it wraps \`$()\` internally. API: \`ActionUtils.tap(selector)\`, \`.type(selector, text)\`, \`.clear(selector)\`, \`.tapByText(text)\`, \`.tapByIndex(selector, n)\`, \`.tapAndWait(tap, waitFor)\`, \`.hideKeyboard()\`, \`.tapBack()\`. Do NOT call \`$(selector).click()\` or \`$(selector).setValue()\` directly.
 8. **API Mocking**: If the test requires specific backend state, use \`MockServer\` from \`../utils/MockServer\`.
 9. **Tags**: Add appropriate tags (\`@smoke\`, \`@android\`, \`@ios\`, \`@regression\`).
 10. **Data-Driven**: If the scenario involves multiple users/values, use a Scenario Outline with Examples.
 11. **WebView Screens**: Use \`this.switchToWebView()\` before interacting with web elements and \`this.switchToNativeContext()\` to return to native.
 12. **App Lifecycle**: Use \`this.openDeepLink(url)\` for direct navigation. Use \`this.handlePermissionDialog(accept)\` for system popups.
-13. **TSConfig Autowiring**: If your implementation creates a NEW top-level architectural directory (e.g., \`models/\`, \`types/\`, \`helpers/\`), you MUST also actively update \`tsconfig.json\` in the target project via standard file editing tools. You must append the corresponding path alias (e.g., \`"@models/*": ["./models/*"]\`) to \`compilerOptions.paths\`, and ENSURE your newly generated TypeScript files strictly use that alias in their imports.
-14. **No Inline Comments**: DO NOT include any inline comments (\`//\` or \`/* */\`) in generated code arrays. This inflates completion tokens unnecessarily. Code should be self-documenting.
+13. **TSConfig Autowiring**: If your implementation creates a NEW top-level architectural directory (e.g., \`models/\`, \`types/\`, \`helpers/\`), update \`tsconfig.json\` to add the corresponding path alias and use that alias in all generated imports.
+14. **No Inline Comments**: DO NOT include any inline comments (\`//\` or \`/* */\`) in generated code arrays. Code is self-documenting.
 ${envStrategyRule}
 ${platform === 'both' ? `
 ## CROSS-PLATFORM RULES (platform: both)
