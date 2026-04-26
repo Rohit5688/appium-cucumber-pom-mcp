@@ -11,19 +11,15 @@ export function registerCheckTestStatus(
     "check_test_status",
     {
       title: "Check Test Status",
-      description: `POLL A RUNNING TEST JOB. Use after run_cucumber_test returns a jobId to check whether the tests have finished.
+      description: `TRIGGER: Poll a running test job after run_cucumber_test.
+RETURNS: { found, job: { jobId, status, startedAt, completedAt?, result? } }
+NEXT: If status="running" → wait. If "completed"/"failed" → read result and call self_heal_test if needed.
+COST: Low (~50-100 tokens per poll)
+ERROR_HANDLING: Standard
 
-How to use:
-1. Call run_cucumber_test (returns { status: "started", jobId: "job_..." })
-2. Call check_test_status with that jobId and waitSeconds: 30
-3. If status is still "running", call again with waitSeconds: 25 (must stay under 55s per call)
-4. When status is "completed" or "failed", read the result and call self_heal_test if needed
+⚙️ SERVER-SIDE SLEEP: When waitSeconds > 0 and the job is still running, the server will sleep that many seconds before responding — so a single call is efficient and won't spin-loop. Must stay under 55s per call.
 
-⚙️ SERVER-SIDE SLEEP: When waitSeconds > 0 and the job is still running, the server will sleep that many seconds before responding — so a single call is efficient and won't spin-loop.
-
-Returns: { found, job: { jobId, status, startedAt, completedAt?, result? } }
-
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+OUTPUT: Ack (<= 10 words), proceed.`,
       inputSchema: z.object({
         jobId: z.string().describe("The jobId returned by run_cucumber_test."),
         waitSeconds: z.number().min(0).max(55).default(0).describe(

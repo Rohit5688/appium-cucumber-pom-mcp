@@ -11,9 +11,15 @@ export function registerAuditUtils(
     "audit_utils",
     {
       title: "Audit Utils",
-      description: `CHECK UTILITY COVERAGE. Use when the user asks 'what helpers are missing / check my utilities / what Appium methods are not wrapped'. Scans for implementations of essential Appium wrappers and reports gaps. Returns: { coveragePercent, missing[], actionableSuggestions[] }.
+      description: `TRIGGER: Check for missing Appium API surface wrappers.
+RETURNS: Report of missing utils helper methods with count of implemented vs expected actions.
+NEXT: Implement missing helpers → Ensure custom wrapper coverage.
+COST: Low (~100-200 tokens)
+ERROR_HANDLING: Standard
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Scans the utils layer to report missing helper methods. Custom-wrapper-aware.
+
+OUTPUT: Ack (<= 10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         customWrapperPackage: z.string().optional()

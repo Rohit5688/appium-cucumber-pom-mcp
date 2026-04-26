@@ -12,11 +12,15 @@ export function registerManageUsers(
     "manage_users",
     {
       title: "Manage Users",
-      description: `MANAGE TEST USERS. Use when the user wants to add or view test account credentials for different environments (staging, prod). Stores users with roles in users.{env}.json. Generates a typed getUser() helper. Returns: list of users on read, confirmation on write.
+      description: `TRIGGER: Manage multi-environment test users.
+RETURNS: User list (list) | Updated roles config (add-role) | Scaffolded users file (scaffold).
+NEXT: Verify user roles exist → Reference in test steps via getUser() helper.
+COST: Low (~50-100 tokens)
+ERROR_HANDLING: Throws McpErrors.projectValidationFailed on invalid config.
 
-NOTE: This tool may now surface validation/warning conditions by throwing McpErrors.projectValidationFailed (instead of returning an error JSON). Callers should catch exceptions rather than parsing JSON output to detect validation failures.
+Stores users with roles in users.{env}.json. Generates a typed getUser() helper.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (<= 10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         operation: z.enum(["read", "write"]),

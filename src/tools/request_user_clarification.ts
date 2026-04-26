@@ -12,7 +12,13 @@ export function registerRequestUserClarification(
     "request_user_clarification",
     {
       title: "Request User Clarification",
-      description: `Requests structured clarification from the user. Use when the agent finds ambiguity that cannot be resolved autonomously.
+      description: `TRIGGER: CRITICAL — Call when you encounter an architectural ambiguity or missing requirement.
+RETURNS: SYSTEM HALT directive — blocks execution until user answers.
+NEXT: Wait for user answer → Incorporate their response into the plan.
+COST: Low (~50 tokens)
+ERROR_HANDLING: Always halts — throws to surface question to user.
+
+Requests structured clarification from the user. Use when the agent finds ambiguity that cannot be resolved autonomously.
 
 WHEN TO USE:
 - Found multiple matching elements with no clear priority

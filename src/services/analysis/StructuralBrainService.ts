@@ -21,32 +21,21 @@ export interface GodNode {
  * Configuration stored at: .AppForge/structural-brain.json
  */
 export class StructuralBrainService {
-  private static instance: StructuralBrainService;
-
   /** Minimum import count to qualify as a god node */
   private readonly GOD_NODE_THRESHOLD = 5;
   private readonly CRITICAL_THRESHOLD = 15;
 
-  /** Project root used for scans (set on scanProject) */
-  private projectRoot?: string;
-
   private readonly mcpConfigService = new McpConfigService();
 
-  /** Dynamic brain file path (depends on projectRoot when set) */
   private get brainFile(): string {
-    return path.join(this.projectRoot || process.cwd(), '.AppForge', 'structural-brain.json');
+    return path.join(this.projectRoot, '.AppForge', 'structural-brain.json');
   }
 
   private godNodes: GodNode[] = [];
   private lastScanTime: number = 0;
   private readonly SCAN_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-  public static getInstance(): StructuralBrainService {
-    if (!StructuralBrainService.instance) {
-      StructuralBrainService.instance = new StructuralBrainService();
-    }
-    return StructuralBrainService.instance;
-  }
+  constructor(private readonly projectRoot: string) {}
 
   /**
    * Scans the project's src/ directory to build the import graph.
@@ -54,9 +43,7 @@ export class StructuralBrainService {
    *
    * Results are cached to disk for re-use across sessions.
    */
-  public async scanProject(projectRoot?: string, srcDir?: string): Promise<GodNode[]> {
-    // Set project root for dynamic paths and brain file location
-    this.projectRoot = projectRoot || process.cwd();
+  public async scanProject(srcDir?: string): Promise<GodNode[]> {
 
     // Return cached result if fresh
     if (this.godNodes.length > 0 && (Date.now() - this.lastScanTime) < this.SCAN_CACHE_TTL_MS) {

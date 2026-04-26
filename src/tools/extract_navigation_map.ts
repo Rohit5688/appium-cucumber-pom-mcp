@@ -3,7 +3,7 @@ import { z } from "zod";
 import { NavigationGraphService } from "../services/nav/NavigationGraphService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { McpError, McpErrorCode, toMcpErrorResponse } from "../types/ErrorSystem.js";
+import { McpError, McpErrorCode } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerExtractNavigationMap(
@@ -14,7 +14,12 @@ export function registerExtractNavigationMap(
     "extract_navigation_map",
     {
       title: "Extract Navigation Map",
-      description: `EXTRACT APP NAVIGATION FLOW. Use when the user says 'understand the app flow / map the navigation / how do I get to X screen'. Analyzes existing step definitions, page objects, and test flows to build a navigation graph. Helps LLMs understand multi-screen app navigation patterns for intelligent test generation. Returns: { navigationMap: graph of screen connections, reusableFlows: common navigation paths, suggestions: how to reuse existing navigation steps }.
+      description: `TRIGGER: Map the app / discover nav / crawl the site
+RETURNS: { navigationMap: graph of screen connections, reusableFlows: common navigation paths, suggestions: how to reuse existing navigation steps }
+NEXT: export_navigation_map to view diagram
+COST: Medium (static analysis, ~200-500 tokens)
+
+Analyzes existing step definitions, page objects, and test flows to build a navigation graph. Helps LLMs understand multi-screen app navigation patterns for intelligent test generation.
 
 OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({
@@ -43,9 +48,9 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
             options: err.options ?? []
           };
           const mcpErr = new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'extract_navigation_map', cause: new Error(JSON.stringify(details)) });
-          return toMcpErrorResponse(mcpErr, 'extract_navigation_map');
+          throw mcpErr;
         }
-        return toMcpErrorResponse(err, 'extract_navigation_map');
+        throw err;
       }
     }
   );

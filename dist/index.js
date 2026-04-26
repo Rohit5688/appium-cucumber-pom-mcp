@@ -7,7 +7,6 @@ import { Logger } from "./utils/Logger.js";
 import { Metrics } from "./utils/Metrics.js";
 import { TokenBudgetService } from "./services/config/TokenBudgetService.js";
 import { ObservabilityService } from "./services/analysis/ObservabilityService.js";
-import { StructuralBrainService } from "./services/analysis/StructuralBrainService.js";
 // ServiceContainer — resolves all services with correct dep injection (Concern 1)
 import "./container/registrations.js"; // side-effect: registers all factories
 import { container } from "./container/ServiceContainer.js";
@@ -52,10 +51,9 @@ import { registerCheckAppiumReady } from './tools/check_appium_ready.js';
 import { registerScanStructuralBrain } from './tools/scan_structural_brain.js';
 import { registerCreateTestAtomically } from './tools/create_test_atomically.js';
 import { registerHealAndVerifyAtomically } from './tools/heal_and_verify_atomically.js';
-// Initialize at startup (background scan)
-StructuralBrainService.getInstance().scanProject().catch(() => {
-    // Non-fatal — warnings just won't be available
-});
+import { registerDiffUiState } from './tools/diff_ui_state.js';
+import { registerNavigateToScreen } from './tools/navigate_to_screen.js';
+import { registerGetDeviceContext } from './tools/get_device_context.js';
 /** Extract a safe summary (non-PII, size-limited) for logging */
 function summarize(result) {
     if (!result)
@@ -152,7 +150,7 @@ class AppForgeServer {
         registerValidateAndWrite(this.server, this.fileWriterService);
         registerRunCucumberTest(this.server, this.executionService);
         registerCheckTestStatus(this.server, this.executionService);
-        registerInspectUiHierarchy(this.server, this.executionService);
+        registerInspectUiHierarchy(this.server, this.executionService, this.navigationGraphServices);
         registerSelfHealTest(this.server, this.selfHealingService, this.configService, this.sessionManager);
         registerSetCredentials(this.server, this.credentialService);
         registerManageUsers(this.server, this.credentialService);
@@ -181,6 +179,10 @@ class AppForgeServer {
         // Orchestrator tools (atomic multi-step operations)
         registerCreateTestAtomically(this.server, this.orchestrationService);
         registerHealAndVerifyAtomically(this.server, this.orchestrationService);
+        // State analysis tools
+        registerDiffUiState(this.server, this.executionService);
+        registerNavigateToScreen(this.server, this.navigationGraphServices);
+        registerGetDeviceContext(this.server, this.sessionManager);
     }
     async run() {
         const args = process.argv.slice(2);

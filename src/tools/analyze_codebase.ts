@@ -13,9 +13,15 @@ export function registerAnalyzeCodebase(
     "analyze_codebase",
     {
       title: "Analyze Codebase",
-      description: `⚠️ TOKEN-INTENSIVE — ONLY FOR TINY PROJECTS (<5 files). Reads every source file to extract existing steps, page objects, and utilities for reuse in code generation. For ANY real project, use execute_sandbox_code (Turbo Mode) instead — it uses 98% fewer tokens and returns only the data you request. Returns: { existingSteps[], existingPageObjects[], existingUtils[] }.
+      description: `TRIGGER: Scan existing codebase structure before generating code. FOR TINY PROJECTS (<5 files) ONLY.
+RETURNS: { existingSteps[], existingPageObjects[], existingUtils[] }
+NEXT: Use results to inform test generation → Call generate_cucumber_pom.
+COST: High (reads ALL source files — use execute_sandbox_code for large projects, 98% fewer tokens)
+ERROR_HANDLING: Standard
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Analyzes the codebase using AST. Only use this for very small projects (< 5 files). FOR LARGE PROJECTS, ALWAYS USE 'execute_sandbox_code' (Turbo Mode) instead.
+
+OUTPUT: Ack (<= 10 words), proceed.`,
       inputSchema: z.object({ projectRoot: z.string() }),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false }
     },

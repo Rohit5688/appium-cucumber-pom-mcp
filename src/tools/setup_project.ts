@@ -14,7 +14,13 @@ export function registerSetupProject(
     "setup_project",
     {
       title: "Setup Project",
-      description: `FIRST-TIME SETUP. Use when starting a brand-new mobile automation project. TWO-PHASE PROCESS:
+      description: `TRIGGER: First time setting up a new AppForge environment.
+RETURNS: Setup completion report — files created, npm packages installed, mcp-config.json written.
+NEXT: Edit mcp-config.json to set app paths → Call check_environment to verify.
+COST: High (installs npm packages + creates project structure, ~500-2000 tokens)
+ERROR_HANDLING: Standard
+
+FIRST-TIME SETUP. Use when starting a brand-new mobile automation project. TWO-PHASE PROCESS:
 
 PHASE 1: First call creates mcp-config.json template with CONFIGURE_ME placeholders. STOP and wait for user to manually fill required fields.
 

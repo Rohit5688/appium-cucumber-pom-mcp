@@ -71,6 +71,31 @@ const RETRYABLE_CODES = new Set<McpErrorCode>([
 
 // ─── McpError class ───────────────────────────────────────────────────────────
 
+function getDefaultSuggestedTools(code: McpErrorCode): string[] | undefined {
+  switch (code) {
+    case McpErrorCode.FILE_MODIFIED_EXTERNAL:
+      return ['execute_sandbox_code'];
+    case McpErrorCode.FILE_NOT_FOUND:
+      return ['execute_sandbox_code'];
+    case McpErrorCode.SESSION_NOT_FOUND:
+    case McpErrorCode.SESSION_TIMEOUT:
+    case McpErrorCode.APPIUM_NOT_REACHABLE:
+    case McpErrorCode.DEVICE_NOT_CONNECTED:
+      return ['start_session'];
+    case McpErrorCode.MISSING_CONFIG:
+    case McpErrorCode.CONFIG_VALIDATION_FAILED:
+      return ['manage_config'];
+    case McpErrorCode.PROJECT_VALIDATION_FAILED:
+      return ['execute_sandbox_code', 'audit_locators', 'scan_structural_brain'];
+    case McpErrorCode.SANDBOX_API_FAILED:
+      return ['execute_sandbox_code'];
+    case McpErrorCode.TEST_EXECUTION_FAILED:
+      return ['self_heal_test'];
+    default:
+      return undefined;
+  }
+}
+
 export class McpError extends Error {
   public readonly code: McpErrorCode;
   public readonly retryable: boolean;
@@ -80,6 +105,7 @@ export class McpError extends Error {
   public readonly suggestedNextTools?: string[];
   public readonly autoFixAvailable?: boolean;
   public readonly autoFixCommand?: string;
+  public readonly file?: string;
 
   constructor(
     message: string,
@@ -91,6 +117,7 @@ export class McpError extends Error {
       suggestedNextTools?: string[];
       autoFixAvailable?: boolean;
       autoFixCommand?: string;
+      file?: string;
     }
   ) {
     super(message);
@@ -100,9 +127,10 @@ export class McpError extends Error {
     this.toolName = options?.toolName;
     this.cause = options?.cause;
     this.timestamp = new Date().toISOString();
-    this.suggestedNextTools = options?.suggestedNextTools;
+    this.suggestedNextTools = options?.suggestedNextTools || getDefaultSuggestedTools(code);
     this.autoFixAvailable = options?.autoFixAvailable;
     this.autoFixCommand = options?.autoFixCommand;
+    this.file = options?.file;
   }
 
   /** Serialize to MCP-compatible JSON-RPC error object */
@@ -110,6 +138,7 @@ export class McpError extends Error {
     const detail = [
       `[${this.code}] ${this.message}`,
       this.toolName ? `Tool: ${this.toolName}` : null,
+      this.file ? `File: ${this.file}` : null,
       this.retryable ? 'Retryable: yes' : 'Retryable: no',
       this.suggestedNextTools ? `Next: ${this.suggestedNextTools.join(', ')}` : null,
       this.autoFixAvailable ? `Auto-fix: ${this.autoFixCommand ?? '<command unavailable>'}` : null,
@@ -130,75 +159,78 @@ export class McpError extends Error {
 // ─── Factory helpers ──────────────────────────────────────────────────────────
 
 export const McpErrors = {
-  sessionNotFound: (sessionId: string, toolName?: string) =>
-    new McpError(`No active session found: ${sessionId}. Start a session first.`, McpErrorCode.SESSION_NOT_FOUND, { toolName }),
+  sessionNotFound: (sessionId: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`No active session found: ${sessionId}. Start a session first.`, McpErrorCode.SESSION_NOT_FOUND, { toolName, ...opts }),
 
-  sessionTimeout: (toolName?: string) =>
-    new McpError('Appium session timed out. Restart the session.', McpErrorCode.SESSION_TIMEOUT, { toolName }),
+  sessionTimeout: (toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError('Appium session timed out. Restart the session.', McpErrorCode.SESSION_TIMEOUT, { toolName, ...opts }),
 
-  fileNotFound: (filePath: string, toolName?: string) =>
-    new McpError(`File not found: ${filePath}`, McpErrorCode.FILE_NOT_FOUND, { toolName }),
+  fileNotFound: (filePath: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`File not found: ${filePath}`, McpErrorCode.FILE_NOT_FOUND, { toolName, file: filePath, ...opts }),
 
-  permissionDenied: (filePath: string, toolName?: string) =>
-    new McpError(`Permission denied: ${filePath}`, McpErrorCode.PERMISSION_DENIED, { toolName }),
+  permissionDenied: (filePath: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Permission denied: ${filePath}`, McpErrorCode.PERMISSION_DENIED, { toolName, file: filePath, ...opts }),
 
-  binaryFileRejected: (filePath: string, reason: string, toolName?: string) =>
-    new McpError(`Cannot read binary file '${filePath}': ${reason}`, McpErrorCode.BINARY_FILE_REJECTED, { toolName }),
+  binaryFileRejected: (filePath: string, reason: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Cannot read binary file '${filePath}': ${reason}`, McpErrorCode.BINARY_FILE_REJECTED, { toolName, file: filePath, ...opts }),
 
-  fileModifiedExternally: (filePath: string, toolName?: string) =>
-    new McpError(`File was modified externally since last read: ${filePath}. Re-read the file before writing.`, McpErrorCode.FILE_MODIFIED_EXTERNAL, { toolName }),
+  fileModifiedExternally: (filePath: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`File was modified externally since last read: ${filePath}. Re-read the file before writing.`, McpErrorCode.FILE_MODIFIED_EXTERNAL, { toolName, file: filePath, ...opts }),
 
-  schemaValidationFailed: (details: string, toolName?: string) =>
-    new McpError(`Schema validation failed: ${details}`, McpErrorCode.SCHEMA_VALIDATION_FAILED, { toolName }),
+  schemaValidationFailed: (details: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Schema validation failed: ${details}`, McpErrorCode.SCHEMA_VALIDATION_FAILED, { toolName, ...opts }),
 
-  invalidParameter: (param: string, reason: string, toolName?: string) =>
-    new McpError(`Invalid parameter '${param}': ${reason}`, McpErrorCode.INVALID_PARAMETER, { toolName }),
+  invalidParameter: (param: string, reason: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Invalid parameter '${param}': ${reason}`, McpErrorCode.INVALID_PARAMETER, { toolName, ...opts }),
 
-  missingConfig: (configKey: string, toolName?: string) =>
-    new McpError(`Missing required config: ${configKey}. Ensure mcp-config.json is configured.`, McpErrorCode.MISSING_CONFIG, { toolName }),
+  missingConfig: (configKey: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Missing required config: ${configKey}. Ensure mcp-config.json is configured.`, McpErrorCode.MISSING_CONFIG, { toolName, ...opts }),
 
-  appiumNotReachable: (url: string, toolName?: string) =>
-    new McpError(`Appium server not reachable at ${url}. Ensure Appium is running.`, McpErrorCode.APPIUM_NOT_REACHABLE, { toolName }),
+  appiumNotReachable: (url: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Appium server not reachable at ${url}. Ensure Appium is running.`, McpErrorCode.APPIUM_NOT_REACHABLE, { toolName, ...opts }),
 
-  appiumCommandFailed: (command: string, cause?: Error, toolName?: string) =>
-    new McpError(`Appium command failed: ${command}`, McpErrorCode.APPIUM_COMMAND_FAILED, { cause, toolName }),
+  appiumCommandFailed: (command: string, cause?: Error, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string }) =>
+    new McpError(`Appium command failed: ${command}`, McpErrorCode.APPIUM_COMMAND_FAILED, { cause, toolName, ...opts }),
 
-  deviceNotConnected: (deviceName: string, toolName?: string) =>
-    new McpError(`Device not connected: ${deviceName}. Check ADB/device connection.`, McpErrorCode.DEVICE_NOT_CONNECTED, { toolName }),
+  deviceNotConnected: (deviceName: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Device not connected: ${deviceName}. Check ADB/device connection.`, McpErrorCode.DEVICE_NOT_CONNECTED, { toolName, ...opts }),
 
-  maxHealingAttempts: (testPath: string, attempts: number, toolName?: string) =>
-    new McpError(`Max healing attempts (${attempts}) reached for ${testPath}. Manual review required.`, McpErrorCode.MAX_HEALING_ATTEMPTS, { toolName }),
+  maxHealingAttempts: (testPath: string, attempts: number, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Max healing attempts (${attempts}) reached for ${testPath}. Manual review required.`, McpErrorCode.MAX_HEALING_ATTEMPTS, { toolName, file: testPath, ...opts }),
 
-  shellInjectionDetected: (pattern: string, toolName?: string) =>
-    new McpError(`Shell injection pattern detected: '${pattern}'. Command blocked.`, McpErrorCode.SHELL_INJECTION_DETECTED, { toolName }),
+  shellInjectionDetected: (pattern: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Shell injection pattern detected: '${pattern}'. Command blocked.`, McpErrorCode.SHELL_INJECTION_DETECTED, { toolName, ...opts }),
 
   // New error factories
-  configValidationFailed: (details: string, toolName?: string) =>
-    new McpError(`Configuration validation failed: ${details}`, McpErrorCode.CONFIG_VALIDATION_FAILED, { toolName }),
+  configValidationFailed: (details: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Configuration validation failed: ${details}`, McpErrorCode.CONFIG_VALIDATION_FAILED, { toolName, ...opts }),
 
-  invalidTimeout: (value: any, toolName?: string) =>
-    new McpError(`Invalid timeout value: ${value}`, McpErrorCode.INVALID_TIMEOUT, { toolName }),
+  invalidTimeout: (value: any, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Invalid timeout value: ${value}`, McpErrorCode.INVALID_TIMEOUT, { toolName, ...opts }),
 
-  invalidExecutable: (exe: string, toolName?: string) =>
-    new McpError(`Invalid executable: ${exe}`, McpErrorCode.INVALID_EXECUTABLE, { toolName }),
+  invalidExecutable: (exe: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Invalid executable: ${exe}`, McpErrorCode.INVALID_EXECUTABLE, { toolName, file: exe, ...opts }),
 
-  invalidCredential: (reason: string, toolName?: string) =>
-    new McpError(`Invalid credential: ${reason}`, McpErrorCode.INVALID_CREDENTIAL, { toolName }),
+  invalidCredential: (reason: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Invalid credential: ${reason}`, McpErrorCode.INVALID_CREDENTIAL, { toolName, ...opts }),
 
-  sandboxApiFailed: (details: string, cause?: Error, toolName?: string) =>
-    new McpError(`Sandbox API failed: ${details}`, McpErrorCode.SANDBOX_API_FAILED, { cause, toolName }),
+  sandboxApiFailed: (details: string, cause?: Error, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string }) =>
+    new McpError(`Sandbox API failed: ${details}`, McpErrorCode.SANDBOX_API_FAILED, { cause, toolName, ...opts }),
 
-  projectValidationFailed: (details: string, toolName?: string) =>
-    new McpError(`Project validation failed: ${details}`, McpErrorCode.PROJECT_VALIDATION_FAILED, { toolName }),
+  projectValidationFailed: (details: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Project validation failed: ${details}`, McpErrorCode.PROJECT_VALIDATION_FAILED, { toolName, ...opts }),
 
-  testExecutionFailed: (details: string, toolName?: string) =>
-    new McpError(`Test execution failed: ${details}`, McpErrorCode.TEST_EXECUTION_FAILED, { toolName }),
+  testExecutionFailed: (details: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Test execution failed: ${details}`, McpErrorCode.TEST_EXECUTION_FAILED, { toolName, ...opts }),
   
-  fileOperationFailed: (details: string, cause?: Error, toolName?: string) =>
-    new McpError(`File operation failed: ${details}`, McpErrorCode.FILE_OPERATION_FAILED, { cause, toolName }),
+  fileOperationFailed: (details: string, cause?: Error, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string }) =>
+    new McpError(`File operation failed: ${details}`, McpErrorCode.FILE_OPERATION_FAILED, { cause, toolName, ...opts }),
 
-  stringNotFound: (snippet: string, toolName?: string) =>
-    new McpError(`String not found: ${snippet}`, McpErrorCode.STRING_NOT_FOUND, { toolName }),
+  stringNotFound: (snippet: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`String not found: ${snippet}`, McpErrorCode.STRING_NOT_FOUND, { toolName, ...opts }),
+
+  selfHealFailed: (details: string, toolName?: string, opts?: { suggestedNextTools?: string[]; file?: string; cause?: Error }) =>
+    new McpError(`Self-heal failed: ${details}`, McpErrorCode.TEST_EXECUTION_FAILED, { toolName, ...opts }),
 };
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
@@ -237,7 +269,8 @@ export function toMcpErrorResponse(err: unknown, toolName?: string): { isError: 
         timestamp: mcpErr.timestamp,
         suggestedNextTools: mcpErr.suggestedNextTools,
         autoFixAvailable: mcpErr.autoFixAvailable,
-        autoFixCommand: mcpErr.autoFixCommand
+        autoFixCommand: mcpErr.autoFixCommand,
+        file: mcpErr.file
       }
     };
 

@@ -9,11 +9,17 @@ export function registerCheckAppiumReady(server: McpServer): void {
     "check_appium_ready",
     {
       title: "Check Appium Ready",
-      description: `Checks if Appium server is running and the current session is valid. Use this at the beginning of a test session to verify readiness before running tests.
+      description: `TRIGGER: Before running tests OR when session behaves unexpectedly — verify Appium is alive.
+RETURNS: { ready: boolean, sessionValid: boolean, issues: string[] }. If ready=false → fix issues before proceeding.
+NEXT: If ready=true → run_cucumber_test | If ready=false → restart Appium or call start_appium_session.
+COST: Low (HTTP ping to Appium server, ~50-100 tokens)
+ERROR_HANDLING: Throws if Appium unreachable.
 
-NOTE: This tool surfaces failures by throwing McpErrors (e.g., appiumNotReachable or projectValidationFailed). Callers should catch exceptions rather than relying on returned JSON to detect failures.
+Checks if Appium server is running and the current session is valid. Use at the beginning of a test session to verify readiness before running tests.
 
-OUTPUT INSTRUCTIONS: Display the check results as-is.`,
+OUTPUT INSTRUCTIONS: Do NOT repeat file path or parameters. Acknowledge in <=10 words, then proceed.
+
+NOTE: This tool surfaces failures by throwing McpErrors (e.g., appiumNotReachable or projectValidationFailed). Callers should catch exceptions rather than relying on returned JSON to detect failures.`,
       inputSchema: z.object({
         appiumUrl: z.string().optional().describe('Appium server URL (default: http://127.0.0.1:4723)'),
         projectRoot: z.string().optional().describe('Project root to check for active sessions')
@@ -21,6 +27,7 @@ OUTPUT INSTRUCTIONS: Display the check results as-is.`,
     },
     async (args) => {
       const appiumUrl = args.appiumUrl ?? "http://127.0.0.1:4723";
+      if (!args.projectRoot) console.warn('[check_appium_ready] projectRoot not provided — falling back to process.cwd()');
       const projectRoot = args.projectRoot ?? process.cwd();
       const preFlight = PreFlightService.getInstance();
       

@@ -4,7 +4,7 @@ import type { SelfHealingService } from "../services/execution/SelfHealingServic
 import type { McpConfigService } from "../services/config/McpConfigService.js";
 import type { SessionManager } from "../services/execution/SessionManager.js";
 import { textResult, getPlatformSkill } from "./_helpers.js";
-import { toMcpErrorResponse, McpErrors } from "../types/ErrorSystem.js";
+import { McpErrors } from "../types/ErrorSystem.js";
 import { PreFlightService } from "../services/setup/PreFlightService.js";
 
 export function registerSelfHealTest(
@@ -39,9 +39,9 @@ OUTPUT: Ack (≤10 words), proceed.`,
       let projectRoot = (args as any).projectRoot;
 
       if (!projectRoot) {
-        projectRoot = process.cwd();
-        console.warn('[AppForge] ⚠️ No projectRoot provided and no active session. Using process.cwd() as fallback.');
+        console.warn('[AppForge] ⚠️ self_heal_test: No projectRoot provided. Config-based thresholds will use defaults.');
       }
+
 
       let xmlHierarchy = args.xmlHierarchy as string | undefined;
 
@@ -56,7 +56,11 @@ OUTPUT: Ack (≤10 words), proceed.`,
       }
 
       if (!xmlHierarchy) {
-        return toMcpErrorResponse(new Error('HEAL_BLOCKED: No XML hierarchy available. No live session and no cached XML found. Start a session, navigate to the broken screen, call inspect_ui_hierarchy once, then retry self_heal_test.'), 'self_heal_test');
+        throw McpErrors.selfHealFailed(
+          'No XML hierarchy available. No live session and no cached XML found. Start a session, navigate to the broken screen, call inspect_ui_hierarchy once, then retry self_heal_test.',
+          'self_heal_test',
+          { suggestedNextTools: ['start_appium_session', 'inspect_ui_hierarchy'] }
+        );
       }
 
       // Pre-flight check
@@ -65,7 +69,11 @@ OUTPUT: Ack (≤10 words), proceed.`,
       const report = await preFlight.runChecks('http://127.0.0.1:4723', sessionInfo?.sessionId);
       
       if (!report.allPassed) {
-        return toMcpErrorResponse(new Error(preFlight.formatReport(report)), 'self_heal_test');
+        throw McpErrors.selfHealFailed(
+          preFlight.formatReport(report),
+          'self_heal_test',
+          { suggestedNextTools: ['start_appium_session', 'check_environment'] }
+        );
       }
 
       let confidenceThreshold = 0.7;
@@ -110,7 +118,12 @@ OUTPUT: Ack (≤10 words), proceed.`,
         throw McpErrors.testExecutionFailed('No candidate selectors found for self-healing.', 'self_heal_test');
       }
 
-      return textResult(JSON.stringify(data, null, 2), data);
+      const block = [
+        `[HEAL INSTRUCTION]`,
+        `candidates: ${candidates.length} found`,
+        JSON.stringify({ candidates, promptForLLM: platformContext + healResult.prompt }, null, 2)
+      ].join('\n');
+      return textResult(block, data);
     }
   );
 }

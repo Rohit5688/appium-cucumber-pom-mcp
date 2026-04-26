@@ -14,7 +14,12 @@ export function registerMigrateTest(
     "migrate_test",
     {
       title: "Migrate Test",
-      description: `CONVERT EXISTING TESTS TO APPIUM. Use when the user has Espresso (Java), XCUITest (Swift), or Detox (JavaScript) tests and wants to migrate to Appium + Cucumber POM format. Returns a migration prompt with side-by-side construct mapping.
+      description: `TRIGGER: User has Espresso/XCUITest/Detox tests and wants to migrate to Appium + Cucumber POM.
+RETURNS: Migration prompt with side-by-side construct mapping for the target framework.
+NEXT: Follow returned instructions → Generate migrated test files → validate_and_write.
+COST: Low (~200-500 tokens)
+
+CONVERT EXISTING TESTS TO APPIUM. Use when the user has Espresso (Java), XCUITest (Swift), or Detox (JavaScript) tests and wants to migrate to Appium + Cucumber POM format.
 
 OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({

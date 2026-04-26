@@ -9,7 +9,12 @@ export function registerGetTokenBudget(
     "get_token_budget",
     {
       title: "Get Token Budget",
-      description: `Returns estimated token usage for the current session. Use to check costs and identify token-heavy operations. Returns a formatted report with per-tool breakdown.
+      description: `TRIGGER: User asks 'how many tokens used / check costs / token report'
+RETURNS: Per-tool breakdown of estimated session token usage.
+NEXT: If CRITICAL (>150k tokens), start a new session.
+COST: Low (reads in-memory counters).
+
+Returns estimated token usage for the current session. Use to check costs and identify token-heavy operations.
 
 OUTPUT INSTRUCTIONS: Display the report as-is. Do not add commentary.`,
       inputSchema: z.object({}),

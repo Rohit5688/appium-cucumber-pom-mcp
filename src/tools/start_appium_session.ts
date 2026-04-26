@@ -5,7 +5,7 @@ import { ContextManager } from '../services/system/ContextManager.js';
 import { textResult } from "./_helpers.js";
 import { SelfHealingService } from '../services/execution/SelfHealingService.js';
 import { TokenBudgetService } from '../services/config/TokenBudgetService.js';
-import { toMcpErrorResponse } from '../types/ErrorSystem.js';
+import { toMcpErrorResponse, McpErrors } from '../types/ErrorSystem.js';
 
 export function registerStartAppiumSession(
   server: McpServer,
@@ -73,9 +73,13 @@ OUTPUT: Ack (≤10 words), proceed.`,
           bundleId: sessionInfo.bundleId,
           hint: `✅ Session started on ${sessionInfo.deviceName} (${sessionInfo.platformName}). NEXT: Call inspect_ui_hierarchy (no args) to fetch live XML and see what's on screen.`
         };
-        return textResult(JSON.stringify(data, null, 2), data);
+        const block = `[SESSION STARTED]\n${JSON.stringify(data, null, 2)}\n\n${output}`;
+        return textResult(block, data);
       } catch (error: any) {
-        return toMcpErrorResponse(error, 'start_appium_session');
+        throw McpErrors.sessionTimeout(
+          'start_appium_session',
+          { suggestedNextTools: ['check_environment', 'check_appium_ready'], cause: error instanceof Error ? error : new Error(String(error)) }
+        );
       }
     }
   );

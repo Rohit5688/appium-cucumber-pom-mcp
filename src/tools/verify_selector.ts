@@ -16,9 +16,15 @@ export function registerVerifySelector(
     "verify_selector",
     {
       title: "Verify Selector",
-      description: `TEST A SELECTOR LIVE. Use after self_heal_test returns candidates to confirm a selector works before updating your Page Object. ⚡ REQUIRES ACTIVE SESSION. Returns: { exists, displayed, enabled, tagName, text }. If exists is true and this fixes a broken selector, also pass oldSelector and projectRoot to auto-learn the fix.
+      description: `TRIGGER: Proactively guarantee locators before writing Page Objects.
+RETURNS: { exists: boolean, displayed: boolean, enabled: boolean, tagName: string, text: string } — live verification result.
+NEXT: If valid → Write locator to Page Object | If invalid → Fix selector and retry.
+COST: Low (~50 tokens + live browser query)
+ERROR_HANDLING: Standard
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Tests a CSS/XPath selector LIVE in the persistent browser without running a full script. Pass autoTrain:true to auto-learn the fix after a successful heal. ⚡ REQUIRES ACTIVE SESSION.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file path or parameters. Do NOT summarise what you just did. Acknowledge in <=10 words, then proceed. Keep response under 100 words unless explaining an error.`,
       inputSchema: z.object({
         selector: z.string(),
         projectRoot: z.string().optional(),
@@ -29,6 +35,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
     async (args) => {
       try {
         return await safeExecute(async () => {
+          if (!args.projectRoot) console.warn('[verify_selector] projectRoot not provided — falling back to process.cwd()');
           const projectRoot = args.projectRoot ?? process.cwd();
           
           // Pre-flight check

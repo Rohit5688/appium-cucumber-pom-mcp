@@ -33,7 +33,8 @@ export class PreFlightService {
    */
   public async runChecks(
     appiumUrl: string = 'http://127.0.0.1:4723',
-    sessionId?: string
+    sessionId?: string,
+    projectRoot?: string
   ): Promise<PreFlightReport> {
     const checks: PreFlightCheck[] = [];
 
@@ -60,7 +61,7 @@ export class PreFlightService {
     }
 
     // Check 3: Config file
-    const configCheck = this.checkConfigFile();
+    const configCheck = this.checkConfigFile(projectRoot);
     checks.push(configCheck);
 
     return this.buildReport(checks);
@@ -182,8 +183,9 @@ export class PreFlightService {
     }
   }
 
-  private checkConfigFile(): PreFlightCheck {
-    const configPath = path.join(process.cwd(), 'mcp-config.json');
+  private checkConfigFile(projectRoot?: string): PreFlightCheck {
+    const base = projectRoot || process.cwd();
+    const configPath = path.join(base, 'mcp-config.json');
     const exists = fs.existsSync(configPath);
 
     return {

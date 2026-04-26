@@ -9,7 +9,7 @@ import type { SandboxApiRegistry } from "../services/execution/SandboxEngine.js"
 import { FileStateService } from "../services/io/FileStateService.js";
 import { FileGuard } from "../utils/FileGuard.js";
 import { textResult, truncate } from "./_helpers.js";
-import { toMcpErrorResponse } from "../types/ErrorSystem.js";
+import { toMcpErrorResponse, McpErrors } from "../types/ErrorSystem.js";
 
 export function registerExecuteSandboxCode(
   server: McpServer,
@@ -39,11 +39,11 @@ OUTPUT: Ack (≤10 words), proceed.`,
     async (args) => {
       // Inline validation for required 'script' field
       if (!args.script || args.script === '') {
-        return toMcpErrorResponse(new Error('Missing required argument(s): script'), 'execute_sandbox_code');
+        throw McpErrors.invalidParameter('script', 'Missing required argument: script', 'execute_sandbox_code', { suggestedNextTools: ['execute_sandbox_code'] });
       }
 
       const apiRegistry: SandboxApiRegistry = {
-        analyzeCodebase: async (projectRoot: string, filters?: { type?: 'all'|'pages'|'steps'|'utils'|'features'; searchPattern?: string }) => {
+        analyzeCodebase: async (projectRoot: string, filters?: { type?: 'all' | 'pages' | 'steps' | 'utils' | 'features'; searchPattern?: string }) => {
           const config = configService.read(projectRoot);
           const paths = configService.getPaths(config);
           let customWrapperPackage: string | undefined;
@@ -149,7 +149,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
             }) as string[];
             items = matches.map(m => path.default.relative(absDir, m));
           }
-  
+
           return items.slice(0, MAX_LIST_ITEMS);
         },
 
@@ -292,13 +292,13 @@ OUTPUT: Ack (≤10 words), proceed.`,
             const fullPath = path.default.join(root, fileRel);
             try {
               if (fs.default.statSync(fullPath).isFile()) {
-                 const content = FileGuard.readTextFileSafely(fullPath);
-                 if (content.includes(query)) {
-                   const lines = content.split('\n');
-                   lines.forEach((lineStr, idx) => {
-                     if (lineStr.includes(query)) results.push({ file: fileRel, line: idx + 1, content: lineStr.trim() });
-                   });
-                 }
+                const content = FileGuard.readTextFileSafely(fullPath);
+                if (content.includes(query)) {
+                  const lines = content.split('\n');
+                  lines.forEach((lineStr, idx) => {
+                    if (lineStr.includes(query)) results.push({ file: fileRel, line: idx + 1, content: lineStr.trim() });
+                  });
+                }
               }
             } catch { /* skip */ }
           }
@@ -339,13 +339,13 @@ OUTPUT: Ack (≤10 words), proceed.`,
         parseUiHierarchy: async (xmlStr: string) => {
           const nodes: any[] = [];
           const matches = [...xmlStr.matchAll(/<([a-zA-Z0-9_.-]+)\s+([^>]+)>/g)];
-          for(const match of matches) {
+          for (const match of matches) {
             const tagName = match[1];
             const attrsStr = match[2];
             const attrs: any = {};
             if (attrsStr) {
-               const attrMatches = [...attrsStr.matchAll(/([a-zA-Z0-9_.-]+)="([^"]*)"/g)];
-               for(const a of attrMatches) attrs[a[1]] = a[2];
+              const attrMatches = [...attrsStr.matchAll(/([a-zA-Z0-9_.-]+)="([^"]*)"/g)];
+              for (const a of attrMatches) attrs[a[1]] = a[2];
             }
             if (Object.keys(attrs).length > 0) {
               nodes.push({ type: tagName, ...attrs });
@@ -357,9 +357,9 @@ OUTPUT: Ack (≤10 words), proceed.`,
           const nodes = await apiRegistry.parseUiHierarchy(xmlStr);
           const locators: string[] = [];
           for (const node of nodes) {
-             if (node['resource-id'] && node['resource-id'] !== '') locators.push(`~${node['resource-id']}`);
-             if (node['content-desc'] && node['content-desc'] !== '') locators.push(`@${node['content-desc']}`);
-             if (node['text'] && node['text'] !== '') locators.push(`text=${node['text']}`);
+            if (node['resource-id'] && node['resource-id'] !== '') locators.push(`~${node['resource-id']}`);
+            if (node['content-desc'] && node['content-desc'] !== '') locators.push(`@${node['content-desc']}`);
+            if (node['text'] && node['text'] !== '') locators.push(`text=${node['text']}`);
           }
           return [...new Set(locators)];
         },
@@ -369,11 +369,11 @@ OUTPUT: Ack (≤10 words), proceed.`,
           const latency = [];
           const commands = [];
           for (const line of lines) {
-             if (line.includes('[W]') || line.includes('[E]') || line.includes('Error') || line.includes('Exception')) {
-                errors.push(line.trim());
-             }
-             if (line.includes('duration:')) latency.push(line.trim());
-             if (line.includes('Executing command')) commands.push(line.trim());
+            if (line.includes('[W]') || line.includes('[E]') || line.includes('Error') || line.includes('Exception')) {
+              errors.push(line.trim());
+            }
+            if (line.includes('duration:')) latency.push(line.trim());
+            if (line.includes('Executing command')) commands.push(line.trim());
           }
           return { errors, latency: latency.slice(-20), commands: commands.slice(-20) };
         }
@@ -399,7 +399,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
         const joined = parts.join('\n\n');
         return textResult(truncate(joined, "narrow your script's return value to reduce output"));
       } else {
-        return toMcpErrorResponse(new Error(`SANDBOX ERROR: ${sandboxResult.error}`), 'execute_sandbox_code');
+        throw McpErrors.sandboxApiFailed(`SANDBOX ERROR: ${sandboxResult.error}`, undefined, 'execute_sandbox_code');
       }
     }
   );

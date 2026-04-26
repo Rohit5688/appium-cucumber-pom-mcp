@@ -12,13 +12,14 @@ export function registerExportNavigationMap(
     "export_navigation_map",
     {
       title: "Export Navigation Map",
-      description: `VISUALIZE APP NAVIGATION. Returns the known screen navigation graph as a Mermaid diagram.
+      description: `TRIGGER: Visualize app navigation or static nav analysis
+RETURNS: { diagram: mermaid string, knownScreens: string[], source: static|live|seed }
+NEXT: View diagram or use in generation prompts
+COST: Low (~100-300 tokens)
 
 Automatically performs static analysis of your PageObjects and step definitions to build the map — no active Appium session required. For new projects with no code yet, returns a conceptual seed map based on mcp-config to give the LLM a starting framework.
 
 For richer maps, combine with start_appium_session + inspect_ui_hierarchy to record live screen transitions.
-
-Returns: Mermaid diagram string, known screens, and source mode (static/live/seed).
 
 OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({

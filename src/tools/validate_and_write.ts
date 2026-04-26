@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import * as path from "path";
+import * as fs from "fs";
 import type { FileWriterService } from "../services/io/FileWriterService.js";
 import { textResult } from "./_helpers.js";
 import { StructuralBrainService } from "../services/analysis/StructuralBrainService.js";
@@ -55,7 +57,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }
     },
     async (args) => {
-      const brainService = StructuralBrainService.getInstance();
+      const brainService = new StructuralBrainService(args.projectRoot);
       let totalWarning = '';
       for (const file of args.files) {
         const warning = brainService.formatPreFlightWarning(file.path);
@@ -70,7 +72,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
         for (const stepFile of jsonSteps) {
           const validationErrors = JsonToStepsTranspiler.validate(stepFile);
           if (validationErrors.length > 0) {
-            return textResult(`⚠️ jsonSteps validation failed:\n${validationErrors.join('\n')}`);
+            throw McpErrors.projectValidationFailed(`jsonSteps validation failed:\n${validationErrors.join('\n')}`, 'validate_and_write', { suggestedNextTools: ['validate_and_write'] });
           }
           const generatedContent = JsonToStepsTranspiler.transpile(stepFile);
           filesToProcess.push({
@@ -86,7 +88,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
         for (const poFile of jsonPageObjects) {
           const validationErrors = JsonToPomTranspiler.validate(poFile);
           if (validationErrors.length > 0) {
-            return textResult(`⚠️ jsonPageObjects validation failed:\n${validationErrors.join('\n')}`);
+            throw McpErrors.projectValidationFailed(`jsonPageObjects validation failed:\n${validationErrors.join('\n')}`, 'validate_and_write', { suggestedNextTools: ['validate_and_write'] });
           }
           const generatedContent = JsonToPomTranspiler.transpile(poFile);
           filesToProcess.push({
@@ -137,21 +139,36 @@ OUTPUT: Ack (≤10 words), proceed.`,
 
         // Non-preview behavior: surface structured errors
         if (phase === 'write-to-disk') {
-          throw McpErrors.fileOperationFailed(detail, undefined, toolName);
+          const rejectionMsg = `[REJECTION] Write failed — do NOT retry blindly.\n  Phase: ${phase}\n  Raw error: ${detail}\nNEXT: Fix the flagged file content then call validate_and_write again.`;
+          throw McpErrors.fileOperationFailed(rejectionMsg, undefined, toolName);
         }
 
         if (['security-validation', 'gherkin-validation', 'cross-platform-validation', 'tsc'].includes(phase)) {
-          throw McpErrors.projectValidationFailed(detail, toolName);
+          const rejectionMsg = `[REJECTION] Validation failed — do NOT retry blindly.\n  Phase: ${phase}\n  Raw error: ${detail}\nNEXT: Fix the flagged pattern in generated content then call validate_and_write again.`;
+          throw McpErrors.projectValidationFailed(rejectionMsg, toolName, { suggestedNextTools: ['validate_and_write', 'execute_sandbox_code'] });
         }
 
-        // Fallback to a generic file operation error
-        throw McpErrors.fileOperationFailed(detail, undefined, toolName);
+        // Fallback
+        const rejectionMsg = `[REJECTION] Unexpected failure.\n  Phase: ${phase}\n  Raw error: ${detail}\nNEXT: Call execute_sandbox_code to inspect the project state.`;
+        throw McpErrors.fileOperationFailed(rejectionMsg, undefined, toolName);
       }
 
-      // Success path — return the original service response (possibly modified with warnings)
+      // Success path — build [WRITE DIFF] block and return structured signal
+      const writtenFiles: string[] = resultObj?.filesWritten ?? resultObj?.files ?? [];
+      const diffLines: string[] = ['[WRITE DIFF]'];
+      for (const f of writtenFiles) {
+        const absPath = path.isAbsolute(f) ? f : path.join(args.projectRoot, f);
+        const matchedFile = filesToProcess.find((rf: any) =>
+          path.join(args.projectRoot, rf.path) === absPath || rf.path === f
+        );
+        const newLines = matchedFile ? matchedFile.content.split('\n').length : 0;
+        const existed = fs.existsSync(absPath);
+        diffLines.push(`  ${existed ? '✏️ modified' : '✅ created'} ${f}${newLines > 0 ? ` (${newLines} lines)` : ''}`);
+      }
+      const diffBlock = writtenFiles.length > 0 ? `\n\n${diffLines.join('\n')}` : '';
+
       if (resultObj) {
         if (args.preview) {
-          // Ensure preview responses are standardized
           const payload = {
             preview: true,
             ...resultObj,
@@ -160,10 +177,9 @@ OUTPUT: Ack (≤10 words), proceed.`,
           if (totalWarning && typeof payload === 'object') payload.message = totalWarning + (payload.message || '');
           return textResult(JSON.stringify(payload, null, 2));
         }
-        return textResult(JSON.stringify(resultObj, null, 2));
+        return textResult(JSON.stringify(resultObj, null, 2) + diffBlock + (totalWarning ? `\n\n⚠️ Pre-flight warnings:\n${totalWarning}` : ''));
       }
 
-      // If result was plain string, wrap consistent preview payload when requested
       if (args.preview) {
         return textResult(JSON.stringify({
           preview: true,
@@ -173,7 +189,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
         }, null, 2));
       }
 
-      return textResult(resultString);
+      return textResult(resultString + diffBlock);
     }
   );
 }

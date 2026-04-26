@@ -14,7 +14,13 @@ export function registerGenerateTestDataFactory(
     "generate_test_data_factory",
     {
       title: "Generate Test Data Factory",
-      description: `CREATE FAKE TEST DATA. Use when tests need realistic randomized data or the user says 'generate test data / mock data / create a data factory'. Returns a generation prompt to create a typed Faker.js factory.
+      description: `TRIGGER: Mock backend or entity data. To scaffold typed Faker.js fixtures.
+RETURNS: System instructions for LLM to create a typed Faker.js data factory.
+NEXT: Follow returned instructions → Generate and save factory file.
+COST: Low (~100-200 tokens)
+ERROR_HANDLING: Standard
+
+CREATE FAKE TEST DATA. Use when tests need realistic randomized data or the user says 'generate test data / mock data / create a data factory'. Returns a generation prompt to create a typed Faker.js factory.
 
 OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
       inputSchema: z.object({

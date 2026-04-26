@@ -6,6 +6,41 @@ import { McpErrors } from "../types/ErrorSystem.js";
 import { ShellSecurityEngine } from "../utils/ShellSecurityEngine.js";
 import { EnvironmentCheckService } from "../services/setup/EnvironmentCheckService.js";
 
+/**
+ * Classifies Cucumber/Appium failure output into an actionable [ERROR DNA] block.
+ * Mirrors the TF TestRunnerService.classifyErrorDna taxonomy.
+ */
+function classifyCucumberError(raw: string): string {
+  const rules: Array<{ pattern: RegExp; failureClass: string; reason: string; next: string }> = [
+    {
+      pattern: /no such element|element.*not found|StaleElementReference|selector.*not found|Unable to find element/i,
+      failureClass: 'selector', reason: 'Element not found in current UI hierarchy.', next: 'inspect_ui_hierarchy → self_heal_test'
+    },
+    {
+      pattern: /Cannot find module|SyntaxError|TypeError.*undefined|ReferenceError|is not a function/i,
+      failureClass: 'compile', reason: 'TypeScript/module error — test will not boot.', next: 'Fix imports/types then re-run'
+    },
+    {
+      pattern: /Timeout.*waiting|implicit wait|explicit wait|WebDriverError.*timeout|Command.*timed out/i,
+      failureClass: 'timing', reason: 'Appium command timed out — element may not have rendered.', next: 'Increase timeout or add waitUntil before interaction'
+    },
+    {
+      pattern: /ECONNREFUSED|Appium.*not reachable|Could not start.*session|Failed to connect|No device found/i,
+      failureClass: 'infra', reason: 'Appium/device not reachable.', next: 'check_environment → start_appium_session'
+    },
+    {
+      pattern: /AssertionError|expected.*to (equal|contain|be)|but was|to have text/i,
+      failureClass: 'logic', reason: 'App returned wrong data — not a scripting issue.', next: 'export_bug_report → file as app defect'
+    },
+  ];
+  for (const rule of rules) {
+    if (rule.pattern.test(raw)) {
+      return `\n[ERROR DNA] class: ${rule.failureClass} | reason: ${rule.reason} | next: ${rule.next}`;
+    }
+  }
+  return `\n[ERROR DNA] class: unknown | reason: Could not classify. | next: inspect_ui_hierarchy then self_heal_test`;
+}
+
 export function registerRunCucumberTest(
   server: McpServer,
   executionService: ExecutionService
@@ -150,7 +185,8 @@ OUTPUT: Ack (≤10 words), proceed.`,
 
       if (!result.success) {
         // Include test output in the error details (truncate to keep payload small)
-        const summary = truncate(JSON.stringify({ output: result.output, stats: result.stats }, null, 2));
+        const dnaBlock = classifyCucumberError(result.output || '');
+        const summary = truncate(JSON.stringify({ output: dnaBlock + '\n' + result.output, stats: result.stats }, null, 2));
         throw McpErrors.testExecutionFailed(summary, "run_cucumber_test");
       }
 

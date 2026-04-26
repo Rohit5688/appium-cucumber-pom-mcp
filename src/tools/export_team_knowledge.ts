@@ -11,9 +11,15 @@ export function registerExportTeamKnowledge(
     "export_team_knowledge",
     {
       title: "Export Team Knowledge",
-      description: `EXPORT LEARNED RULES. Generates a human-readable Markdown table of all rules taught via train_on_example. Use to review what the AI knows about your project, onboard new team members, or audit the knowledge base. Returns: Markdown document with all learned rules.
+      description: `TRIGGER: Share the AI's internal knowledge base with the team.
+RETURNS: Path to exported docs/team-knowledge.md Markdown file.
+NEXT: Commit team-knowledge.md to repository → Share learned rules with team.
+COST: Low (~50-100 tokens)
+ERROR_HANDLING: Standard
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Exports the mcp-learning.json brain into a human-readable Markdown file.
+
+OUTPUT: Ack (<= 10 words), proceed.`,
       inputSchema: z.object({ projectRoot: z.string() }),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },

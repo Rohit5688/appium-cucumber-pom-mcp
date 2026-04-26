@@ -11,7 +11,12 @@ export function registerSetCredentials(
     "set_credentials",
     {
       title: "Set Credentials",
-      description: `⚠️ DEPRECATED: Use manage_config({ operation: 'set_credentials', credentials }) instead. This tool will be removed in v2.0.
+      description: `TRIGGER: DEPRECATED — Use manage_config({ operation: 'set_credentials' }) instead.
+RETURNS: .env write confirmation.
+NEXT: Restart session — credentials are loaded from .env at startup.
+COST: Low (~50 tokens)
+
+⚠️ DEPRECATED: Use manage_config({ operation: 'set_credentials', credentials }) instead. This tool will be removed in v2.0.
 
 LEGACY: Stores cloud provider credentials, API keys, or service env vars in the project .env file. Values stored in .env and excluded from git.
 

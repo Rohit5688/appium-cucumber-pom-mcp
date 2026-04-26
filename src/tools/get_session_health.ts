@@ -11,9 +11,14 @@ export function registerGetSessionHealth(
     "get_session_health",
     {
       title: "Get Session Health",
-      description: `GET SESSION METRICS. Use to debug session issues, check connection states, or view active Appium connections. Returns memory, uptime, device caps, and singleton pool metrics.
+      description: `TRIGGER: When debugging session issues, checking connection state, or diagnosing unexpected failures.
+RETURNS: { memory, uptime, deviceCaps, singletonPoolMetrics } — full session diagnostic snapshot.
+NEXT: If unhealthy → call start_appium_session to reset | If healthy → continue test workflow.
+COST: Low (reads in-memory session state, ~50-100 tokens)
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+GET SESSION METRICS. Use to debug session issues, check connection states, or view active Appium connections.
+
+OUTPUT INSTRUCTIONS: Display the report as-is. Do not add commentary.`,
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { BugReportService } from "../services/collaboration/BugReportService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { McpError, McpErrorCode, toMcpErrorResponse } from "../types/ErrorSystem.js";
+import { McpError, McpErrorCode, McpErrors } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerExportBugReport(
@@ -42,10 +42,9 @@ OUTPUT: Ack (≤10 words), proceed.`,
             context: err.context,
             options: err.options ?? []
           };
-          const mcpErr = new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'export_bug_report', cause: new Error(JSON.stringify(details)) });
-          return toMcpErrorResponse(mcpErr, 'export_bug_report');
+          throw new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'export_bug_report', cause: new Error(JSON.stringify(details)) });
         }
-        return toMcpErrorResponse(err, 'export_bug_report');
+        throw McpErrors.testExecutionFailed(`Bug report export failed: ${err instanceof Error ? err.message : String(err)}`, 'export_bug_report', { cause: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   );

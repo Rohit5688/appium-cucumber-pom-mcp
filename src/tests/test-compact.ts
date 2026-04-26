@@ -10,7 +10,8 @@ const mockMap = (name: string, count: number) => ({
   xmlHash: 'abc123',
   elements: Array.from({ length: count }, (_, i) => ({
     ref: `#${i + 1}`, role: 'button' as const, label: `btn-${i}`,
-    locator: `~btn-${i}`, strategy: 'accessibility id' as const, states: ['clickable']
+    locator: `~btn-${i}`, strategy: 'accessibility id' as const,
+    locatorQuality: '✅ stable' as const, states: ['clickable']
   })),
   dehydratedText: '',
   totalElements: count,

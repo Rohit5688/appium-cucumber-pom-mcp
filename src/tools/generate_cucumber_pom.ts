@@ -29,7 +29,7 @@ Loads: existing steps, page objects, utilities, learned patterns, platform skill
 OUTPUT: Ack (≤10 words), proceed.`,
       inputSchema: z.object({
         projectRoot: z.string(),
-        testDescription: z.string(),
+        testDescription: z.string().min(1, "testDescription cannot be empty"),
         testName: z.string().optional(),
         screenXml: z.string().optional(),
         screenshotBase64: z.string().optional()

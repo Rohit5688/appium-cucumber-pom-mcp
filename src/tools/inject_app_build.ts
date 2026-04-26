@@ -11,7 +11,12 @@ export function registerInjectAppBuild(
     "inject_app_build",
     {
       title: "Inject App Build",
-      description: `⚠️ DEPRECATED: Use manage_config({ operation: 'inject_app', platform, appPath }) instead. This tool will be removed in v2.0.
+      description: `TRIGGER: DEPRECATED — Use manage_config({ operation: 'inject_app' }) instead.
+RETURNS: Updated mcp-config.json confirmation.
+NEXT: Call start_appium_session with the new app path.
+COST: Low (~50 tokens)
+
+⚠️ DEPRECATED: Use manage_config({ operation: 'inject_app', platform, appPath }) instead. This tool will be removed in v2.0.
 
 LEGACY: Updates the app path in mcp-config.json for the specified platform. Set forceWrite: true for CI paths where the file does not exist locally yet.
 

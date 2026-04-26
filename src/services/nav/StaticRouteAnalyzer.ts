@@ -16,7 +16,7 @@ export class StaticRouteAnalyzer {
   set mapSource(v) { this.state.mapSource = v; }
   get fileToSignatures() { return this.state.fileToSignatures; }
   set fileToSignatures(v) { this.state.fileToSignatures = v; }
-  get paths() { return this.mcpConfigService.getPaths(this.mcpConfigService.read(process.cwd())); }
+
 
     public async analyzeStepDefinitions(projectRoot: string): Promise<any[]> {
         const stepFiles = this.findStepDefinitionFiles(projectRoot);
@@ -141,8 +141,9 @@ export class StaticRouteAnalyzer {
 
     public findStepDefinitionFiles(projectRoot: string): string[] {
         const files: string[] = [];
-        const stepsRoot = this.paths?.stepsRoot ?? 'src/step-definitions';
-        const locatorsRoot = this.paths?.locatorsRoot ?? 'src/locators';
+        const projectPaths = this.mcpConfigService.getPaths(this.mcpConfigService.read(projectRoot));
+        const stepsRoot = projectPaths?.stepsRoot ?? 'src/step-definitions';
+        const locatorsRoot = projectPaths?.locatorsRoot ?? 'src/locators';
         const candidates = [
                   path.join(projectRoot, stepsRoot),
                   path.join(projectRoot, 'step-definitions'),
@@ -162,7 +163,8 @@ export class StaticRouteAnalyzer {
 
     public findPageObjectFiles(projectRoot: string): string[] {
         const files: string[] = [];
-        const pagesRoot = this.paths?.pagesRoot ?? 'src/pages';
+        const projectPaths = this.mcpConfigService.getPaths(this.mcpConfigService.read(projectRoot));
+        const pagesRoot = projectPaths?.pagesRoot ?? 'src/pages';
         const candidates = [
                   path.join(projectRoot, pagesRoot),
                   path.join(projectRoot, 'pages'),

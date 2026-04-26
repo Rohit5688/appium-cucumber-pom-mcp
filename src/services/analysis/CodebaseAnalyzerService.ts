@@ -407,7 +407,13 @@ export class CodebaseAnalyzerService {
 
     // 4c. Discover existing Env or Config Files
     let rootFiles: string[] = [];
-    try { rootFiles = await fs.readdir(projectRoot); } catch (e) { }
+    try { rootFiles = await fs.readdir(projectRoot); } catch (e: any) {
+      if (e?.code === 'ENOENT') {
+        const { McpErrors } = await import('../../types/ErrorSystem.js');
+        throw McpErrors.fileNotFound(projectRoot);
+      }
+      console.error(`[CodebaseAnalyzer] Failed to read projectRoot "${projectRoot}": ${e?.message ?? e}`);
+    }
     const envFiles = rootFiles.filter(f => f.startsWith('.env') && !f.endsWith('.example'));
     let hasCustomConfigDir = false;
     try {

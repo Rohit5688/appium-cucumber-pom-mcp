@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { OrchestrationService } from "../services/system/OrchestrationService.js";
 import { textResult } from "./_helpers.js";
-import { toMcpErrorResponse } from "../types/ErrorSystem.js";
+import { toMcpErrorResponse, McpErrors } from "../types/ErrorSystem.js";
 
 export function registerCreateTestAtomically(
   server: McpServer,
@@ -12,9 +12,15 @@ export function registerCreateTestAtomically(
     "create_test_atomically",
     {
       title: "Create Test Atomically",
-      description: `WORKFLOW ORCHESTRATOR: Validate → Write test files in one atomic call. Use when you have generated test files and want to write them without manual validation chaining. Validates TypeScript/Gherkin syntax, then writes to disk atomically. Returns: { success: boolean, filesWritten: string[] }. NEXT: run_cucumber_test to verify.
+      description: `TRIGGER: After generating test files in memory — write them without manual validation chaining.
+RETURNS: { success: boolean, filesWritten: string[] }
+NEXT: run_cucumber_test to verify written files pass.
+COST: Low (~100-200 tokens)
+ERROR_HANDLING: Throws on TypeScript/Gherkin syntax validation failure.
 
-OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (≤10 words), then proceed to next step.`,
+Validates TypeScript/Gherkin syntax, then writes to disk atomically in one call.
+
+OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize what you just did. Briefly acknowledge completion (<= 10 words), then proceed to next step.`,
       inputSchema: z.object({
         projectRoot: z.string(),
         generatedFiles: z.array(z.object({
@@ -59,7 +65,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
           for (const stepFile of jsonSteps) {
             const validationErrors = JsonToStepsTranspiler.validate(stepFile);
             if (validationErrors.length > 0) {
-              return textResult(`⚠️ jsonSteps validation failed:\n${validationErrors.join('\n')}`);
+              throw McpErrors.projectValidationFailed(`jsonSteps validation failed:\n${validationErrors.join('\n')}`, 'create_test_atomically', { suggestedNextTools: ['create_test_atomically'] });
             }
             const generatedContent = JsonToStepsTranspiler.transpile(stepFile);
             filesToProcess.push({
@@ -75,7 +81,7 @@ OUTPUT INSTRUCTIONS: Do NOT repeat file paths or parameters. Do NOT summarize wh
           for (const poFile of jsonPageObjects) {
             const validationErrors = JsonToPomTranspiler.validate(poFile);
             if (validationErrors.length > 0) {
-              return textResult(`⚠️ jsonPageObjects validation failed:\n${validationErrors.join('\n')}`);
+              throw McpErrors.projectValidationFailed(`jsonPageObjects validation failed:\n${validationErrors.join('\n')}`, 'create_test_atomically', { suggestedNextTools: ['create_test_atomically'] });
             }
             const generatedContent = JsonToPomTranspiler.transpile(poFile);
             filesToProcess.push({

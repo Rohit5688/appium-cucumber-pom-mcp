@@ -8,24 +8,40 @@ export function registerScanStructuralBrain(server: McpServer): void {
     "scan_structural_brain",
     {
       title: "Scan Structural Brain",
-      description: `Scans the project's import graph to identify god nodes (high-connectivity files). Returns a list of files that are heavily depended upon and require extra caution when editing.
+      description: `TRIGGER: Before editing any file — identify if it's a god node and which files will be directly affected.
+RETURNS: God node list with severity + "editing this affects: [fileA, fileB]" (1-hop only). Safe-to-edit verdict per file.
+NEXT: If target file is a god node → use surgical replace_file_content only, ripple-audit listed dependents after edit.
+COST: Low (reads .AppForge/structural-brain.json cache, ~100-200 tokens)
+ERROR_HANDLING: Standard
 
 OUTPUT INSTRUCTIONS: Display the god node table. Do not add commentary.`,
-      inputSchema: z.object({}),
+      inputSchema: z.object({
+        projectRoot: z.string().describe("Absolute path to the project root to scan.")
+      }),
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
-    async () => {
-      const brainService = StructuralBrainService.getInstance();
+    async (args) => {
+      const brainService = new StructuralBrainService(args.projectRoot);
       brainService.invalidateCache();
       const godNodes = await brainService.scanProject();
 
-      const report = godNodes.length === 0
-        ? 'No god nodes detected. Codebase has healthy decoupling.'
-        : [`God Nodes (${godNodes.length}):\n`, ...godNodes.map(n =>
-            `  ${n.severity === 'critical' ? '🔴' : '🟡'} ${n.file} — ${n.connections} dependents`
-          )].join('\n');
+      if (godNodes.length === 0) {
+        return textResult('No god nodes detected. All files safe to edit freely.');
+      }
 
-      return textResult(report);
+      const lines: string[] = [`God Nodes (${godNodes.length}) — edit with caution:\n`];
+      for (const n of godNodes) {
+        const icon = n.severity === 'critical' ? '🔴' : '🟡';
+        lines.push(`${icon} ${n.file} — ${n.connections} dependents [${n.severity}]`);
+        // 1-hop impact: direct files that import this
+        const affected = (n.importedBy ?? []).slice(0, 10);
+        if (affected.length > 0) {
+          lines.push(`   editing this affects: ${affected.join(', ')}${n.connections > 10 ? ` (+${n.connections - 10} more)` : ''}`);
+        }
+        lines.push('');
+      }
+
+      return textResult(lines.join('\n'));
     }
   );
 }

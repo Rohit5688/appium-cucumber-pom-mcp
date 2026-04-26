@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { CoverageAnalysisService } from "../services/analysis/CoverageAnalysisService.js";
 import { safeExecute } from "../utils/ErrorHandler.js";
 import { ClarificationRequired } from "../utils/Questioner.js";
-import { McpError, McpErrorCode, toMcpErrorResponse } from "../types/ErrorSystem.js";
+import { McpError, McpErrorCode, McpErrors } from "../types/ErrorSystem.js";
 import { textResult } from "./_helpers.js";
 
 export function registerAnalyzeCoverage(
@@ -43,10 +43,9 @@ OUTPUT: Ack (≤10 words), proceed.`,
             context: err.context,
             options: err.options ?? []
           };
-          const mcpErr = new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'analyze_coverage', cause: new Error(JSON.stringify(details)) });
-          return toMcpErrorResponse(mcpErr, 'analyze_coverage');
+          throw new McpError('CLARIFICATION_REQUIRED', McpErrorCode.INVALID_PARAMETER, { toolName: 'analyze_coverage', cause: new Error(JSON.stringify(details)) });
         }
-        return toMcpErrorResponse(err, 'analyze_coverage');
+        throw McpErrors.testExecutionFailed(`Coverage analysis failed: ${err instanceof Error ? err.message : String(err)}`, 'analyze_coverage', { cause: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   );

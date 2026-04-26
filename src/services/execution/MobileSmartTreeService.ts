@@ -10,6 +10,7 @@ export interface ActionElement {
   label: string;            // Best human-readable label (text > contentDesc > resourceId)
   locator: string;          // Best locator in WD format: ~label, id=resourceId, //xpath
   strategy: LocatorStrategy;
+  locatorQuality: '✅ stable' | '⚠️ fragile' | '❌ brittle'; // NEW: ranked for LLM
   states: string[];         // ['clickable', 'editable', 'secure', 'disabled']
   bounds?: { x: number; y: number; width: number; height: number };
 }
@@ -103,7 +104,7 @@ export class MobileSmartTreeService {
       const label = this.getBestLabel(attrs, tagName);
       if (!label || label.length < 1) continue; // Skip unlabeled interactive elements
 
-      const { locator, strategy } = this.getBestLocator(attrs, label, platform);
+      const { locator, strategy, locatorQuality } = this.getBestLocator(attrs, label, platform);
       const role = this.inferRole(tagName, attrs);
       const states = this.getStates(attrs, editable);
 
@@ -113,6 +114,7 @@ export class MobileSmartTreeService {
         label,
         locator,
         strategy,
+        locatorQuality,
         states,
         bounds: this.parseBounds(attrs['bounds']),
       });
@@ -126,17 +128,26 @@ export class MobileSmartTreeService {
    * Format: #ref   role        label                  locator                 [states]
    */
   private buildDehydratedText(elements: ActionElement[], summary: string): string {
-    const header = `UI Action Map — ${summary}\n${'─'.repeat(80)}\n`;
-    const colHeader = `${'Ref'.padEnd(6)}${'Role'.padEnd(12)}${'Label'.padEnd(28)}${'Locator'.padEnd(28)}States\n`;
-    const divider = `${'─'.repeat(80)}\n`;
+    const header = `UI Action Map — ${summary}\n${'─'.repeat(90)}\n`;
+    const colHeader = `${'Ref'.padEnd(6)}${'Role'.padEnd(12)}${'Label'.padEnd(28)}${'Locator'.padEnd(28)}${'Quality'.padEnd(12)}States\n`;
+    const divider = `${'─'.repeat(90)}\n`;
 
     const rows = elements.map(el => {
       const label = el.label.length > 26 ? el.label.substring(0, 24) + '..' : el.label;
       const locator = el.locator.length > 26 ? el.locator.substring(0, 24) + '..' : el.locator;
-      return `${el.ref.padEnd(6)}${el.role.padEnd(12)}${label.padEnd(28)}${locator.padEnd(28)}[${el.states.join(', ')}]`;
+      return `${el.ref.padEnd(6)}${el.role.padEnd(12)}${label.padEnd(28)}${locator.padEnd(28)}${el.locatorQuality.padEnd(12)}[${el.states.join(', ')}]`;
     });
 
-    return header + colHeader + divider + rows.join('\n');
+    // Quality summary block for LLM
+    const stable = elements.filter(e => e.locatorQuality === '✅ stable').length;
+    const fragile = elements.filter(e => e.locatorQuality === '⚠️ fragile').length;
+    const brittle = elements.filter(e => e.locatorQuality === '❌ brittle').length;
+    const qualitySummary =
+      `\n[LOCATOR QUALITY SUMMARY] stable: ${stable} | fragile: ${fragile} | brittle: ${brittle}\n` +
+      (brittle > 0 ? `⚠️ ${brittle} element(s) have coordinate-fallback locators — inspect XML manually or use tap(x,y) with bounds.\n` : '') +
+      (fragile > 0 ? `⚠️ ${fragile} element(s) use UIAutomator/predicate — retest after UI refactor.\n` : '');
+
+    return header + colHeader + divider + rows.join('\n') + qualitySummary;
   }
 
   /** Convert attributes string to key-value map */
@@ -164,54 +175,53 @@ export class MobileSmartTreeService {
     attrs: Record<string, string>,
     label: string,
     platform: Platform
-  ): { locator: string; strategy: LocatorStrategy } {
+  ): { locator: string; strategy: LocatorStrategy; locatorQuality: ActionElement['locatorQuality'] } {
     // Priority 1 (both): accessibility-id / content-desc — most stable, cross-platform
     const contentDesc = attrs['content-desc'] || attrs['accessibilityLabel'];
     if (contentDesc) {
-      return { locator: `~${contentDesc}`, strategy: 'accessibility id' };
+      return { locator: `~${contentDesc}`, strategy: 'accessibility id', locatorQuality: '✅ stable' };
     }
 
     // Priority 2 (Android): resource-id — stable if app doesn't obfuscate IDs
     if (platform === 'android') {
       const resourceId = attrs['resource-id'];
       if (resourceId) {
-        return { locator: `id=${resourceId}`, strategy: 'id' };
+        return { locator: `id=${resourceId}`, strategy: 'id', locatorQuality: '✅ stable' };
       }
     }
 
     // Priority 3 (iOS): name attribute with no content-desc → maps to accessibility-id
-    // iOS UIAutomation uses `name` attr; Appium exposes it as ~name via accessibility-id
     if (platform === 'ios') {
       const iosName = attrs['name'];
       if (iosName && iosName !== label) {
-        return { locator: `~${iosName}`, strategy: 'accessibility id' };
+        return { locator: `~${iosName}`, strategy: 'accessibility id', locatorQuality: '✅ stable' };
       }
     }
 
-    // Priority 4 (Android): visible text via UIAutomator — more reliable than XPath
+    // Priority 4 (Android): visible text via UIAutomator — fragile if text changes
     if (platform === 'android' && label && label !== attrs['resource-id']?.split('/').pop()) {
       return {
         locator: `-android uiautomator:new UiSelector().text("${label.replace(/"/g, '\\"')}")`,
         strategy: '-android uiautomator',
+        locatorQuality: '⚠️ fragile',
       };
     }
 
-    // Priority 5 (iOS): predicate string — label or value text match, namespace-safe
+    // Priority 5 (iOS): predicate string — fragile if text or label changes
     if (platform === 'ios') {
       const iosLabel = attrs['label'] || label;
       if (iosLabel) {
-        // Try label= first (matches accessibility label), then value= for inputs
         const field = attrs['value'] ? 'value' : 'label';
         return {
           locator: `-ios predicate string:${field} == "${iosLabel.replace(/"/g, '\\"')}"`,
           strategy: '-ios predicate string',
+          locatorQuality: '⚠️ fragile',
         };
       }
     }
 
-    // Priority 6: coordinate fallback — last resort, no stable selector available
-    // Bounds are emitted as-is; caller must handle [ coordinate-fallback ] hint
-    return { locator: `[coordinate-fallback: ${attrs['bounds'] ?? 'unknown'}]`, strategy: 'coordinate-fallback' as LocatorStrategy };
+    // Priority 6: coordinate fallback — brittle, breaks on any layout change
+    return { locator: `[coordinate-fallback: ${attrs['bounds'] ?? 'unknown'}]`, strategy: 'coordinate-fallback' as LocatorStrategy, locatorQuality: '❌ brittle' };
   }
 
   private inferRole(tagName: string, attrs: Record<string, string>): ActionElement['role'] {
