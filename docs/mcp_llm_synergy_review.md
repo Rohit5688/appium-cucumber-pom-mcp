@@ -62,3 +62,22 @@ To achieve near-100% reliability, constraints must be enforced at the **Agent Or
 - **Strict Budgeting:** *"Actively monitor `get_token_budget`. If session cost > 100k, STOP."*
 
 The MCP toolkit is no longer the bottleneck. Future instability will stem purely from LLM reasoning limits, which must be governed by strict orchestration rules.
+
+---
+
+## 🔧 PROTOCOL PATCH: Fixing the Remaining 15%
+
+The `setPageRequired` prompt conflict bug (2026-04-27) proved a critical gap:
+> **Even correctly gated conditional logic fails if the section HEADER contradicts the rule BODY.**
+
+The LLM reads the heading (`"Singleton Pattern"`) and anchors on it, then de-prioritizes the conflicting mandate buried 3 lines below. This is an attention-mechanism failure at the prompt architecture level, not a tool failure.
+
+### Mandatory additions to `AppForge Autonomous Agent Protocol`:
+
+1. **Critical Rule Placement:** Any rule marked `CRITICAL`, `MANDATORY`, or `⚡` MUST appear as the **first line** of its section — never as a sub-bullet under a misleading header.
+
+2. **Hard Turn Limits:** *"If you fail to heal a test after 3 attempts, HALT immediately and call `request_user_clarification`. Do NOT retry a fourth time."*
+
+3. **Active Budget Monitoring:** *"After every 5 tool calls, call `get_token_budget`. If session cost > 100k tokens, STOP generating new tests and summarize remaining work for the user."*
+
+4. **Prompt Section Header Law:** Section headers MUST accurately describe the content that follows. A header named `"Pattern X"` must ONLY contain rules for Pattern X — never conditionally mix patterns under a single header.
