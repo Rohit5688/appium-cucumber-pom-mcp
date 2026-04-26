@@ -172,6 +172,14 @@ ${schemaHint ? `- Schema Hint: ${schemaHint}` : ''}
       ? '{ "path": "locators/example.yaml", "content": "..." }'
       : '{ "path": "pages/ExamplePage.ts", "content": "..." }';
     return `
+🚨🚨 **[CRITICAL ANTI-LOOPHOLE MANDATE FOR FAST MODELS]** 🚨🚨
+1. DO NOT BE SNEAKY. Do not look for loopholes in instructions.
+2. Follow the EXACT sequence of instructions given. Do not skip steps.
+3. If a tool output says [HALT], [REJECTION], or [CONTEXT MISSING], you MUST stop and follow the specific corrective action provided.
+4. Do NOT hallucinate tool calls (e.g., claiming you called a tool without actually doing it).
+5. You MUST read and follow ALL rules in this prompt, not just the first few.
+──────────────────────────────────────────────────────────────────────────
+
 ⚡⚡ **[PRE-GENERATION MANDATES — READ BEFORE WRITING ANY CODE]**
 1. Import \`Given\`, \`When\`, \`Then\`, \`Before\`, \`After\` ONLY from **\`@wdio/cucumber-framework\`** — NEVER from \`@cucumber/cucumber\`.
 2. Use ONLY WebdriverIO with \`$()\` selectors and Appium locator strategies. Do NOT import Playwright, TestForge, or web-testing fixtures.
