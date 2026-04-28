@@ -101,28 +101,28 @@ class AppForgeServer {
 
   // All services resolved from the ServiceContainer (Concern 1 fix).
   // Construction order and dependency injection are handled by registrations.ts.
-  private readonly projectSetupService    = container.resolve<ProjectSetupService>('projectSetup');
-  private readonly configService          = container.resolve<McpConfigService>('config');
-  private readonly analyzerService        = container.resolve<CodebaseAnalyzerService>('analyzer');
-  private readonly generationService      = container.resolve<TestGenerationService>('generation');
-  private readonly fileWriterService      = container.resolve<FileWriterService>('fileWriter');
-  private readonly executionService       = container.resolve<ExecutionService>('execution');
-  private readonly selfHealingService     = container.resolve<SelfHealingService>('healing');
-  private readonly credentialService      = container.resolve<CredentialService>('credential');
-  private readonly auditLocatorService    = container.resolve<AuditLocatorService>('auditLocator');
-  private readonly summarySuiteService    = container.resolve<SummarySuiteService>('summarySuite');
+  private readonly projectSetupService = container.resolve<ProjectSetupService>('projectSetup');
+  private readonly configService = container.resolve<McpConfigService>('config');
+  private readonly analyzerService = container.resolve<CodebaseAnalyzerService>('analyzer');
+  private readonly generationService = container.resolve<TestGenerationService>('generation');
+  private readonly fileWriterService = container.resolve<FileWriterService>('fileWriter');
+  private readonly executionService = container.resolve<ExecutionService>('execution');
+  private readonly selfHealingService = container.resolve<SelfHealingService>('healing');
+  private readonly credentialService = container.resolve<CredentialService>('credential');
+  private readonly auditLocatorService = container.resolve<AuditLocatorService>('auditLocator');
+  private readonly summarySuiteService = container.resolve<SummarySuiteService>('summarySuite');
   private readonly environmentCheckService = container.resolve<EnvironmentCheckService>('envCheck');
-  private readonly utilAuditService       = container.resolve<UtilAuditService>('utilAudit');
-  private readonly ciWorkflowService      = container.resolve<CiWorkflowService>('ciWorkflow');
-  private readonly learningService        = container.resolve<LearningService>('learning');
-  private readonly refactoringService     = container.resolve<RefactoringService>('refactoring');
-  private readonly bugReportService       = container.resolve<BugReportService>('bugReport');
-  private readonly testDataService        = container.resolve<TestDataService>('testData');
-  private readonly sessionManager         = container.resolve<SessionManager>('session');
+  private readonly utilAuditService = container.resolve<UtilAuditService>('utilAudit');
+  private readonly ciWorkflowService = container.resolve<CiWorkflowService>('ciWorkflow');
+  private readonly learningService = container.resolve<LearningService>('learning');
+  private readonly refactoringService = container.resolve<RefactoringService>('refactoring');
+  private readonly bugReportService = container.resolve<BugReportService>('bugReport');
+  private readonly testDataService = container.resolve<TestDataService>('testData');
+  private readonly sessionManager = container.resolve<SessionManager>('session');
   private readonly projectMaintenanceService = container.resolve<ProjectMaintenanceService>('projectMaint');
   private readonly coverageAnalysisService = container.resolve<CoverageAnalysisService>('coverage');
-  private readonly migrationService       = container.resolve<MigrationService>('migration');
-  private readonly orchestrationService   = container.resolve<OrchestrationService>('orchestration');
+  private readonly migrationService = container.resolve<MigrationService>('migration');
+  private readonly orchestrationService = container.resolve<OrchestrationService>('orchestration');
 
   // MEMORY LEAK FIX: Per-project pool — not in container (per-project, not global singleton)
   private readonly navigationGraphServices = new Map<string, NavigationGraphService>();
@@ -143,14 +143,14 @@ class AppForgeServer {
       const wrappedHandler = async (args: any, extraOptions?: any) => {
         const startTime = Date.now();
         const traceId = obs.toolStart(name, args ?? {}, undefined);
-        
+
         // Update activity pulse
         this.activityTimestamps.set(name, startTime);
         const lastPulse = Array.from(this.activityTimestamps.values()).sort((a, b) => b - a)[0];
-        
+
         try {
           const result = await handler(args, extraOptions);
-          
+
           const tokenService = TokenBudgetService.getInstance();
           const inputText = JSON.stringify(args ?? '');
           const outputText = JSON.stringify(result ?? '');
@@ -161,7 +161,7 @@ class AppForgeServer {
               result.content.push({ type: 'text', text: `\n⚠️ ${usage.warning}` });
             }
           }
-          
+
           obs.toolEnd(traceId, name, true, summarize(result), startTime);
           return result;
         } catch (err) {
@@ -217,7 +217,7 @@ class AppForgeServer {
     registerGetTokenBudget(this.server);
     registerCheckAppiumReady(this.server);
     registerScanStructuralBrain(this.server);
-    
+
     // Orchestrator tools (atomic multi-step operations)
     registerCreateTestAtomically(this.server, this.orchestrationService);
     registerHealAndVerifyAtomically(this.server, this.orchestrationService);

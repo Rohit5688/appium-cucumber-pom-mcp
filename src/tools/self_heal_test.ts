@@ -3,7 +3,8 @@ import { z } from "zod";
 import type { SelfHealingService } from "../services/execution/SelfHealingService.js";
 import type { McpConfigService } from "../services/config/McpConfigService.js";
 import type { SessionManager } from "../services/execution/SessionManager.js";
-import { textResult, getPlatformSkill } from "./_helpers.js";
+import { textResult, textAndImageResult, getPlatformSkill } from "./_helpers.js";
+
 import { McpErrors } from "../types/ErrorSystem.js";
 import { PreFlightService } from "../services/setup/PreFlightService.js";
 
@@ -123,7 +124,9 @@ OUTPUT: Ack (≤10 words), proceed.`,
         `candidates: ${candidates.length} found`,
         JSON.stringify({ candidates, promptForLLM: platformContext + healResult.prompt }, null, 2)
       ].join('\n');
-      return textResult(block, data);
+      // Return screenshot as ImageContent — lets LLM visually confirm which element is broken
+      return textAndImageResult(block, args.screenshotBase64 as string | undefined, data);
+
     }
   );
 }

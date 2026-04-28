@@ -25,11 +25,14 @@ export class UiHierarchyInspector {
     sessionHistory?: string;
     elementCount: { total: number; interactive: number };
     screenshotPath?: string;
+    screenshotBase64?: string;  // returned for MCP ImageContent (Maestro pattern)
     screenshotSize?: number;
     timestamp: string;
     source: 'provided' | 'live_session';
+    platform: 'android' | 'ios';  // exposed so callers can select correct schema
     rawXml?: string;  // only populated in full mode (for healer tools)
   }> {
+
     let xml = xmlDump ?? '';
     let screenshot = screenshotBase64 ?? '';
     let source: 'provided' | 'live_session' = 'provided';
@@ -60,8 +63,10 @@ export class UiHierarchyInspector {
           snapshot: snapshotLines.join('\n'),
           elementCount: { total: nativeElements.length, interactive: nativeElements.length },
           timestamp: new Date().toISOString(),
-          source: 'live_session'
+          source: 'live_session',
+          platform: (platform === 'ios' ? 'ios' : 'android') as 'android' | 'ios',
         };
+
       }
       // If native query returned 0 results, fall through to full XML snapshot below
     }
@@ -115,12 +120,15 @@ export class UiHierarchyInspector {
       sessionHistory: history || undefined,
       elementCount: { total: actionMap.totalElements, interactive: actionMap.interactiveCount },
       screenshotPath,
+      screenshotBase64: screenshot || undefined,  // return for MCP ImageContent
       screenshotSize,
       timestamp: new Date().toISOString(),
       source,
+      platform: (platformToUse === 'both' ? 'android' : platformToUse) as 'android' | 'ios',
       // Raw XML only for healer tools that explicitly need it
       rawXml: includeRawXml ? xml : undefined
     };
+
   }
 
   /**

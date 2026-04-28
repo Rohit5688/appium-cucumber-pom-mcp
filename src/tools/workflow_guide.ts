@@ -38,7 +38,8 @@ OUTPUT: Ack (≤10 words), proceed.`,
           ]
         },
         write_test: {
-          description: "Generate a new Cucumber BDD test scenario from plain English.",
+          description: "Generate a new Cucumber BDD test scenario from plain English. ATOMICITY RULE: PREFER one generate_cucumber_pom → validate_and_write → run_cucumber_test cycle. AVOID repeated inspect_ui_hierarchy → tap → inspect round trips — each adds latency and state drift. Write the full scenario in one shot, then run it.",
+
           steps: [
             {
               step: 1,
@@ -85,9 +86,10 @@ OUTPUT: Ack (≤10 words), proceed.`,
               onSuccess: "Test complete. Review HTML report at configured reportPath.",
               onFailure: "If 'element not found': call self_heal_test with the error output — it will suggest replacement selectors automatically using cached XML. If 'session expired': restart session and re-run. If 'step not defined': a step in the feature has no matching step definition — add it."
             }
-          ]
+          ],
         },
         run_and_heal: {
+
           description: "Run the test suite and fix any tests failing due to broken selectors.",
           steps: [
             "1. run_cucumber_test — Run all or filtered tests.",
@@ -114,7 +116,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
               step: 2,
               tool: "inspect_ui_hierarchy",
               purpose: "Get snapshot of current screen.",
-              onSuccess: "Use #ref numbers and locators from snapshot in your Page Object.",
+              onSuccess: "Use #ref numbers and locators from snapshot in your Page Object. Re-inspect after every tap or navigation — never assume what the next screen looks like.",
               onFailure: "If session expired between steps: call start_appium_session again. If app crashed: relaunch app manually then retry."
             }
           ]

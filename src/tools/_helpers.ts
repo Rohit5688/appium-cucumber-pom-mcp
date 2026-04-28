@@ -4,6 +4,30 @@ export function textResult(text: string, structured?: Record<string, unknown>) {
   return result;
 }
 
+/**
+ * Returns text + an inline screenshot the LLM can visually inspect.
+ * Mirrors Maestro's take_screenshot pattern: PNG bytes → JPEG base64 → ImageContent.
+ * Falls back to textResult if screenshotBase64 is absent.
+ */
+export function textAndImageResult(
+  text: string,
+  screenshotBase64: string | undefined,
+  structured?: Record<string, unknown>
+) {
+  const content: any[] = [{ type: "text" as const, text }];
+  if (screenshotBase64?.trim()) {
+    content.push({
+      type: "image" as const,
+      data: screenshotBase64,
+      mimeType: "image/png",
+    });
+  }
+  const result: any = { content };
+  if (structured) result.structuredContent = structured;
+  return result;
+}
+
+
 const CHARACTER_LIMIT = 25_000;
 export function truncate(text: string, tip?: string): string {
   if (text.length <= CHARACTER_LIMIT) return text;

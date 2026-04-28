@@ -1,0 +1,127 @@
+# AppForge MCP — LLM Eval Scenarios
+# Tests that the LLM can correctly CALL tools AND USE the output.
+# Run manually: feed each scenario to your LLM client and assert the expected tool call and output usage.
+# Future: automate with ANTHROPIC_API_KEY + a harness script.
+
+version: "1"
+scenarios:
+
+  # ─── inspect_ui_hierarchy ────────────────────────────────────────────────────
+
+  - id: eval-001
+    title: "Inspect screen and pick best locator for Login button"
+    trigger: |
+      A test is failing because the Login button selector is broken.
+      Call inspect_ui_hierarchy (no args, live session) and identify
+      the best locator for the Login button.
+    expected_tool_call:
+      tool: inspect_ui_hierarchy
+      args: {}
+    expected_llm_behavior:
+      - Uses accessibilityId (~Login) if present in [RANKED LOCATORS]
+      - Falls back to resource-id if no accessibilityId
+      - Does NOT use xpath or coordinate-fallback unless all else fails
+      - Does NOT infer text from a screenshot
+
+  - id: eval-002
+    title: "Use format:compact on a large screen"
+    trigger: |
+      The previous inspect_ui_hierarchy call returned >5000 tokens.
+      Re-inspect using the compact format to reduce token usage.
+    expected_tool_call:
+      tool: inspect_ui_hierarchy
+      args:
+        format: compact
+    expected_llm_behavior:
+      - Calls format:'compact' (not default table)
+      - Decodes abbreviated keys using ui_schema.abbreviations
+      - Extracts correct locator from compact tree
+
+  - id: eval-003
+    title: "Use format:yaml when token budget is critical"
+    trigger: |
+      Token budget is below 2000. Inspect the current screen in
+      the most token-efficient format available.
+    expected_tool_call:
+      tool: inspect_ui_hierarchy
+      args:
+        format: yaml
+    expected_llm_behavior:
+      - Chooses format:'yaml' (smallest output)
+      - Still extracts correct locators from YAML structure
+
+  # ─── self_heal_test ──────────────────────────────────────────────────────────
+
+  - id: eval-004
+    title: "Heal a broken 'element not found' failure"
+    trigger: |
+      Test output: "Error: element not found using selector ~Submit"
+      Call self_heal_test and apply the top candidate.
+    expected_tool_call:
+      tool: self_heal_test
+      args:
+        testOutput: "Error: element not found using selector ~Submit"
+    expected_llm_behavior:
+      - Calls self_heal_test (not inspect_ui_hierarchy directly)
+      - Picks highest-confidence candidate from candidates[]
+      - Updates the Page Object with the new selector
+      - Does NOT pick a candidate with confidence < 0.7
+
+  - id: eval-005
+    title: "Full heal cycle: broken selector → passing test"
+    trigger: |
+      A test is failing with 'no such element'. Run the full heal cycle:
+      self_heal_test → verify_selector → update Page Object → run test.
+    expected_tool_sequence:
+      - self_heal_test
+      - verify_selector
+      - validate_and_write
+      - run_cucumber_test
+    expected_llm_behavior:
+      - Does NOT skip verify_selector
+      - Does NOT rewrite the entire Page Object — only updates the broken selector
+      - Confirms the test passes before finishing
+
+  # ─── write_test workflow ─────────────────────────────────────────────────────
+
+  - id: eval-006
+    title: "Atomic test generation — one shot, not micro-cycles"
+    trigger: |
+      Write a test for the login flow: enter username, enter password, tap Login, assert Dashboard appears.
+    expected_tool_sequence:
+      - inspect_ui_hierarchy          # one inspect only
+      - generate_cucumber_pom
+      - validate_and_write
+      - run_cucumber_test
+    expected_llm_behavior:
+      - Does NOT call inspect_ui_hierarchy more than once
+      - Does NOT call run_cucumber_test with individual taps
+      - Writes the full scenario in ONE generate_cucumber_pom call
+      - Covers all 4 steps in one feature file
+
+  - id: eval-007
+    title: "Re-inspect after navigation — never guess screen state"
+    trigger: |
+      After tapping the Login button, what is on the screen?
+    expected_tool_call:
+      tool: inspect_ui_hierarchy
+      args: {}
+    expected_llm_behavior:
+      - Calls inspect_ui_hierarchy after navigation (not uses memory of previous screen)
+      - Does NOT assume Dashboard has appeared without inspecting
+
+  # ─── platform guard ──────────────────────────────────────────────────────────
+
+  - id: eval-008
+    title: "Reject AppForge tools on a Playwright project"
+    trigger: |
+      projectRoot: D:/TestforgeDemo (contains playwright.config.ts)
+      Call inspect_ui_hierarchy.
+    expected_tool_call:
+      tool: inspect_ui_hierarchy
+      args:
+        projectRoot: "D:/TestforgeDemo"
+    expected_llm_behavior:
+      - Receives 🚫 WRONG MCP SERVER error
+      - Switches to TestForge MCP server
+      - Does NOT retry with AppForge tools

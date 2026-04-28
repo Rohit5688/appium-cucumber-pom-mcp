@@ -83,8 +83,8 @@ export class TokenBudgetService {
     const statusEmoji = this.sessionTokens > this.CRITICAL_THRESHOLD
       ? '🔴'
       : this.sessionTokens > this.WARNING_THRESHOLD
-      ? '🟡'
-      : '🟢';
+        ? '🟡'
+        : '🟢';
 
     return {
       sessionTokens: this.sessionTokens,

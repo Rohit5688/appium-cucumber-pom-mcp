@@ -28,6 +28,59 @@ export interface ActionMap {
   interactiveCount: number; // Count of elements in this map
 }
 
+// ── Compact Tree Types & Schemas ─────────────────────────────────────────────
+
+export interface CompactNode {
+  b?: string;        // bounds
+  txt?: string;      // text / label
+  rid?: string;      // resource-id (package prefix stripped)
+  a11y?: string;     // content-desc / accessibilityLabel
+  hint?: string;     // hintText
+  val?: string;      // value (iOS slider, text-field current value)
+  cls?: string;      // class / type (short name only)
+  clickable?: true;  // omitted when false (default)
+  enabled?: false;   // omitted when true (default)
+  checked?: true;    // omitted when false
+  focused?: true;    // omitted when false
+  selected?: true;   // omitted when false
+  scroll?: true;     // omitted when false
+  c?: CompactNode[]; // children
+}
+
+interface RawXmlNode {
+  tag: string;
+  attrs: Record<string, string>;
+  children: RawXmlNode[];
+}
+
+const ANDROID_COMPACT_SCHEMA = {
+  platform: 'android',
+  abbreviations: {
+    b: 'bounds', txt: 'text', rid: 'resource-id (pkg prefix stripped)',
+    a11y: 'content-desc', hint: 'hintText', cls: 'class (short)',
+    scroll: 'scrollable', c: 'children',
+  },
+  defaults: {
+    enabled: true, clickable: false, focused: false,
+    selected: false, checked: false, scrollable: false,
+  },
+} as const;
+
+const IOS_COMPACT_SCHEMA = {
+  platform: 'ios',
+  abbreviations: {
+    b: 'bounds', txt: 'label/text', rid: 'name / identifier',
+    a11y: 'accessibilityLabel', val: 'value', hint: 'hintText',
+    cls: 'type (short)', scroll: 'scrollable', c: 'children',
+  },
+  defaults: {
+    enabled: true, focused: false, selected: false,
+    checked: false, scrollable: false,
+  },
+} as const;
+
+type CompactSchema = typeof ANDROID_COMPACT_SCHEMA | typeof IOS_COMPACT_SCHEMA;
+
 /**
  * MobileSmartTreeService — reduces raw Appium XML to minimal action maps.
  *
@@ -135,7 +188,13 @@ export class MobileSmartTreeService {
     const rows = elements.map(el => {
       const label = el.label.length > 26 ? el.label.substring(0, 24) + '..' : el.label;
       const locator = el.locator.length > 26 ? el.locator.substring(0, 24) + '..' : el.locator;
-      return `${el.ref.padEnd(6)}${el.role.padEnd(12)}${label.padEnd(28)}${locator.padEnd(28)}${el.locatorQuality.padEnd(12)}[${el.states.join(', ')}]`;
+      let row = `${el.ref.padEnd(6)}${el.role.padEnd(12)}${label.padEnd(28)}${locator.padEnd(28)}${el.locatorQuality.padEnd(12)}[${el.states.join(', ')}]`;
+      // P4: Spatial hint for brittle elements — LLM alternative when no stable locator exists
+      if (el.locatorQuality === '\u274c brittle' && el.bounds) {
+        const { x, y, width, height } = el.bounds;
+        row += `\n      \u26a0\ufe0f  No stable locator. Bounds: [${x},${y}][${x + width},${y + height}] — use coordinate tap or $('~ParentContainer').getChildByIndex(n).`;
+      }
+      return row;
     });
 
     // Quality summary block for LLM
@@ -264,5 +323,245 @@ export class MobileSmartTreeService {
   /** Clear the scan cache (e.g., on screen navigation) */
   public clearCache(): void {
     this.scanCache.clear();
+  }
+
+  // ── Compact Tree API (Maestro-style) ─────────────────────────────────────────
+
+  /**
+   * Builds a Maestro-style compact tree from raw Appium XML.
+   * Preserves parent-child structure while pruning zero-size nodes and empty containers.
+   * Aliases long attribute names to single-letter keys and injects a ui_schema
+   * so the LLM can decode them. Typically 60-80% fewer tokens than the flat table.
+   *
+   * Fixes the existing regex bug: the flat-table extractor only matches self-closing
+   * tags (<Tag />). This parser also handles container tags (<Tag>...</Tag>),
+   * which are common in Android hierarchy XML.
+   */
+  public buildCompactTree(
+    xml: string,
+    platform: Platform,
+  ): { ui_schema: CompactSchema; elements: CompactNode[] } {
+    const cacheKey = `compact:${this.hashXml(xml)}`;
+    const cached = this.scanCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL_MS) {
+      return cached.map as unknown as { ui_schema: CompactSchema; elements: CompactNode[] };
+    }
+    const roots = this.parseXmlToTree(xml);
+    const elements = this.buildCompactFromRaw(roots, platform);
+    const schema: CompactSchema = platform === 'ios' ? IOS_COMPACT_SCHEMA : ANDROID_COMPACT_SCHEMA;
+    const result = { ui_schema: schema, elements };
+    // Reuse existing scanCache with TTL
+    this.scanCache.set(cacheKey, { map: result as unknown as ActionMap, timestamp: Date.now() });
+    return result;
+  }
+
+  /**
+   * Stack-based XML parser. Handles both self-closing (<Tag />) and
+   * container (<Tag>...</Tag>) elements — fixing the gap in the regex-only approach.
+   */
+  private parseXmlToTree(xml: string): RawXmlNode[] {
+    const roots: RawXmlNode[] = [];
+    const stack: RawXmlNode[] = [];
+    const tagRe = /<(\/?)([ A-Za-z][A-Za-z0-9._-]*)(\s[^>]*)?(\/?)?>/g;
+    let m: RegExpExecArray | null;
+    while ((m = tagRe.exec(xml)) !== null) {
+      const [, isClosing, tag, rawAttrs, selfClose] = m;
+      if (isClosing === '/') {
+        if (stack.length > 0) stack.pop();
+        continue;
+      }
+      const node: RawXmlNode = { tag, attrs: this.parseAttributes(rawAttrs ?? ''), children: [] };
+      if (stack.length > 0) stack[stack.length - 1].children.push(node);
+      else roots.push(node);
+      if (selfClose !== '/') stack.push(node);
+    }
+    return roots;
+  }
+
+  /** Recursively convert raw XML nodes to compact aliased nodes, pruning noise. */
+  private buildCompactFromRaw(nodes: RawXmlNode[], platform: Platform): CompactNode[] {
+    const results: CompactNode[] = [];
+    for (const node of nodes) {
+      if (this.compactHasZeroSize(node.attrs)) {
+        results.push(...this.buildCompactFromRaw(node.children, platform));
+        continue;
+      }
+      if (!this.compactHasContent(node.attrs, platform)) {
+        results.push(...this.buildCompactFromRaw(node.children, platform));
+        continue;
+      }
+      const compact = this.rawAttrsToCompact(node.attrs, platform);
+      const children = this.buildCompactFromRaw(node.children, platform);
+      if (children.length > 0) compact.c = children;
+      results.push(compact);
+    }
+    return results;
+  }
+
+  private compactHasZeroSize(attrs: Record<string, string>): boolean {
+    const bounds = attrs['bounds'];
+    if (!bounds) return false;
+    const m = bounds.match(/\[(\d+),(\d+)\]\[(\d+),(\d+)\]/);
+    if (!m) return false;
+    return (parseInt(m[3]) - parseInt(m[1]) === 0) || (parseInt(m[4]) - parseInt(m[2]) === 0);
+  }
+
+  /**
+   * P3 — Schema-driven content check (Maestro pattern).
+   * Compares boolean attrs against platform schema defaults instead of hardcoded checks.
+   * A node is meaningful if ANY attribute value deviates from its platform default.
+   */
+  private compactHasContent(attrs: Record<string, string>, platform: Platform): boolean {
+    const meaningful = ['text', 'content-desc', 'accessibilityLabel', 'label',
+                        'resource-id', 'name', 'value', 'hintText', 'class', 'type'];
+    if (meaningful.some(k => (attrs[k] ?? '').trim().length > 0)) return true;
+
+    // Schema-driven boolean default check — adding a new attr to the schema covers it automatically
+    const schema = platform === 'ios' ? IOS_COMPACT_SCHEMA : ANDROID_COMPACT_SCHEMA;
+    const defaults = schema.defaults as Record<string, boolean>;
+    for (const [key, defaultVal] of Object.entries(defaults)) {
+      const raw = attrs[key];
+      if (!raw) continue;
+      if ((raw === 'true') !== defaultVal) return true;
+    }
+    return false;
+  }
+
+
+  /** Map raw attributes to compact aliased node (non-default values only). */
+  private rawAttrsToCompact(attrs: Record<string, string>, platform: Platform): CompactNode {
+    const n: CompactNode = {};
+    if (attrs['bounds']) n.b = attrs['bounds'];
+    const txt = attrs['text'] || (platform === 'ios' ? attrs['label'] : '');
+    if (txt?.trim()) n.txt = txt;
+    const rid = attrs['resource-id'] || (platform === 'ios' ? attrs['name'] : '');
+    if (rid?.trim()) n.rid = rid.includes('/') ? rid.split('/').pop()! : rid;
+    const a11y = attrs['content-desc'] || attrs['accessibilityLabel'];
+    if (a11y?.trim()) n.a11y = a11y;
+    const hint = attrs['hintText'];
+    if (hint?.trim()) n.hint = hint;
+    const val = attrs['value'];
+    if (val?.trim()) n.val = val;
+    const cls = attrs['class'] || attrs['type'];
+    if (cls?.trim()) n.cls = cls.includes('.') ? cls.split('.').pop()! : cls;
+    if (attrs['clickable'] === 'true') n.clickable = true;
+    if (attrs['enabled'] === 'false') n.enabled = false;
+    if (attrs['checked'] === 'true') n.checked = true;
+    if (attrs['focused'] === 'true') n.focused = true;
+    if (attrs['selected'] === 'true') n.selected = true;
+    if (attrs['scrollable'] === 'true') n.scroll = true;
+    return n;
+  }
+
+  // ── P5: YAML output (smaller than JSON for deeply nested trees ~30%) ─────────
+
+  /**
+   * Builds a Maestro-style compact tree serialized as YAML.
+   * ~30% smaller than compact JSON for deeply nested screens.
+   * Reuses buildCompactTree cache (same TTL).
+   */
+  public buildCompactYaml(xml: string, platform: Platform): string {
+    const { ui_schema, elements } = this.buildCompactTree(xml, platform);
+    const lines: string[] = ['---'];
+
+    // Schema block
+    lines.push('ui_schema:');
+    lines.push(`  platform: ${ui_schema.platform}`);
+    lines.push('  abbreviations:');
+    for (const [k, v] of Object.entries(ui_schema.abbreviations)) {
+      lines.push(`    ${k}: ${v}`);
+    }
+    lines.push('  defaults:');
+    for (const [k, v] of Object.entries(ui_schema.defaults)) {
+      lines.push(`    ${k}: ${v}`);
+    }
+
+    // Elements block
+    lines.push('elements:');
+    for (const node of elements) {
+      lines.push(...this.compactNodeToYamlLines(node, 1));
+    }
+    return lines.join('\n');
+  }
+
+  // ── P7: CSV output with parent_id for tabular analysis ──────────────────
+
+  /**
+   * Builds a flat CSV with parent_id column from the compact tree.
+   * Useful for tabular analysis: "find all clickable elements at depth 2" etc.
+   * Reuses buildCompactTree cache (same TTL).
+   */
+  public buildCompactCsv(xml: string, platform: Platform): string {
+    const { elements } = this.buildCompactTree(xml, platform);
+    const header = 'id,parent_id,depth,b,txt,rid,a11y,hint,val,cls,clickable,enabled,checked,focused,selected,scroll';
+    const rows: string[] = [header];
+    let nextId = 0;
+
+    const traverse = (nodes: CompactNode[], parentId: number | null, depth: number): void => {
+      for (const node of nodes) {
+        const currentId = nextId++;
+        const q = (v: string | undefined) => v ? `"${v.replace(/"/g, '""')}"` : '';
+        rows.push([
+          currentId,
+          parentId ?? '',
+          depth,
+          node.b ? `"${node.b}"` : '',
+          q(node.txt),
+          node.rid ?? '',
+          q(node.a11y),
+          node.hint ?? '',
+          node.val ?? '',
+          node.cls ?? '',
+          node.clickable ? 'true' : '',
+          node.enabled === false ? 'false' : '',
+          node.checked ? 'true' : '',
+          node.focused ? 'true' : '',
+          node.selected ? 'true' : '',
+          node.scroll ? 'true' : '',
+        ].join(','));
+        if (node.c) traverse(node.c, currentId, depth + 1);
+      }
+    };
+
+    traverse(elements, null, 0);
+    return rows.join('\n');
+  }
+
+  /**
+   * Serializes a CompactNode to YAML lines at the given list depth.
+   * Children use nested YAML sequence syntax.
+   */
+  private compactNodeToYamlLines(node: CompactNode, listDepth: number): string[] {
+    const lines: string[] = [];
+    const pad = '  '.repeat(listDepth);
+    const listPad = '  '.repeat(listDepth - 1);
+
+    const entries = (Object.entries(node) as [string, unknown][])
+      .filter(([k, v]) => k !== 'c' && v !== undefined);
+
+    entries.forEach(([k, v], i) => {
+      const indent = i === 0 ? `${listPad}- ` : pad;
+      if (typeof v === 'string') {
+        // Quote strings that contain YAML-special characters
+        const needsQuote = /[:#\[\]{}*!|>'"@`\n]/.test(v);
+        const safeV = needsQuote ? `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"` : v;
+        lines.push(`${indent}${k}: ${safeV}`);
+      } else {
+        lines.push(`${indent}${k}: ${v}`);
+      }
+    });
+
+    if (entries.length === 0) {
+      // Node has only children — emit a bare list marker
+      lines.push(`${listPad}-`);
+    }
+
+    if (node.c && node.c.length > 0) {
+      lines.push(`${pad}c:`);
+      for (const child of node.c) {
+        lines.push(...this.compactNodeToYamlLines(child, listDepth + 1));
+      }
+    }
+    return lines;
   }
 }
