@@ -20,7 +20,7 @@ export const config: Config = {
   capabilities: [{
     platformName: 'Android',
     'appium:automationName': 'UiAutomator2',
-    'appium:deviceName': 'Pixel_8',
+    'appium:deviceName': 'emulator-5554',
     // 'appium:app': '/path/to/your/app.apk',
     'appium:newCommandTimeout': 240,
     'appium:noReset': false,

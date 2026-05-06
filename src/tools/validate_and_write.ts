@@ -65,7 +65,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
       }
 
       const filesToProcess = [...args.files];
-      
+
       const jsonSteps: any[] | undefined = (args as any).jsonSteps;
       if (jsonSteps && Array.isArray(jsonSteps)) {
         const { JsonToStepsTranspiler } = await import('../utils/JsonToStepsTranspiler.js');
@@ -81,7 +81,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
           });
         }
       }
-      
+
       const jsonPageObjects: any[] | undefined = (args as any).jsonPageObjects;
       if (jsonPageObjects && Array.isArray(jsonPageObjects)) {
         const { JsonToPomTranspiler } = await import('../utils/JsonToPomTranspiler.js');
@@ -99,7 +99,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
       }
 
       const resultString = await fileWriterService.validateAndWrite(args.projectRoot, filesToProcess, 3, args.preview);
-  
+
       // Attempt to parse the service response (most responses are JSON strings)
       let resultObj: any = null;
       try {
@@ -107,7 +107,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
       } catch {
         resultObj = null;
       }
-  
+
       // Prepend any pre-flight warnings to the human message payload
       if (totalWarning) {
         if (resultObj && typeof resultObj === 'object') {
@@ -117,7 +117,7 @@ OUTPUT: Ack (≤10 words), proceed.`,
           return textResult(totalWarning + resultString);
         }
       }
-  
+
       // If the FileWriterService signaled failure, handle according to preview flag.
       if (resultObj && resultObj.success === false) {
         const phase = resultObj.phase || 'validation';

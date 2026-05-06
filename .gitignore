@@ -1,29 +1,47 @@
-node_modules
-binaries
+# Dependencies
+node_modules/
+binaries/
+
+# Build outputs
 dist/
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
 
 # Environment secrets
 .env
-.env.local
-.env.staging
-.env.prod
+.env.*
+!.env.example
 
 # User credential stores (never commit)
-test-data/users.local.json
-test-data/users.staging.json
-test-data/users.prod.json
+test-data/users.*.json
+!test-data/users.example.json
 
-graphify-out
-.AppForge
-help.txt
-detect.json
-.claude/settings.json
+# Tooling & Caches
+.AppForge/
+.TestForge/
+graphify-out/
 mcp-logs/
 *.log
 scratch/
 backups/
+detect.json
+.graphify_detect.json
+.claude/
+.cursor/
 
 # IDE settings
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
 
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test reports
+test-results/
+allure-results/
+playwright-report/
+blob-report/

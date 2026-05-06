@@ -66,15 +66,15 @@ export class FileWriterService {
     }
 
     const fileState = FileStateService.getInstance();
-    
+
     // Validate file hasn't changed externally
-      for (const file of files) {
-        const fullPath = path.join(projectRoot, file.path);
-        const validation = fileState.validateWrite(fullPath);
-        if (!validation.valid) {
-          throw McpErrors.fileOperationFailed(`Cannot write file ${file.path}: ${validation.reason}`, undefined, 'FileWriterService');
-        }
+    for (const file of files) {
+      const fullPath = path.join(projectRoot, file.path);
+      const validation = fileState.validateWrite(fullPath);
+      if (!validation.valid) {
+        throw McpErrors.fileOperationFailed(`Cannot write file ${file.path}: ${validation.reason}`, undefined, 'FileWriterService');
       }
+    }
 
     // Step 1: Write files to a temp staging area first
     const stagingDir = path.join(projectRoot, '.mcp-staging');
@@ -147,7 +147,7 @@ export class FileWriterService {
       const androidPages = pageFiles.filter(f => f.path.includes('.android.ts'));
       const iosPages = pageFiles.filter(f => f.path.includes('.ios.ts'));
       const genericPages = pageFiles.filter(f => !f.path.includes('.android.') && !f.path.includes('.ios.'));
-      
+
       // Only enforce if we detect the intent to be cross-platform (both variants present or generic pages exist)
       const hasCrossPlatformIntent = androidPages.length > 0 || iosPages.length > 0;
       if (hasCrossPlatformIntent) {
@@ -248,7 +248,7 @@ export class FileWriterService {
         }
       }
       await this.cleanStaging(stagingDir);
-      
+
       return JSON.stringify({
         success: false,
         phase: 'write-to-disk',
@@ -297,7 +297,7 @@ export class FileWriterService {
     const retryResult = await withRetry(async () => FileGuard.readTextFileSafely(fullPath), RetryPolicies.fileOperation);
     const content = retryResult.value;
     FileStateService.getInstance().recordRead(fullPath, content);
-    
+
     const result = StringMatcher.fuzzyReplace(oldString, newString, content);
     if (!result.modified) {
       throw McpErrors.stringNotFound(oldString.substring(0, 50) + '...', 'FileWriterService');
@@ -349,7 +349,7 @@ export class FileWriterService {
       }
 
       const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-      
+
       // CB-1 FIX: Use execFile with args array instead of shell command string
       // to prevent shell injection via projectRoot parameter
       if (hasTsConfig) {
@@ -369,7 +369,7 @@ export class FileWriterService {
           cwd: projectRoot
         });
       }
-      
+
       return { valid: true, errors: [] };
     } catch (error: any) {
       const stderr = error.stderr || error.stdout || error.message;

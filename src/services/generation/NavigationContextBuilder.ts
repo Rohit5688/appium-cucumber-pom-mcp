@@ -38,7 +38,7 @@ export class NavigationContextBuilder {
           const pathSections = navContext.split('\n\n').filter(s => s.trim());
 
           for (const section of pathSections) {
-            const sectionTokens = this.facade.promptBuilder.estimateTokens(section);
+            const sectionTokens = this.facade?.promptBuilder?.estimateTokens(section) ?? 20;
 
             if (estimatedTokens + sectionTokens > maxTokens) {
               contextParts.push('*(Additional navigation paths truncated — use inspect_ui_hierarchy on the specific screen you need)*');
