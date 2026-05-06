@@ -15,14 +15,9 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "typeRoots": [
-      "./node_modules/@types",
-      "../../node_modules/@types",
-      "../../node_modules"
-    ],
     "types": [
       "node",
-      "webdriverio/globals",
+      "@wdio/globals/types",
       "@wdio/cucumber-framework",
       "@wdio/appium-service"
     ]
