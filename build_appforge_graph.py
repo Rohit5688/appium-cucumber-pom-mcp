@@ -71,12 +71,13 @@ def run():
     to_json(G, communities, str(out_dir / 'graph.json'))
     
     # Save the custom "Structural Brain" for AI awareness
-    brain_dir = Path('.AppForge')
+    project_name = Path('.').resolve().name
+    brain_dir = Path(f'.{project_name}')
     brain_dir.mkdir(exist_ok=True)
     brain_data = {
-        'project': 'AppForge',
-        'analyzed_at': datetime.now().toISOString() if hasattr(datetime.now(), 'toISOString') else datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
-        'god_nodes': gods,
+        'project': project_name,
+        'analyzed_at': datetime.now().isoformat() if hasattr(datetime.now(), 'isoformat') else datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+        'godNodes': gods,
         'surprising_connections': surprises,
         'suggested_questions': questions,
         'communities': {str(cid): members for cid, members in communities.items()},
